@@ -7,6 +7,7 @@ import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { relativeDue } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 import { MCP_URL, REST_URL, OPENAPI_URL } from '@/lib/endpoints'
 import {
   Dialog,
@@ -27,6 +28,7 @@ type TabId = (typeof SETUP_TABS)[number]['id']
 
 export function IntegrationsScreen() {
   const qc = useQueryClient()
+  const t = useT()
   const { data: keys, isLoading } = useQuery({ queryKey: ['api-keys'], queryFn: listApiKeys })
   const [name, setName] = useState('')
   const [fullAccess, setFullAccess] = useState(false)
@@ -35,14 +37,14 @@ export function IntegrationsScreen() {
   const [tab, setTab] = useState<TabId>('claude')
 
   const create = useMutation({
-    mutationFn: () => createApiKey(name.trim() || 'Untitled key', fullAccess ? ['create', 'edit'] : ['create']),
+    mutationFn: () => createApiKey(name.trim() || t('Untitled key', '未命名金鑰'), fullAccess ? ['create', 'edit'] : ['create']),
     onSuccess: (k) => {
       setCreated(k)
       setLastKey(k.api_key)
       setName('')
       qc.invalidateQueries({ queryKey: ['api-keys'] })
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to create key'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to create key', '建立金鑰失敗')),
   })
   const revoke = useMutation({
     mutationFn: (id: string) => revokeApiKey(id),
@@ -54,8 +56,8 @@ export function IntegrationsScreen() {
   return (
     <>
       <PageHeader
-        title="Connect an AI"
-        subtitle="Let an assistant add notes & flashcards for you"
+        title={t('Connect an AI', '連接 AI')}
+        subtitle={t('Let an assistant add notes & flashcards for you', '讓 AI 助理為你新增筆記與字卡')}
         icon={<Plug className="size-4" />}
       />
       <div className="flex-1 overflow-y-auto">
@@ -63,23 +65,22 @@ export function IntegrationsScreen() {
           <div className="flex items-start gap-2.5 rounded-xl border border-border bg-card p-4 text-[13px] leading-relaxed text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand" />
             <span>
-              An AI you connect can <strong className="text-foreground">only add</strong> notes &amp; flashcards to
-              your library — by default it can never edit, delete, or see anyone else's. Revoke a key anytime below.
+              {t('An AI you connect can ', '你連接的 AI ')}<strong className="text-foreground">{t('only add', '只能新增')}</strong>{t(" notes & flashcards to your library — by default it can never edit, delete, or see anyone else's. Revoke a key anytime below.", '筆記與字卡到你的資料庫 — 預設情況下，它無法編輯、刪除，也看不到其他人的內容。你可以隨時在下方撤銷金鑰。')}
             </span>
           </div>
 
           {/* 1 · Keys */}
           <section className="space-y-3">
-            <SectionTitle n={1} icon={<KeyRound />}>Create a key</SectionTitle>
+            <SectionTitle n={1} icon={<KeyRound />}>{t('Create a key', '建立金鑰')}</SectionTitle>
             <div className="flex gap-2">
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Key name (e.g. “Cursor laptop”)"
+                placeholder={t('Key name (e.g. “Cursor laptop”)', '金鑰名稱（例如「Cursor 筆電」）')}
                 onKeyDown={(e) => e.key === 'Enter' && create.mutate()}
               />
               <Button variant="brand" onClick={() => create.mutate()} disabled={create.isPending}>
-                <Plus className="size-4" /> Create
+                <Plus className="size-4" /> {t('Create', '建立')}
               </Button>
             </div>
             <label className="flex cursor-pointer select-none items-start gap-2 text-xs text-muted-foreground">
@@ -90,8 +91,7 @@ export function IntegrationsScreen() {
                 className="mt-0.5 size-3.5"
               />
               <span>
-                Allow this key to <strong className="font-medium text-foreground">edit existing</strong> notes (full
-                access). Leave off for <strong className="font-medium text-foreground">add-only</strong> — safest for an AI.
+                {t('Allow this key to ', '允許此金鑰')}<strong className="font-medium text-foreground">{t('edit existing', '編輯既有')}</strong>{t(' notes (full access). Leave off for ', '筆記（完整存取）。不勾選則為')}<strong className="font-medium text-foreground">{t('add-only', '僅新增')}</strong>{t(' — safest for an AI.', ' — 對 AI 而言最安全。')}
               </span>
             </label>
 
@@ -110,16 +110,16 @@ export function IntegrationsScreen() {
                             k.scopes?.includes('edit') ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground'
                           }`}
                         >
-                          {k.scopes?.includes('edit') ? 'full' : 'add-only'}
+                          {k.scopes?.includes('edit') ? t('full', '完整') : t('add-only', '僅新增')}
                         </span>
-                        {k.revoked_at ? <span className="ml-2 text-xs text-destructive">revoked</span> : null}
+                        {k.revoked_at ? <span className="ml-2 text-xs text-destructive">{t('revoked', '已撤銷')}</span> : null}
                       </p>
                       <p className="font-mono text-xs text-muted-foreground">
-                        {k.key_prefix}••••••• · {k.last_used_at ? `used ${relativeDue(k.last_used_at)}` : 'never used'}
+                        {k.key_prefix}••••••• · {k.last_used_at ? t(`used ${relativeDue(k.last_used_at)}`, `使用於 ${relativeDue(k.last_used_at)}`) : t('never used', '從未使用')}
                       </p>
                     </div>
                     {!k.revoked_at ? (
-                      <Button variant="ghost" size="icon-sm" title="Revoke" onClick={() => revoke.mutate(k.id)}>
+                      <Button variant="ghost" size="icon-sm" title={t('Revoke', '撤銷')} onClick={() => revoke.mutate(k.id)}>
                         <Trash2 className="size-4 text-muted-foreground" />
                       </Button>
                     ) : null}
@@ -129,18 +129,18 @@ export function IntegrationsScreen() {
             ) : (
               <EmptyState
                 icon={<KeyRound className="size-6" />}
-                title="No keys yet"
-                description="Create a key, then use it to connect your AI below."
+                title={t('No keys yet', '尚無金鑰')}
+                description={t('Create a key, then use it to connect your AI below.', '先建立一把金鑰，再用它在下方連接你的 AI。')}
               />
             )}
           </section>
 
           {/* 2 · Set up */}
           <section className="space-y-3">
-            <SectionTitle n={2} icon={<Plug />}>Set up your assistant</SectionTitle>
+            <SectionTitle n={2} icon={<Plug />}>{t('Set up your assistant', '設定你的助理')}</SectionTitle>
             {!lastKey ? (
               <p className="text-[13px] text-muted-foreground">
-                Create a key above and the snippets below fill in with your real key automatically.
+                {t('Create a key above and the snippets below fill in with your real key automatically.', '在上方建立金鑰後，下方的程式碼片段會自動填入你的真實金鑰。')}
               </p>
             ) : null}
             <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
@@ -172,9 +172,9 @@ export function IntegrationsScreen() {
               <div className="space-y-2">
                 <CopyBlock code={OPENAPI_URL} />
                 <ol className="list-decimal space-y-1 pl-5 text-[13px] leading-relaxed text-muted-foreground">
-                  <li>New GPT → Configure → <strong className="text-foreground">Create new action</strong> → Import from URL → paste the URL above.</li>
-                  <li>Authentication → <strong className="text-foreground">API Key</strong> → <strong className="text-foreground">Bearer</strong> → paste your key.</li>
-                  <li>In chat: "save this as flashcards in Mnema".</li>
+                  <li>New GPT → Configure → <strong className="text-foreground">Create new action</strong> → Import from URL → {t('paste the URL above.', '貼上上方的網址。')}</li>
+                  <li>Authentication → <strong className="text-foreground">API Key</strong> → <strong className="text-foreground">Bearer</strong> → {t('paste your key.', '貼上你的金鑰。')}</li>
+                  <li>{t('In chat: ', '在對話中輸入：')}"save this as flashcards in Mnema".</li>
                 </ol>
               </div>
             )}
@@ -185,9 +185,9 @@ export function IntegrationsScreen() {
 
           {/* 3 · Tools */}
           <section className="space-y-3">
-            <SectionTitle n={3} icon={<Wrench />}>What the AI can do</SectionTitle>
+            <SectionTitle n={3} icon={<Wrench />}>{t('What the AI can do', 'AI 能做什麼')}</SectionTitle>
             <p className="text-[13px] leading-relaxed text-muted-foreground">
-              The exact actions a connected AI can perform — read live from the API. It can do these and nothing else.
+              {t('The exact actions a connected AI can perform — read live from the API. It can do these and nothing else.', '已連接的 AI 能執行的確切操作 — 直接從 API 即時讀取。它只能做這些，別無其他。')}
             </p>
             <ToolsList />
           </section>
@@ -197,14 +197,14 @@ export function IntegrationsScreen() {
       <Dialog open={!!created} onOpenChange={(v) => !v && setCreated(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Copy your API key now</DialogTitle>
+            <DialogTitle>{t('Copy your API key now', '立即複製你的 API 金鑰')}</DialogTitle>
             <DialogDescription className="flex items-center gap-1.5 text-amber-600">
-              <TriangleAlert className="size-4" /> Shown once and never again.
+              <TriangleAlert className="size-4" /> {t('Shown once and never again.', '只會顯示這一次，之後不再顯示。')}
             </DialogDescription>
           </DialogHeader>
           <CopyField value={created?.api_key ?? ''} />
           <DialogFooter>
-            <Button variant="brand" onClick={() => setCreated(null)}>Done</Button>
+            <Button variant="brand" onClick={() => setCreated(null)}>{t('Done', '完成')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -226,6 +226,7 @@ function SectionTitle({ n, icon, children }: { n: number; icon: ReactNode; child
 
 function CopyBlock({ code }: { code: string }) {
   const [copied, setCopied] = useState(false)
+  const t = useT()
   return (
     <div className="group relative">
       <pre className="overflow-x-auto rounded-lg border border-border bg-muted/50 px-4 py-3 text-[12.5px] leading-relaxed">
@@ -238,7 +239,7 @@ function CopyBlock({ code }: { code: string }) {
           setTimeout(() => setCopied(false), 1500)
         }}
         className="absolute right-2 top-2 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 transition group-hover:opacity-100"
-        title="Copy"
+        title={t('Copy', '複製')}
       >
         {copied ? <Check className="size-3.5 text-brand" /> : <Copy className="size-3.5" />}
       </button>
@@ -248,6 +249,7 @@ function CopyBlock({ code }: { code: string }) {
 
 function CopyField({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
+  const t = useT()
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
       <code className="min-w-0 flex-1 truncate font-mono text-[13px]">{value}</code>
@@ -259,7 +261,7 @@ function CopyField({ value }: { value: string }) {
           setCopied(true)
           setTimeout(() => setCopied(false), 1500)
         }}
-        title="Copy"
+        title={t('Copy', '複製')}
       >
         {copied ? <Check className="size-4 text-brand" /> : <Copy className="size-4" />}
       </Button>
@@ -276,6 +278,7 @@ interface Op {
 const humanize = (id: string) => id.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
 
 function ToolsList() {
+  const t = useT()
   const { data, isLoading, error } = useQuery({
     queryKey: ['openapi'],
     queryFn: async () => {
@@ -289,11 +292,11 @@ function ToolsList() {
     () => (data ? Object.values(data.paths).filter((m) => m.post).map((m) => m.post as Op) : []),
     [data],
   )
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
+  if (isLoading) return <p className="text-sm text-muted-foreground">{t('Loading…', '載入中…')}</p>
   if (error)
     return (
       <p className="rounded-lg border border-border bg-card px-4 py-3 text-[13px] text-muted-foreground">
-        Couldn't load the tool list right now — the AI service may be waking up.
+        {t("Couldn't load the tool list right now — the AI service may be waking up.", '目前無法載入工具清單 — AI 服務可能正在啟動。')}
       </p>
     )
   return (

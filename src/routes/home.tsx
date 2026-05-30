@@ -5,9 +5,11 @@ import { ArrowRight, FilePlus2, FileText, GraduationCap, Layers, Sparkles } from
 import { useDecks, useDueCards, useNewNote, useNotes, useSeedSample } from '@/lib/hooks'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/lib/i18n'
 import { modKey, relativeDue } from '@/lib/utils'
 
 export function HomeScreen() {
+  const t = useT()
   const { data: due } = useDueCards()
   const { data: notes } = useNotes()
   const { data: decks } = useDecks()
@@ -32,19 +34,21 @@ export function HomeScreen() {
             >
               <div className="absolute inset-0 bg-dots opacity-40" />
               <div className="relative space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wider text-brand">Welcome</p>
-                <h2 className="font-serif text-2xl text-foreground">Let's get your first cards going</h2>
+                <p className="text-xs font-medium uppercase tracking-wider text-brand">{t('Welcome', '歡迎')}</p>
+                <h2 className="font-serif text-2xl text-foreground">{t("Let's get your first cards going", '來建立你的第一批卡片吧')}</h2>
                 <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-                  Add a tiny sample deck to see the whole loop in 30 seconds, or write your first note. An AI can also
-                  fill your library for you —{' '}
-                  <Link to="/guide" className="font-medium text-brand hover:underline">see how it works</Link>.
+                  {t(
+                    'Add a tiny sample deck to see the whole loop in 30 seconds, or write your first note. An AI can also fill your library for you —',
+                    '加入一個小小的範例牌組，30 秒內看完整個流程，或寫下你的第一則筆記。也可以讓 AI 幫你充實資料庫 —',
+                  )}{' '}
+                  <Link to="/guide" className="font-medium text-brand hover:underline">{t('see how it works', '看看它如何運作')}</Link>.
                 </p>
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Button variant="brand" onClick={() => seed.mutate()} disabled={seed.isPending}>
-                    <Sparkles className="size-4" /> {seed.isPending ? 'Adding…' : 'Add a sample deck'}
+                    <Sparkles className="size-4" /> {seed.isPending ? t('Adding…', '加入中…') : t('Add a sample deck', '加入範例牌組')}
                   </Button>
                   <Button variant="outline" onClick={() => void newNote.run()} disabled={newNote.isPending}>
-                    <FilePlus2 className="size-4" /> Write a note
+                    <FilePlus2 className="size-4" /> {t('Write a note', '寫一則筆記')}
                   </Button>
                 </div>
               </div>
@@ -58,14 +62,16 @@ export function HomeScreen() {
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium uppercase tracking-wider text-brand">Spaced repetition</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-brand">{t('Spaced repetition', '間隔重複')}</p>
                   <h2 className="font-serif text-2xl text-foreground">
-                    {dueCount > 0 ? `${dueCount} card${dueCount === 1 ? '' : 's'} due` : 'All caught up 🌿'}
+                    {dueCount > 0
+                      ? t(`${dueCount} card${dueCount === 1 ? '' : 's'} due`, `${dueCount} 張卡片待複習`)
+                      : t('All caught up 🌿', '全部完成 🌿')}
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     {dueCount > 0
-                      ? 'Review them now to keep your memory fresh.'
-                      : 'Nothing to review right now — add notes or come back later.'}
+                      ? t('Review them now to keep your memory fresh.', '現在就複習，讓記憶保持新鮮。')
+                      : t('Nothing to review right now — add notes or come back later.', '目前沒有要複習的內容 — 新增筆記，或稍後再回來。')}
                   </p>
                 </div>
                 <GraduationCap className="size-12 shrink-0 text-brand/30" />
@@ -73,7 +79,7 @@ export function HomeScreen() {
               {dueCount > 0 ? (
                 <Button asChild variant="brand" className="mt-4">
                   <Link to="/study">
-                    Start review <ArrowRight className="size-4" />
+                    {t('Start review', '開始複習')} <ArrowRight className="size-4" />
                   </Link>
                 </Button>
               ) : null}
@@ -82,17 +88,17 @@ export function HomeScreen() {
 
           {/* Stat tiles */}
           <section className="grid grid-cols-3 gap-3">
-            <StatTile icon={<Layers className="size-4" />} label="Decks" value={decks?.length ?? 0} />
-            <StatTile icon={<FileText className="size-4" />} label="Notes" value={notes?.length ?? 0} />
-            <StatTile icon={<GraduationCap className="size-4" />} label="Due now" value={dueCount} />
+            <StatTile icon={<Layers className="size-4" />} label={t('Decks', '牌組')} value={decks?.length ?? 0} />
+            <StatTile icon={<FileText className="size-4" />} label={t('Notes', '筆記')} value={notes?.length ?? 0} />
+            <StatTile icon={<GraduationCap className="size-4" />} label={t('Due now', '待複習')} value={dueCount} />
           </section>
 
           {/* Recent notes */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground">Recent notes</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('Recent notes', '最近的筆記')}</h3>
               <Link to="/notes" className="text-xs font-medium text-brand hover:underline">
-                View all
+                {t('View all', '查看全部')}
               </Link>
             </div>
             {notes?.length ? (
@@ -113,9 +119,9 @@ export function HomeScreen() {
             ) : (
               <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-card/50 px-4 py-5 text-sm text-muted-foreground">
                 <Sparkles className="size-4 text-brand" />
-                No notes yet — press{' '}
-                <kbd className="rounded border border-border bg-card px-1.5 text-xs">{modKey}+K</kbd> to create one, or
-                connect an AI to fill them in.
+                {t('No notes yet — press', '還沒有筆記 — 按')}{' '}
+                <kbd className="rounded border border-border bg-card px-1.5 text-xs">{modKey}+K</kbd>{' '}
+                {t('to create one, or connect an AI to fill them in.', '即可建立一則，或連接 AI 來幫你充實內容。')}
               </div>
             )}
           </section>

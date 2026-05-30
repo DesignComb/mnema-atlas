@@ -3,6 +3,7 @@ import { GraduationCap, Layers, Sparkles } from 'lucide-react'
 import { useCards, useDecks, useDueCards, useSeedSample } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/lib/i18n'
 
 function StateTile({ label, n, cls }: { label: string; n: number; cls: string }) {
   return (
@@ -18,6 +19,7 @@ export function CardsScreen() {
   const { data: due } = useDueCards()
   const { data: decks } = useDecks()
   const seed = useSeedSample()
+  const t = useT()
 
   const countByDeck = new Map<string, number>()
   cards?.forEach((c) => {
@@ -42,14 +44,21 @@ export function CardsScreen() {
   return (
     <>
       <PageHeader
-        title="Flashcards"
-        subtitle={cards ? `${cards.length} card${cards.length === 1 ? '' : 's'} · ${totalDue} due` : undefined}
+        title={t('Flashcards', '字卡')}
+        subtitle={
+          cards
+            ? t(
+                `${cards.length} card${cards.length === 1 ? '' : 's'} · ${totalDue} due`,
+                `${cards.length} 張字卡 · ${totalDue} 張到期`,
+              )
+            : undefined
+        }
         icon={<Layers className="size-4" />}
         actions={
           totalDue > 0 ? (
             <Button asChild variant="brand" size="sm">
               <Link to="/study">
-                <GraduationCap className="size-4" /> Study ({totalDue})
+                <GraduationCap className="size-4" /> {t('Study', '複習')} ({totalDue})
               </Link>
             </Button>
           ) : undefined
@@ -60,11 +69,14 @@ export function CardsScreen() {
           {isEmpty ? (
             <EmptyState
               icon={<Sparkles className="size-6" />}
-              title="No flashcards yet"
-              description="Add a sample deck to see how it works, add cards from a note, or let a connected AI create them — they enter FSRS scheduling immediately."
+              title={t('No flashcards yet', '還沒有字卡')}
+              description={t(
+                'Add a sample deck to see how it works, add cards from a note, or let a connected AI create them — they enter FSRS scheduling immediately.',
+                '加入範例牌組看看效果、從筆記新增字卡，或讓連接的 AI 為你建立——它們會立即進入 FSRS 排程。',
+              )}
               action={
                 <Button variant="brand" size="sm" onClick={() => seed.mutate()} disabled={seed.isPending}>
-                  <Sparkles className="size-4" /> Add a sample deck
+                  <Sparkles className="size-4" /> {t('Add a sample deck', '加入範例牌組')}
                 </Button>
               }
             />
@@ -72,10 +84,10 @@ export function CardsScreen() {
             <>
               {/* Learning-status overview */}
               <div className="mb-1.5 grid grid-cols-4 gap-2">
-                <StateTile label="New" n={byState[0]} cls="text-sky-600 dark:text-sky-300" />
-                <StateTile label="Learning" n={byState[1] + byState[3]} cls="text-amber-600 dark:text-amber-300" />
-                <StateTile label="Review" n={byState[2]} cls="text-emerald-600 dark:text-emerald-300" />
-                <StateTile label="Due now" n={totalDue} cls="text-brand" />
+                <StateTile label={t('New', '新卡')} n={byState[0]} cls="text-sky-600 dark:text-sky-300" />
+                <StateTile label={t('Learning', '學習中')} n={byState[1] + byState[3]} cls="text-amber-600 dark:text-amber-300" />
+                <StateTile label={t('Review', '複習')} n={byState[2]} cls="text-emerald-600 dark:text-emerald-300" />
+                <StateTile label={t('Due now', '現在到期')} n={totalDue} cls="text-brand" />
               </div>
               {deckList.map((d) => {
                 const n = countByDeck.get(d.id) ?? 0
@@ -91,12 +103,12 @@ export function CardsScreen() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{d.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {n} card{n === 1 ? '' : 's'}
+                        {t(`${n} card${n === 1 ? '' : 's'}`, `${n} 張字卡`)}
                       </p>
                     </div>
                     {dd > 0 ? (
                       <span className="shrink-0 rounded-full bg-brand-muted px-2 py-0.5 text-xs font-medium text-brand">
-                        {dd} due
+                        {t(`${dd} due`, `${dd} 張到期`)}
                       </span>
                     ) : null}
                   </Link>
@@ -104,7 +116,11 @@ export function CardsScreen() {
               })}
               {looseCount > 0 ? (
                 <div className="flex items-center gap-3 rounded-xl border border-dashed border-border px-4 py-3.5 text-sm text-muted-foreground">
-                  <Layers className="size-4" /> {looseCount} card{looseCount === 1 ? '' : 's'} not in any deck
+                  <Layers className="size-4" />{' '}
+                  {t(
+                    `${looseCount} card${looseCount === 1 ? '' : 's'} not in any deck`,
+                    `${looseCount} 張字卡未歸入任何牌組`,
+                  )}
                 </div>
               ) : null}
             </>

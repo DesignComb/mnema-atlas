@@ -8,6 +8,7 @@ import { NewCardDialog } from '@/components/cards/NewCardDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { Button } from '@/components/ui/button'
 import { relativeDue } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 
 export function DeckScreen() {
   const { deckId } = useParams({ strict: false }) as { deckId: string }
@@ -18,6 +19,7 @@ export function DeckScreen() {
   const createNote = useCreateNote()
   const deleteDeck = useDeleteDeck()
   const navigate = useNavigate()
+  const t = useT()
   const [cardOpen, setCardOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
 
@@ -28,10 +30,12 @@ export function DeckScreen() {
     }
     try {
       await deleteDeck.mutateAsync(deckId)
-      toast.success('Deck deleted — its notes & cards were kept, just unfiled')
+      toast.success(
+        t('Deck deleted — its notes & cards were kept, just unfiled', '已刪除牌組——筆記與字卡都會保留，只是不再歸檔'),
+      )
       navigate({ to: '/cards' })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete deck')
+      toast.error(err instanceof Error ? err.message : t('Failed to delete deck', '刪除牌組失敗'))
     }
   }
 
@@ -44,28 +48,28 @@ export function DeckScreen() {
       const note = await createNote.mutateAsync({ title: 'Untitled', body: '', deck_id: deckId })
       navigate({ to: '/notes/$noteId', params: { noteId: note.id } })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create note')
+      toast.error(err instanceof Error ? err.message : t('Failed to create note', '建立筆記失敗'))
     }
   }
 
   return (
     <>
       <PageHeader
-        title={deck?.name ?? 'Deck'}
+        title={deck?.name ?? t('Deck', '牌組')}
         subtitle={deck?.description ?? undefined}
         icon={<Layers className="size-4" />}
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
-              <Plus className="size-4" /> Card
+              <Plus className="size-4" /> {t('Card', '字卡')}
             </Button>
             <Button variant="outline" size="sm" onClick={newNote}>
-              <FilePlus2 className="size-4" /> Note
+              <FilePlus2 className="size-4" /> {t('Note', '筆記')}
             </Button>
             {dueCount > 0 ? (
               <Button asChild variant="brand" size="sm">
                 <Link to="/study/$deckId" params={{ deckId }}>
-                  <GraduationCap className="size-4" /> Study ({dueCount})
+                  <GraduationCap className="size-4" /> {t('Study', '複習')} ({dueCount})
                 </Link>
               </Button>
             ) : null}
@@ -75,10 +79,10 @@ export function DeckScreen() {
               onClick={removeDeck}
               onBlur={() => setConfirmDel(false)}
               className={confirmDel ? 'text-destructive' : 'text-muted-foreground'}
-              title="Delete deck"
+              title={t('Delete deck', '刪除牌組')}
             >
               <Trash2 className="size-4" />
-              {confirmDel ? 'Delete deck?' : null}
+              {confirmDel ? t('Delete deck?', '確定刪除牌組？') : null}
             </Button>
           </>
         }
@@ -88,7 +92,8 @@ export function DeckScreen() {
           {/* Flashcards (primary) */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">
-              Flashcards {cards?.length ? <span className="text-muted-foreground">· {cards.length}</span> : null}
+              {t('Flashcards', '字卡')}{' '}
+              {cards?.length ? <span className="text-muted-foreground">· {cards.length}</span> : null}
             </h3>
             {cards?.length ? (
               <div className="grid gap-2 sm:grid-cols-2">
@@ -99,11 +104,11 @@ export function DeckScreen() {
             ) : (
               <EmptyState
                 icon={<Layers className="size-6" />}
-                title="No flashcards in this deck"
-                description="Add a card, or let a connected AI create them."
+                title={t('No flashcards in this deck', '此牌組還沒有字卡')}
+                description={t('Add a card, or let a connected AI create them.', '新增一張字卡，或讓連接的 AI 為你建立。')}
                 action={
                   <Button variant="brand" size="sm" onClick={() => setCardOpen(true)}>
-                    <Plus className="size-4" /> New card
+                    <Plus className="size-4" /> {t('New card', '新增字卡')}
                   </Button>
                 }
               />
@@ -114,10 +119,11 @@ export function DeckScreen() {
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">
-                Notes {notes?.length ? <span className="text-muted-foreground">· {notes.length}</span> : null}
+                {t('Notes', '筆記')}{' '}
+                {notes?.length ? <span className="text-muted-foreground">· {notes.length}</span> : null}
               </h3>
               <Button variant="ghost" size="sm" onClick={newNote}>
-                <FilePlus2 className="size-4" /> Note
+                <FilePlus2 className="size-4" /> {t('Note', '筆記')}
               </Button>
             </div>
             {notes?.length ? (
@@ -137,7 +143,7 @@ export function DeckScreen() {
               </div>
             ) : (
               <p className="rounded-xl border border-dashed border-border px-4 py-4 text-[13px] text-muted-foreground">
-                No notes in this deck yet.
+                {t('No notes in this deck yet.', '此牌組還沒有筆記。')}
               </p>
             )}
           </section>

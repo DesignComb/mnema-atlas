@@ -17,8 +17,9 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
+import { useI18n } from '@/lib/i18n'
 import { useDecks } from '@/lib/hooks'
-import { cn } from '@/lib/utils'
+import { cn, modKey } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -30,11 +31,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const NAV = [
-  { to: '/', label: 'Today', icon: Home, exact: true },
-  { to: '/notes', label: 'Notes', icon: FileText, exact: false },
-  { to: '/cards', label: 'Flashcards', icon: Layers, exact: false },
-  { to: '/graph', label: 'Graph', icon: Share2, exact: false },
-  { to: '/study', label: 'Study', icon: GraduationCap, exact: false },
+  { to: '/', label: 'Today', zh: '今天', icon: Home, exact: true },
+  { to: '/notes', label: 'Notes', zh: '筆記', icon: FileText, exact: false },
+  { to: '/cards', label: 'Flashcards', zh: '閃卡', icon: Layers, exact: false },
+  { to: '/graph', label: 'Graph', zh: '圖譜', icon: Share2, exact: false },
+  { to: '/study', label: 'Study', zh: '複習', icon: GraduationCap, exact: false },
 ] as const
 
 export function AppSidebar({
@@ -48,6 +49,7 @@ export function AppSidebar({
 }) {
   const { user, signOut } = useAuth()
   const { theme, toggle } = useTheme()
+  const { t, lang, setLang } = useI18n()
   const { data: decks } = useDecks()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
@@ -70,9 +72,9 @@ export function AppSidebar({
           className="flex w-full items-center gap-2 rounded-md border border-transparent bg-sidebar-accent/60 px-2.5 py-1.5 text-[13px] text-muted-foreground transition hover:border-border hover:bg-card"
         >
           <Search className="size-3.5" />
-          <span>Search…</span>
+          <span>{t('Search…', '搜尋…')}</span>
           <kbd className="ml-auto rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            ⌘K
+            {modKey}K
           </kbd>
         </button>
       </div>
@@ -93,7 +95,7 @@ export function AppSidebar({
               )}
             >
               <item.icon className="size-4" />
-              {item.label}
+              {t(item.label, item.zh)}
             </Link>
           )
         })}
@@ -102,7 +104,7 @@ export function AppSidebar({
       {/* Decks */}
       <div className="flex items-center justify-between px-4 pt-4 pb-1">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-          Decks
+          {t('Decks', '牌組')}
         </span>
         <button
           onClick={onNewDeck}
@@ -136,7 +138,7 @@ export function AppSidebar({
             })
           ) : (
             <p className="px-2.5 py-2 text-[12.5px] leading-relaxed text-muted-foreground/70">
-              No decks yet. Create one, or let a connected AI add content.
+              {t('No decks yet. Create one, or let a connected AI add content.', '還沒有牌組。建立一個,或讓連接的 AI 幫你新增。')}
             </p>
           )}
         </div>
@@ -149,8 +151,15 @@ export function AppSidebar({
             to="/guide"
             className="flex flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium text-sidebar-foreground transition hover:bg-sidebar-accent hover:text-foreground"
           >
-            <HelpCircle className="size-4" /> How it works
+            <HelpCircle className="size-4" /> {t('How it works', '使用教學')}
           </Link>
+          <button
+            onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+            className="rounded-md px-2 py-1.5 text-[11px] font-semibold text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
+            title="Language / 語言"
+          >
+            {lang === 'zh' ? 'EN' : '中'}
+          </button>
           <button
             onClick={toggle}
             className="rounded-md p-1.5 text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
@@ -170,16 +179,16 @@ export function AppSidebar({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="top" className="w-56">
             <DropdownMenuItem onSelect={() => onOpenImport()}>
-              <Sparkles /> Import from AI
+              <Sparkles /> {t('Import from AI', '從 AI 匯入')}
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to="/settings/integrations">
-                <Plug /> Connect an AI
+                <Plug /> {t('Connect an AI', '連接 AI')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => void signOut()}>
-              <LogOut /> Sign out
+              <LogOut /> {t('Sign out', '登出')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

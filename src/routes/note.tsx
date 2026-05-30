@@ -9,10 +9,12 @@ import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { AskAiDialog } from '@/components/cards/AskAiDialog'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/lib/i18n'
 
 type SaveStatus = 'idle' | 'saving' | 'saved'
 
 export function NoteScreen() {
+  const t = useT()
   const { noteId } = useParams({ strict: false }) as { noteId: string }
   const { data: note, isLoading } = useNote(noteId)
   const { data: noteCards } = useCardsByNote(noteId)
@@ -43,22 +45,22 @@ export function NoteScreen() {
     if (!note || loadedId.current !== note.id) return
     if (title === note.title && body === note.body) return
     setStatus('saving')
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         await updateNote.mutateAsync({ note_id: note.id, title: title.trim() || 'Untitled', body })
         setStatus('saved')
       } catch (err) {
         setStatus('idle')
-        toast.error(err instanceof Error ? err.message : 'Failed to save')
+        toast.error(err instanceof Error ? err.message : t('Failed to save', '儲存失敗'))
       }
     }, 700)
-    return () => clearTimeout(t)
-  }, [title, body, note, updateNote])
+    return () => clearTimeout(timer)
+  }, [title, body, note, updateNote, t])
 
   if (isLoading) {
     return (
       <>
-        <PageHeader title="Note" />
+        <PageHeader title={t('Note', '筆記')} />
         <div className="mx-auto w-full max-w-3xl space-y-4 px-6 py-8">
           <div className="h-9 w-2/3 animate-pulse rounded bg-card" />
           <div className="h-64 animate-pulse rounded bg-card/60" />
@@ -68,28 +70,28 @@ export function NoteScreen() {
   }
 
   if (!note) {
-    return <PageHeader title="Note not found" subtitle="It may have been deleted." />
+    return <PageHeader title={t('Note not found', '找不到筆記')} subtitle={t('It may have been deleted.', '它可能已被刪除。')} />
   }
 
   return (
     <>
       <PageHeader
-        title={title || 'Untitled'}
+        title={title || t('Untitled', '未命名')}
         subtitle={<SaveIndicator status={status} />}
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
-              <Plus className="size-4" /> Add flashcard
+              <Plus className="size-4" /> {t('Add flashcard', '新增字卡')}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setAskOpen(true)}>
-              <Sparkles className="size-4" /> Ask AI
+              <Sparkles className="size-4" /> {t('Ask AI', '問 AI')}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onBlur={() => setConfirmDel(false)}
               className={confirmDel ? 'text-destructive' : 'text-muted-foreground'}
-              title="Delete note"
+              title={t('Delete note', '刪除筆記')}
               onClick={async () => {
                 if (!confirmDel) {
                   setConfirmDel(true)
@@ -97,15 +99,15 @@ export function NoteScreen() {
                 }
                 try {
                   await deleteNote.mutateAsync(note.id)
-                  toast.success('Note deleted')
+                  toast.success(t('Note deleted', '已刪除筆記'))
                   navigate({ to: '/notes' })
                 } catch (err) {
-                  toast.error(err instanceof Error ? err.message : 'Failed to delete note')
+                  toast.error(err instanceof Error ? err.message : t('Failed to delete note', '刪除筆記失敗'))
                 }
               }}
             >
               <Trash2 className="size-4" />
-              {confirmDel ? 'Delete note?' : null}
+              {confirmDel ? t('Delete note?', '確定刪除筆記？') : null}
             </Button>
           </>
         }
@@ -115,7 +117,7 @@ export function NoteScreen() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Untitled"
+            placeholder={t('Untitled', '未命名')}
             className="mb-4 w-full bg-transparent font-serif text-3xl font-semibold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/40"
           />
           <NoteEditor key={note.id} initialMarkdown={note.body} onChange={setBody} />
@@ -123,7 +125,7 @@ export function NoteScreen() {
           {noteCards && noteCards.length > 0 ? (
             <section className="mt-10 space-y-3 border-t border-border pt-6">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Layers className="size-4 text-muted-foreground" /> Flashcards from this note
+                <Layers className="size-4 text-muted-foreground" /> {t('Flashcards from this note', '此筆記的字卡')}
                 <span className="font-normal text-muted-foreground">· {noteCards.length}</span>
               </h3>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -151,21 +153,22 @@ export function NoteScreen() {
 }
 
 function SaveIndicator({ status }: { status: SaveStatus }) {
+  const t = useT()
   if (status === 'saving')
     return (
       <span className="flex items-center gap-1.5 text-muted-foreground">
-        <Loader2 className="size-3 animate-spin" /> Saving…
+        <Loader2 className="size-3 animate-spin" /> {t('Saving…', '儲存中…')}
       </span>
     )
   if (status === 'saved')
     return (
       <span className="flex items-center gap-1.5 text-brand">
-        <Check className="size-3" /> Saved
+        <Check className="size-3" /> {t('Saved', '已儲存')}
       </span>
     )
   return (
     <span className="flex items-center gap-1.5 text-muted-foreground">
-      <Cloud className="size-3" /> Autosaves as you type
+      <Cloud className="size-3" /> {t('Autosaves as you type', '輸入時自動儲存')}
     </span>
   )
 }

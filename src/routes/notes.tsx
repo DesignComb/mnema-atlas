@@ -5,29 +5,35 @@ import { useCreateNote, useNotes } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { relativeDue } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 
 export function NotesScreen() {
   const { data: notes, isLoading } = useNotes()
   const createNote = useCreateNote()
   const navigate = useNavigate()
+  const t = useT()
 
   async function newNote() {
     try {
       const note = await createNote.mutateAsync({ title: 'Untitled', body: '' })
       navigate({ to: '/notes/$noteId', params: { noteId: note.id } })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create note')
+      toast.error(err instanceof Error ? err.message : t('Failed to create note', '建立筆記失敗'))
     }
   }
 
   return (
     <>
       <PageHeader
-        title="Notes"
-        subtitle={notes ? `${notes.length} note${notes.length === 1 ? '' : 's'}` : undefined}
+        title={t('Notes', '筆記')}
+        subtitle={
+          notes
+            ? t(`${notes.length} note${notes.length === 1 ? '' : 's'}`, `${notes.length} 則筆記`)
+            : undefined
+        }
         actions={
           <Button variant="brand" size="sm" onClick={newNote} disabled={createNote.isPending}>
-            <FilePlus2 className="size-4" /> New note
+            <FilePlus2 className="size-4" /> {t('New note', '新增筆記')}
           </Button>
         }
       />
@@ -66,11 +72,14 @@ export function NotesScreen() {
           ) : (
             <EmptyState
               icon={<FileText className="size-6" />}
-              title="No notes yet"
-              description="Write your first study note, or connect an AI to generate notes and flashcards for you."
+              title={t('No notes yet', '還沒有筆記')}
+              description={t(
+                'Write your first study note, or connect an AI to generate notes and flashcards for you.',
+                '寫下你的第一則學習筆記，或連接 AI 為你自動產生筆記與字卡。',
+              )}
               action={
                 <Button variant="brand" size="sm" onClick={newNote}>
-                  <FilePlus2 className="size-4" /> New note
+                  <FilePlus2 className="size-4" /> {t('New note', '新增筆記')}
                 </Button>
               }
             />

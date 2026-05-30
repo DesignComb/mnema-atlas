@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateCard, useDecks, useDeleteCard, useUpdateCard } from '@/lib/hooks'
+import { useT } from '@/lib/i18n'
 import type { CardRow } from '@/lib/database.types'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -37,6 +38,7 @@ export function NewCardDialog({
   const updateCard = useUpdateCard()
   const deleteCard = useDeleteCard()
   const { data: decks } = useDecks()
+  const t = useT()
 
   useEffect(() => {
     if (open) {
@@ -56,14 +58,14 @@ export function NewCardDialog({
           id: card.id,
           patch: { front: front.trim(), back: back.trim(), deck_id: deckSel || null },
         })
-        toast.success('Flashcard updated')
+        toast.success(t('Flashcard updated', '已更新字卡'))
       } else {
         await createCard.mutateAsync({ front: front.trim(), back: back.trim(), note_id: noteId, deck_id: deckSel || undefined })
-        toast.success('Flashcard added — due now')
+        toast.success(t('Flashcard added — due now', '已新增字卡 — 立即到期'))
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save card')
+      toast.error(err instanceof Error ? err.message : t('Failed to save card', '儲存字卡失敗'))
     }
   }
 
@@ -75,10 +77,10 @@ export function NewCardDialog({
     }
     try {
       await deleteCard.mutateAsync(card.id)
-      toast.success('Flashcard deleted')
+      toast.success(t('Flashcard deleted', '已刪除字卡'))
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete card')
+      toast.error(err instanceof Error ? err.message : t('Failed to delete card', '刪除字卡失敗'))
     }
   }
 
@@ -88,23 +90,23 @@ export function NewCardDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit flashcard' : 'New flashcard'}</DialogTitle>
+          <DialogTitle>{editing ? t('Edit flashcard', '編輯字卡') : t('New flashcard', '新增字卡')}</DialogTitle>
           <DialogDescription>
             {editing
-              ? 'Changes apply immediately; FSRS scheduling is preserved.'
-              : 'It becomes due immediately and enters FSRS scheduling.'}
+              ? t('Changes apply immediately; FSRS scheduling is preserved.', '變更立即生效；FSRS 排程會保留。')
+              : t('It becomes due immediately and enters FSRS scheduling.', '字卡會立即到期並進入 FSRS 排程。')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="card-deck">Deck</Label>
+            <Label htmlFor="card-deck">{t('Deck', '牌組')}</Label>
             <select
               id="card-deck"
               value={deckSel}
               onChange={(e) => setDeckSel(e.target.value)}
               className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-brand"
             >
-              <option value="">No deck</option>
+              <option value="">{t('No deck', '無牌組')}</option>
               {decks?.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -113,12 +115,12 @@ export function NewCardDialog({
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="card-front">Front</Label>
-            <Textarea id="card-front" autoFocus value={front} onChange={(e) => setFront(e.target.value)} placeholder="Question / prompt" />
+            <Label htmlFor="card-front">{t('Front', '正面')}</Label>
+            <Textarea id="card-front" autoFocus value={front} onChange={(e) => setFront(e.target.value)} placeholder={t('Question / prompt', '問題 / 提示')} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="card-back">Back</Label>
-            <Textarea id="card-back" value={back} onChange={(e) => setBack(e.target.value)} placeholder="Answer" />
+            <Label htmlFor="card-back">{t('Back', '背面')}</Label>
+            <Textarea id="card-back" value={back} onChange={(e) => setBack(e.target.value)} placeholder={t('Answer', '答案')} />
           </div>
           <div className="flex items-center justify-between gap-2 pt-1">
             {editing ? (
@@ -128,17 +130,17 @@ export function NewCardDialog({
                 onClick={remove}
                 className={confirmDel ? 'text-destructive' : 'text-muted-foreground'}
               >
-                <Trash2 className="size-4" /> {confirmDel ? 'Confirm delete' : 'Delete'}
+                <Trash2 className="size-4" /> {confirmDel ? t('Confirm delete', '確認刪除') : t('Delete', '刪除')}
               </Button>
             ) : (
               <span />
             )}
             <div className="flex gap-2">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t('Cancel', '取消')}
               </Button>
               <Button type="submit" variant="brand" disabled={pending || !front.trim() || !back.trim()}>
-                {pending ? 'Saving…' : editing ? 'Save' : 'Add card'}
+                {pending ? t('Saving…', '儲存中…') : editing ? t('Save', '儲存') : t('Add card', '新增字卡')}
               </Button>
             </div>
           </div>

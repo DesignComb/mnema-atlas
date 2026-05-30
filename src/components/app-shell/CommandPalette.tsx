@@ -3,6 +3,7 @@ import { Command } from 'cmdk'
 import { useNavigate } from '@tanstack/react-router'
 import { FilePlus2, FolderPlus, GraduationCap, Home, Plug, Search, Share2, Sparkles } from 'lucide-react'
 import { useDecks, useNotes } from '@/lib/hooks'
+import { useT } from '@/lib/i18n'
 
 export function CommandPalette({
   open,
@@ -20,6 +21,7 @@ export function CommandPalette({
   const navigate = useNavigate()
   const { data: decks } = useDecks()
   const { data: notes } = useNotes()
+  const t = useT()
 
   function run(fn: () => void) {
     onOpenChange(false)
@@ -37,47 +39,47 @@ export function CommandPalette({
       <div className="flex items-center gap-2 border-b border-border px-3.5">
         <Search className="size-4 text-muted-foreground" />
         <Command.Input
-          placeholder="Search notes, decks, or run a command…"
+          placeholder={t('Search notes, decks, or run a command…', '搜尋筆記、牌組或執行指令…')}
           className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
         />
       </div>
       <Command.List className="max-h-80 overflow-y-auto p-2">
         <Command.Empty className="px-3 py-8 text-center text-sm text-muted-foreground">
-          No results.
+          {t('No results.', '沒有結果。')}
         </Command.Empty>
 
-        <Command.Group heading="Actions" className="cmdk-group">
+        <Command.Group heading={t('Actions', '動作')} className="cmdk-group">
           <Item onSelect={() => run(onNewNote)} icon={<FilePlus2 className="size-4" />}>
-            New note
+            {t('New note', '新增筆記')}
           </Item>
           <Item onSelect={() => run(onNewDeck)} icon={<FolderPlus className="size-4" />}>
-            New deck
+            {t('New deck', '新增牌組')}
           </Item>
           <Item onSelect={() => run(onImport)} icon={<Sparkles className="size-4" />}>
-            Import from AI
+            {t('Import from AI', '從 AI 匯入')}
           </Item>
           <Item onSelect={() => run(() => navigate({ to: '/study' }))} icon={<GraduationCap className="size-4" />}>
-            Start studying
+            {t('Start studying', '開始學習')}
           </Item>
         </Command.Group>
 
-        <Command.Group heading="Go to" className="cmdk-group">
+        <Command.Group heading={t('Go to', '前往')} className="cmdk-group">
           <Item onSelect={() => run(() => navigate({ to: '/' }))} icon={<Home className="size-4" />}>
-            Today
+            {t('Today', '今天')}
           </Item>
           <Item onSelect={() => run(() => navigate({ to: '/graph' }))} icon={<Share2 className="size-4" />}>
-            Graph
+            {t('Graph', '圖譜')}
           </Item>
           <Item
             onSelect={() => run(() => navigate({ to: '/settings/integrations' }))}
             icon={<Plug className="size-4" />}
           >
-            Connect an AI
+            {t('Connect an AI', '連接 AI')}
           </Item>
         </Command.Group>
 
         {decks?.length ? (
-          <Command.Group heading="Decks" className="cmdk-group">
+          <Command.Group heading={t('Decks', '牌組')} className="cmdk-group">
             {decks.map((d) => (
               <Item
                 key={d.id}
@@ -90,7 +92,7 @@ export function CommandPalette({
         ) : null}
 
         {notes?.length ? (
-          <Command.Group heading="Notes" className="cmdk-group">
+          <Command.Group heading={t('Notes', '筆記')} className="cmdk-group">
             {notes.slice(0, 12).map((n) => (
               <Item
                 key={n.id}

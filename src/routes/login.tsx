@@ -4,6 +4,7 @@ import { BookOpenCheck, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/lib/i18n'
 
 /** Google "G" mark (lucide ships no brand icons). */
 function GoogleIcon({ className }: { className?: string }) {
@@ -18,6 +19,7 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function LoginScreen() {
+  const t = useT()
   const { signInWithGoogle } = useAuth()
   const [busy, setBusy] = useState(false)
 
@@ -28,7 +30,7 @@ export function LoginScreen() {
       // already authenticated, so there's nothing to navigate to here.
       await signInWithGoogle()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not start Google sign-in')
+      toast.error(err instanceof Error ? err.message : t('Could not start Google sign-in', '無法啟動 Google 登入'))
       setBusy(false)
     }
   }
@@ -46,14 +48,16 @@ export function LoginScreen() {
         </div>
         <div className="relative max-w-md space-y-4">
           <h2 className="font-serif text-3xl leading-tight text-foreground">
-            Your notes, distilled into memory.
+            {t('Your notes, distilled into memory.', '把筆記，淬煉成記憶。')}
           </h2>
           <p className="text-[15px] leading-relaxed text-muted-foreground">
-            Capture study notes, review them as spaced-repetition flashcards, and watch ideas connect in a
-            living graph. Let any AI assistant fill your decks for you — through a tool, not a chatbot.
+            {t(
+              'Capture study notes, review them as spaced-repetition flashcards, and watch ideas connect in a living graph. Let any AI assistant fill your decks for you — through a tool, not a chatbot.',
+              '記錄學習筆記，以間隔重複字卡複習，並在動態知識圖中看見概念彼此串連。讓任何 AI 助理為你填充牌組——透過工具，而非聊天機器人。',
+            )}
           </p>
         </div>
-        <div className="relative text-xs text-muted-foreground/70">FSRS spaced repetition · MCP · Knowledge graph</div>
+        <div className="relative text-xs text-muted-foreground/70">{t('FSRS spaced repetition · MCP · Knowledge graph', 'FSRS 間隔重複 · MCP · 知識圖譜')}</div>
       </div>
 
       {/* Right — sign in */}
@@ -71,8 +75,8 @@ export function LoginScreen() {
             </div>
           </div>
           <div className="space-y-1.5">
-            <h1 className="text-2xl font-semibold tracking-tight">Welcome</h1>
-            <p className="text-sm text-muted-foreground">Sign in with Google to start studying.</p>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('Welcome', '歡迎')}</h1>
+            <p className="text-sm text-muted-foreground">{t('Sign in with Google to start studying.', '使用 Google 登入即可開始學習。')}</p>
           </div>
 
           <Button
@@ -83,12 +87,14 @@ export function LoginScreen() {
             disabled={busy}
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : <GoogleIcon className="size-4" />}
-            Continue with Google
+            {t('Continue with Google', '使用 Google 繼續')}
           </Button>
 
           <p className="text-center text-xs leading-relaxed text-muted-foreground/80">
-            We only use your Google account to sign you in. By continuing you agree to let Mnema Atlas
-            store the notes and flashcards you (or your AI assistants) create.
+            {t(
+              'We only use your Google account to sign you in. By continuing you agree to let Mnema Atlas store the notes and flashcards you (or your AI assistants) create.',
+              '我們僅使用你的 Google 帳號為你登入。繼續即表示你同意讓 Mnema Atlas 儲存你（或你的 AI 助理）建立的筆記與字卡。',
+            )}
           </p>
         </motion.div>
       </div>

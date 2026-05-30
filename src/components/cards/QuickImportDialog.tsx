@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { parseMnema } from '@/lib/import/parseMnema'
 import * as api from '@/lib/api'
 import { useDecks } from '@/lib/hooks'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -36,6 +37,7 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
   const qc = useQueryClient()
   const navigate = useNavigate()
   const { data: decks } = useDecks()
+  const t = useT()
 
   const parsed = useMemo(() => (text.trim() ? parseMnema(text) : null), [text])
   const data = parsed?.ok ? parsed.data : undefined
@@ -71,14 +73,19 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
       }
 
       await qc.invalidateQueries()
-      toast.success(`Imported ${data.notes.length} note(s) and ${data.cards.length} card(s)`)
+      toast.success(
+        t(
+          `Imported ${data.notes.length} note(s) and ${data.cards.length} card(s)`,
+          `已匯入 ${data.notes.length} 則筆記與 ${data.cards.length} 張字卡`,
+        ),
+      )
       setText('')
       onOpenChange(false)
       if (deckId) navigate({ to: '/decks/$deckId', params: { deckId } })
       else if (data.notes.length) navigate({ to: '/notes' })
       else navigate({ to: '/cards' })
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Import failed')
+      toast.error(e instanceof Error ? e.message : t('Import failed', '匯入失敗'))
     } finally {
       setBusy(false)
     }
@@ -88,9 +95,9 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Import from AI</DialogTitle>
+          <DialogTitle>{t('Import from AI', '從 AI 匯入')}</DialogTitle>
           <DialogDescription>
-            Paste a <code className="rounded bg-muted px-1">mnema</code> block from ChatGPT, Gemini, or any AI.
+            {t('Paste a ', '貼上來自 ChatGPT、Gemini 或任何 AI 的 ')}<code className="rounded bg-muted px-1">mnema</code>{t(' block from ChatGPT, Gemini, or any AI.', ' 區塊。')}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,17 +105,17 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
           type="button"
           onClick={() => {
             void navigator.clipboard.writeText(PREAMBLE)
-            toast.success('Prompt copied — paste it into your AI chat first')
+            toast.success(t('Prompt copied — paste it into your AI chat first', '已複製提示詞 — 請先貼到你的 AI 對話中'))
           }}
           className="flex items-center gap-1.5 self-start text-[13px] font-medium text-brand hover:underline"
         >
-          <Copy className="size-3.5" /> Copy the prompt to give your AI
+          <Copy className="size-3.5" /> {t('Copy the prompt to give your AI', '複製要給 AI 的提示詞')}
         </button>
 
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={'Paste the AI\'s reply here…'}
+          placeholder={t('Paste the AI\'s reply here…', '在這裡貼上 AI 的回覆…')}
           className="min-h-32 font-mono text-xs"
         />
 
@@ -122,16 +129,18 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
           <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 p-3 text-[13px]">
             {data.deck ? (
               <p className="flex items-center gap-2">
-                <Layers className="size-3.5 text-brand" /> Deck: <strong className="font-medium">{data.deck}</strong>
+                <Layers className="size-3.5 text-brand" /> {t('Deck:', '牌組：')} <strong className="font-medium">{data.deck}</strong>
               </p>
             ) : null}
             <p className="flex items-center gap-2 text-muted-foreground">
-              <FileText className="size-3.5" /> {data.notes.length} note(s) · {data.cards.length} card(s)
+              <FileText className="size-3.5" /> {t(`${data.notes.length} note(s) · ${data.cards.length} card(s)`, `${data.notes.length} 則筆記 · ${data.cards.length} 張字卡`)}
             </p>
             {unknownRefs > 0 ? (
               <p className="flex items-start gap-1.5 text-amber-600">
-                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" /> {unknownRefs} card(s) reference a note not in
-                this import — they'll be created unlinked.
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" /> {t(
+                  `${unknownRefs} card(s) reference a note not in this import — they'll be created unlinked.`,
+                  `${unknownRefs} 張字卡參照了此次匯入中沒有的筆記 — 它們將不會連結。`,
+                )}
               </p>
             ) : null}
           </div>
@@ -139,12 +148,12 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('Cancel', '取消')}
           </Button>
           <Button variant="brand" disabled={!data || busy} onClick={runImport}>
-            {busy ? 'Importing…' : (
+            {busy ? t('Importing…', '匯入中…') : (
               <>
-                <Sparkles className="size-4" /> Import
+                <Sparkles className="size-4" /> {t('Import', '匯入')}
               </>
             )}
           </Button>

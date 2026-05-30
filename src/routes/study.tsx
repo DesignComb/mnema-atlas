@@ -12,6 +12,7 @@ import type { CardRow } from '@/lib/database.types'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 
 const TONE: Record<string, string> = {
   again: 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100',
@@ -21,6 +22,7 @@ const TONE: Record<string, string> = {
 }
 
 export function StudyScreen() {
+  const t = useT()
   const params = useParams({ strict: false }) as { deckId?: string }
   const deckId = params.deckId
   const { data: decks } = useDecks()
@@ -39,7 +41,7 @@ export function StudyScreen() {
 
   const current = queue?.[idx]
   const total = queue?.length ?? 0
-  const deckName = deckId ? decks?.find((d) => d.id === deckId)?.name : 'All decks'
+  const deckName = deckId ? decks?.find((d) => d.id === deckId)?.name : t('All decks', '所有牌組')
 
   const gradeCurrent = useCallback(
     (rating: Grade) => {
@@ -47,13 +49,13 @@ export function StudyScreen() {
       const { card, log } = grade(current, rating)
       // Optimistically advance; persist in the background.
       recordReview(current.id, card, log).catch((err) =>
-        toast.error(err instanceof Error ? err.message : 'Failed to save review'),
+        toast.error(err instanceof Error ? err.message : t('Failed to save review', '儲存複習紀錄失敗')),
       )
       setReviewed((r) => r + 1)
       setFlipped(false)
       setIdx((i) => i + 1)
     },
-    [current],
+    [current, t],
   )
 
   // When the session ends, refresh due counts everywhere.
@@ -94,7 +96,7 @@ export function StudyScreen() {
   return (
     <>
       <PageHeader
-        title="Study"
+        title={t('Study', '學習')}
         subtitle={deckName ?? undefined}
         icon={<Sparkles className="size-4" />}
         actions={
@@ -123,11 +125,14 @@ export function StudyScreen() {
         ) : total === 0 ? (
           <EmptyState
             icon={<PartyPopper className="size-6" />}
-            title="Nothing due right now"
-            description="You're all caught up. New cards (including ones added by AI) appear here the moment they're created."
+            title={t('Nothing due right now', '目前沒有待複習的字卡')}
+            description={t(
+              "You're all caught up. New cards (including ones added by AI) appear here the moment they're created.",
+              '你已全部複習完畢。新字卡（包括 AI 新增的）一建立就會出現在這裡。',
+            )}
             action={
               <Button asChild variant="outline" size="sm">
-                <Link to="/">Back to Today</Link>
+                <Link to="/">{t('Back to Today', '回到今天')}</Link>
               </Button>
             }
           />
@@ -141,13 +146,16 @@ export function StudyScreen() {
               <Check className="size-8" />
             </div>
             <div className="space-y-1">
-              <h2 className="font-serif text-2xl text-foreground">Session complete</h2>
+              <h2 className="font-serif text-2xl text-foreground">{t('Session complete', '本次學習完成')}</h2>
               <p className="text-sm text-muted-foreground">
-                You reviewed {reviewed} card{reviewed === 1 ? '' : 's'}. Nicely done.
+                {t(
+                  `You reviewed ${reviewed} card${reviewed === 1 ? '' : 's'}. Nicely done.`,
+                  `你複習了 ${reviewed} 張字卡，做得很好。`,
+                )}
               </p>
             </div>
             <Button asChild variant="brand">
-              <Link to="/">Back to Today</Link>
+              <Link to="/">{t('Back to Today', '回到今天')}</Link>
             </Button>
           </motion.div>
         ) : current ? (
@@ -193,7 +201,7 @@ export function StudyScreen() {
             <div className="mt-6">
               {!flipped ? (
                 <Button variant="brand" className="w-full" size="lg" onClick={() => setFlipped(true)}>
-                  Show answer
+                  {t('Show answer', '顯示答案')}
                   <kbd className="ml-1 rounded bg-brand-foreground/20 px-1.5 text-[11px]">Space</kbd>
                 </Button>
               ) : (
@@ -223,7 +231,7 @@ export function StudyScreen() {
 
             <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
               <Keyboard className="size-3.5" />
-              Space to reveal · 1–4 to grade
+              {t('Space to reveal · 1–4 to grade', '空白鍵顯示答案 · 1–4 評分')}
             </p>
           </div>
         ) : null}
