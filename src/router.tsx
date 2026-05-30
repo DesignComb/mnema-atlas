@@ -15,6 +15,8 @@ import { DeckScreen } from '@/routes/deck'
 import { StudyScreen } from '@/routes/study'
 import { GraphScreen } from '@/routes/graph'
 import { ApiKeysScreen } from '@/routes/api-keys'
+import { ConnectScreen } from '@/routes/connect'
+import { ToolsScreen } from '@/routes/tools'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -65,6 +67,16 @@ const apiKeysRoute = createRoute({
   path: 'settings/keys',
   component: ApiKeysScreen,
 })
+const connectRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'settings/connect',
+  component: ConnectScreen,
+})
+const toolsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'settings/tools',
+  component: ToolsScreen,
+})
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
@@ -77,6 +89,8 @@ const routeTree = rootRoute.addChildren([
     studyDeckRoute,
     graphRoute,
     apiKeysRoute,
+    connectRoute,
+    toolsRoute,
   ]),
 ])
 

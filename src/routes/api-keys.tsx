@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { relativeDue } from '@/lib/utils'
+import { MCP_URL, REST_URL } from '@/lib/endpoints'
 import {
   Dialog,
   DialogContent,
@@ -16,9 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-
-const MCP_URL = import.meta.env.VITE_MCP_URL ?? 'https://<your-worker>.workers.dev/mcp'
-const REST_URL = import.meta.env.VITE_REST_URL ?? 'https://<your-worker>.workers.dev/rest'
 
 export function ApiKeysScreen() {
   const qc = useQueryClient()

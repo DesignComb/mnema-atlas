@@ -2,15 +2,29 @@ import { Hono } from 'hono'
 import { authenticate } from './auth'
 import { handleMcpRequest } from './mcp'
 import { rest } from './rest'
+import { buildOpenApiSpec } from './openapi'
+import { buildLlmsTxt } from './llms'
+import { discoveryIndex } from './discovery'
 import type { Env } from './env'
 
 const app = new Hono<{ Bindings: Env }>()
 
+const reqOrigin = (url: string) => new URL(url).origin
+
 app.get('/healthz', (c) => c.json({ ok: true, service: 'mnema-atlas-worker' }))
 
+// ── Public, keyless discovery surface ────────────────────────────────────────
+// Lets any agent bootstrap (read the tools + how to auth) before it has a key.
 app.get('/', (c) =>
-  c.text('Mnema Atlas worker. Endpoints: POST /mcp (MCP Streamable HTTP), /rest (REST API), /healthz'),
+  c.json(discoveryIndex(reqOrigin(c.req.url)), 200, {
+    'X-Mnema-Docs': `${reqOrigin(c.req.url)}/openapi.json`,
+  }),
 )
+app.get('/openapi.json', (c) => c.json(buildOpenApiSpec(reqOrigin(c.req.url))))
+app.get('/llms.txt', (c) =>
+  c.text(buildLlmsTxt(reqOrigin(c.req.url)), 200, { 'Content-Type': 'text/plain; charset=utf-8' }),
+)
+app.get('/.well-known/mnema', (c) => c.json(discoveryIndex(reqOrigin(c.req.url))))
 
 /**
  * MCP endpoint (Streamable HTTP, stateless).

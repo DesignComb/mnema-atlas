@@ -6,9 +6,11 @@ import {
   Home,
   KeyRound,
   LogOut,
+  Plug,
   Plus,
   Search,
   Share2,
+  Wrench,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useDecks } from '@/lib/hooks'
@@ -148,8 +150,18 @@ export function AppSidebar({
             <DropdownMenuLabel>Signed in</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
+              <Link to="/settings/connect">
+                <Plug /> Connect an AI
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
               <Link to="/settings/keys">
-                <KeyRound /> API keys & MCP
+                <KeyRound /> API keys
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/settings/tools">
+                <Wrench /> Tools
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

@@ -12,7 +12,10 @@ export const rest = new Hono<{ Bindings: Env; Variables: { userId: string; scope
 
 rest.use('*', async (c, next) => {
   const auth = await authenticate(c.env, c.req.raw)
-  if (!auth) return c.json({ error: 'unauthorized: send a valid Bearer API key' }, 401)
+  if (!auth)
+    return c.json({ error: 'unauthorized: send a valid Bearer API key' }, 401, {
+      'WWW-Authenticate': 'Bearer realm="mnema-atlas"',
+    })
   c.set('userId', auth.userId)
   c.set('scopes', auth.scopes)
   await next()

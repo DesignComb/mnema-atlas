@@ -123,6 +123,27 @@ export async function createCard(input: CreateFlashcardInput): Promise<CardRow> 
   )
 }
 
+/** Bulk-create flashcards in one round-trip (used by the AI paste-import). */
+export interface BulkCardInput {
+  front: string
+  back: string
+  note_id?: string | null
+  deck_id?: string | null
+}
+export async function createFlashcardsBulk(
+  cards: BulkCardInput[],
+  deckId?: string | null,
+): Promise<CardRow[]> {
+  return unwrap(
+    await supabase.rpc('create_flashcards_bulk', {
+      p_user_id: null,
+      p_cards: cards,
+      p_deck_id: deckId ?? null,
+      p_created_via: 'ui',
+    }),
+  )
+}
+
 export async function linkNotes(input: LinkNotesInput): Promise<NoteLinkRow> {
   return unwrap(
     await supabase.rpc('link_notes', {
