@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { authenticate } from './auth'
 import { handleMcpRequest } from './mcp'
 import { rest } from './rest'
@@ -8,6 +9,12 @@ import { discoveryIndex } from './discovery'
 import type { Env } from './env'
 
 const app = new Hono<{ Bindings: Env }>()
+
+// Let browser clients (the in-app Tools page, bookmarklets) call the API cross-origin.
+app.use(
+  '*',
+  cors({ origin: '*', allowHeaders: ['Authorization', 'Content-Type'], allowMethods: ['GET', 'POST', 'OPTIONS'] }),
+)
 
 const reqOrigin = (url: string) => new URL(url).origin
 

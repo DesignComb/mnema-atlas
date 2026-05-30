@@ -38,7 +38,7 @@
 
   --font-sans: 'Inter', 'Noto Sans TC', ui-sans-serif, system-ui, -apple-system,
     'Segoe UI', Roboto, sans-serif;
-  --font-serif: 'Lora', 'Noto Sans TC', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-serif: 'Lora', 'Noto Serif TC', 'Noto Sans TC', ui-serif, Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
 
   --radius-sm: calc(var(--radius) - 4px);

@@ -3,6 +3,7 @@ import {
   BookOpenCheck,
   FileText,
   GraduationCap,
+  HelpCircle,
   Home,
   KeyRound,
   Layers,
@@ -154,6 +155,11 @@ export function AppSidebar({
           <DropdownMenuContent align="start" side="top" className="w-56">
             <DropdownMenuLabel>Signed in</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/guide">
+                <HelpCircle /> How it works
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onOpenImport()}>
               <Sparkles /> Import from AI
             </DropdownMenuItem>
