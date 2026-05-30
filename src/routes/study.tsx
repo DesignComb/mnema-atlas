@@ -179,7 +179,7 @@ export function StudyScreen() {
                       className="border-t border-border"
                     >
                       <div className="px-8 py-8 text-center">
-                        <p className="whitespace-pre-wrap text-[17px] leading-relaxed text-foreground">
+                        <p className="whitespace-pre-wrap font-serif text-[17px] leading-relaxed text-foreground">
                           {current.back}
                         </p>
                       </div>

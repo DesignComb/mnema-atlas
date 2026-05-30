@@ -4,6 +4,15 @@ import { useCards, useDecks, useDueCards, useSeedSample } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 
+function StateTile({ label, n, cls }: { label: string; n: number; cls: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-center shadow-soft">
+      <p className={`text-xl font-semibold tabular-nums ${cls}`}>{n}</p>
+      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+    </div>
+  )
+}
+
 export function CardsScreen() {
   const { data: cards } = useCards()
   const { data: due } = useDueCards()
@@ -19,6 +28,10 @@ export function CardsScreen() {
   due?.forEach((c) => {
     const k = c.deck_id ?? 'none'
     dueByDeck.set(k, (dueByDeck.get(k) ?? 0) + 1)
+  })
+  const byState: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 }
+  cards?.forEach((c) => {
+    byState[c.state] = (byState[c.state] ?? 0) + 1
   })
 
   const totalDue = due?.length ?? 0
@@ -57,6 +70,13 @@ export function CardsScreen() {
             />
           ) : (
             <>
+              {/* Learning-status overview */}
+              <div className="mb-1.5 grid grid-cols-4 gap-2">
+                <StateTile label="New" n={byState[0]} cls="text-sky-600 dark:text-sky-300" />
+                <StateTile label="Learning" n={byState[1] + byState[3]} cls="text-amber-600 dark:text-amber-300" />
+                <StateTile label="Review" n={byState[2]} cls="text-emerald-600 dark:text-emerald-300" />
+                <StateTile label="Due now" n={totalDue} cls="text-brand" />
+              </div>
               {deckList.map((d) => {
                 const n = countByDeck.get(d.id) ?? 0
                 const dd = dueByDeck.get(d.id) ?? 0

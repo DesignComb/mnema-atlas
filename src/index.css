@@ -95,6 +95,48 @@
   --sidebar-border: oklch(0.925 0.004 75);
 }
 
+/* Dark theme — applied via .dark on <html> (see src/lib/theme.tsx). Warm ink-on-charcoal. */
+.dark {
+  --background: oklch(0.205 0.012 70);
+  --foreground: oklch(0.92 0.008 85);
+
+  --card: oklch(0.245 0.012 70);
+  --card-foreground: oklch(0.92 0.008 85);
+  --popover: oklch(0.255 0.012 70);
+  --popover-foreground: oklch(0.92 0.008 85);
+
+  --primary: oklch(0.92 0.008 85);
+  --primary-foreground: oklch(0.245 0.012 70);
+
+  --secondary: oklch(0.3 0.012 70);
+  --secondary-foreground: oklch(0.92 0.008 85);
+
+  --muted: oklch(0.3 0.012 70);
+  --muted-foreground: oklch(0.7 0.012 80);
+
+  --accent: oklch(0.33 0.03 250);
+  --accent-foreground: oklch(0.9 0.05 250);
+
+  --destructive: oklch(0.62 0.19 24);
+  --destructive-foreground: oklch(0.98 0.003 95);
+
+  --border: oklch(0.32 0.01 72);
+  --input: oklch(0.32 0.01 72);
+  --ring: oklch(0.62 0.1 250);
+
+  --brand: oklch(0.72 0.12 250);
+  --brand-foreground: oklch(0.2 0.02 250);
+  --brand-muted: oklch(0.34 0.055 250);
+
+  --sidebar: oklch(0.235 0.012 70);
+  --sidebar-foreground: oklch(0.8 0.01 80);
+  --sidebar-accent: oklch(0.3 0.012 70);
+  --sidebar-border: oklch(0.32 0.01 72);
+
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 0.2), 0 4px 16px oklch(0 0 0 / 0.28);
+  --shadow-pop: 0 2px 6px oklch(0 0 0 / 0.3), 0 10px 32px oklch(0 0 0 / 0.42);
+}
+
 @layer base {
   * {
     border-color: var(--border);
@@ -157,8 +199,10 @@
 }
 
 /* ── Note editor (ProseMirror) typography ── */
+/* Body content uses the serif stack so it reads cohesively with the serif headings. */
 .mnema-prose {
-  font-size: 16px;
+  font-family: var(--font-serif);
+  font-size: 16.5px;
   line-height: 1.75;
   color: var(--foreground);
 }

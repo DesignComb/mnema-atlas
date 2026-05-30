@@ -105,6 +105,47 @@ export function useSeedSample() {
   })
 }
 
+export function useUpdateCard() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; patch: Parameters<typeof api.updateCard>[1] }) => api.updateCard(v.id, v.patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cards'] })
+      qc.invalidateQueries({ queryKey: ['cards-by-note'] })
+      qc.invalidateQueries({ queryKey: ['due'] })
+    },
+  })
+}
+export function useDeleteCard() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteCard(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cards'] })
+      qc.invalidateQueries({ queryKey: ['cards-by-note'] })
+      qc.invalidateQueries({ queryKey: ['due'] })
+    },
+  })
+}
+export function useDeleteNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteNote(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notes'] })
+      qc.invalidateQueries({ queryKey: qk.graph })
+      qc.invalidateQueries({ queryKey: ['cards-by-note'] })
+    },
+  })
+}
+export function useDeleteDeck() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteDeck(id),
+    onSuccess: () => qc.invalidateQueries(),
+  })
+}
+
 /** Create a blank note and open it (deduped from deck/notes/home). */
 export function useNewNote() {
   const navigate = useNavigate()

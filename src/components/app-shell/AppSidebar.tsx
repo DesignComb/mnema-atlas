@@ -7,13 +7,16 @@ import {
   Home,
   Layers,
   LogOut,
+  Moon,
   Plug,
   Plus,
   Search,
   Share2,
   Sparkles,
+  Sun,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
+import { useTheme } from '@/lib/theme'
 import { useDecks } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -44,6 +47,7 @@ export function AppSidebar({
   onOpenImport: () => void
 }) {
   const { user, signOut } = useAuth()
+  const { theme, toggle } = useTheme()
   const { data: decks } = useDecks()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
@@ -140,12 +144,21 @@ export function AppSidebar({
 
       {/* Footer: pinned guide + user menu */}
       <div className="space-y-0.5 border-t border-sidebar-border p-2">
-        <Link
-          to="/guide"
-          className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium text-sidebar-foreground transition hover:bg-sidebar-accent hover:text-foreground"
-        >
-          <HelpCircle className="size-4" /> How it works
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            to="/guide"
+            className="flex flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium text-sidebar-foreground transition hover:bg-sidebar-accent hover:text-foreground"
+          >
+            <HelpCircle className="size-4" /> How it works
+          </Link>
+          <button
+            onClick={toggle}
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
+            title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+          >
+            {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition hover:bg-sidebar-accent">

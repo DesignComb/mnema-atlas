@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from '@tanstack/react-router'
-import { Check, Cloud, Layers, Loader2, Plus } from 'lucide-react'
+import { useNavigate, useParams } from '@tanstack/react-router'
+import { Check, Cloud, Layers, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCardsByNote, useNote, useUpdateNote } from '@/lib/hooks'
+import { useCardsByNote, useDeleteNote, useNote, useUpdateNote } from '@/lib/hooks'
 import { NoteEditor } from '@/components/editor/NoteEditor'
 import { NewCardDialog } from '@/components/cards/NewCardDialog'
+import { FlashcardTile } from '@/components/cards/FlashcardTile'
+import { AskAiDialog } from '@/components/cards/AskAiDialog'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
-import { relativeDue } from '@/lib/utils'
 
 type SaveStatus = 'idle' | 'saving' | 'saved'
 
@@ -16,11 +17,15 @@ export function NoteScreen() {
   const { data: note, isLoading } = useNote(noteId)
   const { data: noteCards } = useCardsByNote(noteId)
   const updateNote = useUpdateNote()
+  const deleteNote = useDeleteNote()
+  const navigate = useNavigate()
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [cardOpen, setCardOpen] = useState(false)
+  const [askOpen, setAskOpen] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
   const loadedId = useRef<string | null>(null)
 
   // Initialise local state once per note.
@@ -72,9 +77,37 @@ export function NoteScreen() {
         title={title || 'Untitled'}
         subtitle={<SaveIndicator status={status} />}
         actions={
-          <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
-            <Plus className="size-4" /> Add flashcard
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
+              <Plus className="size-4" /> Add flashcard
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAskOpen(true)}>
+              <Sparkles className="size-4" /> Ask AI
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onBlur={() => setConfirmDel(false)}
+              className={confirmDel ? 'text-destructive' : 'text-muted-foreground'}
+              title="Delete note"
+              onClick={async () => {
+                if (!confirmDel) {
+                  setConfirmDel(true)
+                  return
+                }
+                try {
+                  await deleteNote.mutateAsync(note.id)
+                  toast.success('Note deleted')
+                  navigate({ to: '/notes' })
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Failed to delete note')
+                }
+              }}
+            >
+              <Trash2 className="size-4" />
+              {confirmDel ? 'Delete note?' : null}
+            </Button>
+          </>
         }
       />
       <div className="flex-1 overflow-y-auto">
@@ -95,11 +128,7 @@ export function NoteScreen() {
               </h3>
               <div className="grid gap-2 sm:grid-cols-2">
                 {noteCards.map((c) => (
-                  <div key={c.id} className="rounded-xl border border-border bg-card p-3.5 shadow-soft">
-                    <p className="line-clamp-2 text-sm font-medium text-foreground">{c.front}</p>
-                    <p className="mt-1 line-clamp-2 text-[13px] text-muted-foreground">{c.back}</p>
-                    <p className="mt-2 text-[11px] text-muted-foreground/80">due {relativeDue(c.due)}</p>
-                  </div>
+                  <FlashcardTile key={c.id} card={c} />
                 ))}
               </div>
             </section>
@@ -111,6 +140,11 @@ export function NoteScreen() {
         onOpenChange={setCardOpen}
         noteId={note.id}
         deckId={note.deck_id ?? undefined}
+      />
+      <AskAiDialog
+        open={askOpen}
+        onOpenChange={setAskOpen}
+        prompt={`Make concise spaced-repetition flashcards from the note below. Reply with ONLY a fenced code block tagged mnema containing JSON like {"cards":[{"front":"...","back":"...","note":"${title || 'Untitled'}"}]}.\n\nNote "${title || 'Untitled'}":\n${body}`}
       />
     </>
   )

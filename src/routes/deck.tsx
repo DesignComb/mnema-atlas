@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
-import { FilePlus2, FileText, GraduationCap, Layers, Plus } from 'lucide-react'
+import { FilePlus2, FileText, GraduationCap, Layers, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCards, useCreateNote, useDecks, useDueCards, useNotes } from '@/lib/hooks'
+import { useCards, useCreateNote, useDecks, useDeleteDeck, useDueCards, useNotes } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { NewCardDialog } from '@/components/cards/NewCardDialog'
+import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { Button } from '@/components/ui/button'
 import { relativeDue } from '@/lib/utils'
 
@@ -15,8 +16,24 @@ export function DeckScreen() {
   const { data: cards } = useCards(deckId)
   const { data: due } = useDueCards(deckId)
   const createNote = useCreateNote()
+  const deleteDeck = useDeleteDeck()
   const navigate = useNavigate()
   const [cardOpen, setCardOpen] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+
+  async function removeDeck() {
+    if (!confirmDel) {
+      setConfirmDel(true)
+      return
+    }
+    try {
+      await deleteDeck.mutateAsync(deckId)
+      toast.success('Deck deleted — its notes & cards were kept, just unfiled')
+      navigate({ to: '/cards' })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete deck')
+    }
+  }
 
   const deck = decks?.find((d) => d.id === deckId)
   const dueCount = due?.length ?? 0
@@ -52,6 +69,17 @@ export function DeckScreen() {
                 </Link>
               </Button>
             ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={removeDeck}
+              onBlur={() => setConfirmDel(false)}
+              className={confirmDel ? 'text-destructive' : 'text-muted-foreground'}
+              title="Delete deck"
+            >
+              <Trash2 className="size-4" />
+              {confirmDel ? 'Delete deck?' : null}
+            </Button>
           </>
         }
       />
@@ -64,32 +92,9 @@ export function DeckScreen() {
             </h3>
             {cards?.length ? (
               <div className="grid gap-2 sm:grid-cols-2">
-                {cards.map((c) => {
-                  const fromTitle = c.note_id ? noteTitleById.get(c.note_id) : undefined
-                  return (
-                    <div key={c.id} className="rounded-xl border border-border bg-card p-3.5 shadow-soft">
-                      <p className="line-clamp-2 text-sm font-medium text-foreground">{c.front}</p>
-                      <p className="mt-1 line-clamp-2 text-[13px] text-muted-foreground">{c.back}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] text-muted-foreground/80">due {relativeDue(c.due)}</span>
-                        {c.created_via !== 'ui' ? (
-                          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                            via {c.created_via}
-                          </span>
-                        ) : null}
-                        {fromTitle ? (
-                          <Link
-                            to="/notes/$noteId"
-                            params={{ noteId: c.note_id as string }}
-                            className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground transition hover:text-brand"
-                          >
-                            <FileText className="size-2.5" /> {fromTitle}
-                          </Link>
-                        ) : null}
-                      </div>
-                    </div>
-                  )
-                })}
+                {cards.map((c) => (
+                  <FlashcardTile key={c.id} card={c} noteTitle={c.note_id ? noteTitleById.get(c.note_id) : undefined} />
+                ))}
               </div>
             ) : (
               <EmptyState

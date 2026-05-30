@@ -178,6 +178,35 @@ export async function recordReview(
   )
 }
 
+export async function updateCard(
+  cardId: string,
+  patch: { front?: string; back?: string; deck_id?: string | null; note_id?: string | null },
+): Promise<CardRow> {
+  return unwrap(
+    await supabase.rpc('update_card', {
+      p_user_id: null,
+      p_card_id: cardId,
+      p_front: patch.front ?? null,
+      p_back: patch.back ?? null,
+      p_deck_id: patch.deck_id ?? null,
+      p_note_id: patch.note_id ?? null,
+    }),
+  )
+}
+
+export async function deleteCard(cardId: string): Promise<void> {
+  const res = await supabase.rpc('delete_card', { p_user_id: null, p_card_id: cardId })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function deleteNote(noteId: string): Promise<void> {
+  const res = await supabase.rpc('delete_note', { p_user_id: null, p_note_id: noteId })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function deleteDeck(deckId: string): Promise<void> {
+  const res = await supabase.rpc('delete_deck', { p_user_id: null, p_deck_id: deckId })
+  if (res.error) throw new Error(res.error.message)
+}
+
 export interface CreatedApiKey {
   id: string
   api_key: string
