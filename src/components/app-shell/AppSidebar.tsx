@@ -5,6 +5,7 @@ import {
   GraduationCap,
   Home,
   KeyRound,
+  Layers,
   LogOut,
   Plug,
   Plus,
@@ -29,6 +30,7 @@ import {
 const NAV = [
   { to: '/', label: 'Today', icon: Home, exact: true },
   { to: '/notes', label: 'Notes', icon: FileText, exact: false },
+  { to: '/cards', label: 'Flashcards', icon: Layers, exact: false },
   { to: '/graph', label: 'Graph', icon: Share2, exact: false },
   { to: '/study', label: 'Study', icon: GraduationCap, exact: false },
 ] as const

@@ -20,6 +20,7 @@ export function DeckScreen() {
 
   const deck = decks?.find((d) => d.id === deckId)
   const dueCount = due?.length ?? 0
+  const noteTitleById = new Map((notes ?? []).map((n) => [n.id, n.title]))
 
   async function newNote() {
     try {
@@ -56,9 +57,64 @@ export function DeckScreen() {
       />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-8 px-6 py-6">
-          {/* Notes */}
+          {/* Flashcards (primary) */}
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Notes</h3>
+            <h3 className="text-sm font-semibold text-foreground">
+              Flashcards {cards?.length ? <span className="text-muted-foreground">· {cards.length}</span> : null}
+            </h3>
+            {cards?.length ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {cards.map((c) => {
+                  const fromTitle = c.note_id ? noteTitleById.get(c.note_id) : undefined
+                  return (
+                    <div key={c.id} className="rounded-xl border border-border bg-card p-3.5 shadow-soft">
+                      <p className="line-clamp-2 text-sm font-medium text-foreground">{c.front}</p>
+                      <p className="mt-1 line-clamp-2 text-[13px] text-muted-foreground">{c.back}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] text-muted-foreground/80">due {relativeDue(c.due)}</span>
+                        {c.created_via !== 'ui' ? (
+                          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            via {c.created_via}
+                          </span>
+                        ) : null}
+                        {fromTitle ? (
+                          <Link
+                            to="/notes/$noteId"
+                            params={{ noteId: c.note_id as string }}
+                            className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground transition hover:text-brand"
+                          >
+                            <FileText className="size-2.5" /> {fromTitle}
+                          </Link>
+                        ) : null}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                icon={<Layers className="size-6" />}
+                title="No flashcards in this deck"
+                description="Add a card, or let an AI assistant create them via MCP."
+                action={
+                  <Button variant="brand" size="sm" onClick={() => setCardOpen(true)}>
+                    <Plus className="size-4" /> New card
+                  </Button>
+                }
+              />
+            )}
+          </section>
+
+          {/* Notes (secondary) */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">
+                Notes {notes?.length ? <span className="text-muted-foreground">· {notes.length}</span> : null}
+              </h3>
+              <Button variant="ghost" size="sm" onClick={newNote}>
+                <FilePlus2 className="size-4" /> Note
+              </Button>
+            </div>
             {notes?.length ? (
               <div className="grid gap-2">
                 {notes.map((n) => (
@@ -75,39 +131,8 @@ export function DeckScreen() {
                 ))}
               </div>
             ) : (
-              <EmptyState
-                icon={<FileText className="size-6" />}
-                title="No notes in this deck"
-                description="Add a note here, or let an AI assistant create them via MCP."
-                action={
-                  <Button variant="brand" size="sm" onClick={newNote}>
-                    <FilePlus2 className="size-4" /> New note
-                  </Button>
-                }
-              />
-            )}
-          </section>
-
-          {/* Cards */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground">
-                Flashcards {cards?.length ? <span className="text-muted-foreground">· {cards.length}</span> : null}
-              </h3>
-            </div>
-            {cards?.length ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {cards.map((c) => (
-                  <div key={c.id} className="rounded-xl border border-border bg-card p-3.5 shadow-soft">
-                    <p className="line-clamp-2 text-sm font-medium text-foreground">{c.front}</p>
-                    <p className="mt-1 line-clamp-2 text-[13px] text-muted-foreground">{c.back}</p>
-                    <p className="mt-2 text-[11px] text-muted-foreground/80">due {relativeDue(c.due)}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-                No flashcards yet.
+              <p className="rounded-xl border border-dashed border-border px-4 py-4 text-[13px] text-muted-foreground">
+                No notes in this deck yet.
               </p>
             )}
           </section>

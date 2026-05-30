@@ -60,6 +60,13 @@ export async function listLinks(): Promise<NoteLinkRow[]> {
   return unwrap(await supabase.from('note_links').select('*'))
 }
 
+/** Flashcards generated from / linked to a given note (provenance backlink). */
+export async function listCardsByNote(noteId: string): Promise<CardRow[]> {
+  return unwrap(
+    await supabase.from('cards').select('*').eq('note_id', noteId).order('created_at', { ascending: true }),
+  )
+}
+
 export interface GraphData {
   nodes: { id: string; title: string; deck_id: string | null }[]
   edges: { source: string; target: string; type: string; weight: number }[]

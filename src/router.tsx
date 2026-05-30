@@ -17,6 +17,7 @@ import { GraphScreen } from '@/routes/graph'
 import { ApiKeysScreen } from '@/routes/api-keys'
 import { ConnectScreen } from '@/routes/connect'
 import { ToolsScreen } from '@/routes/tools'
+import { CardsScreen } from '@/routes/cards'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -62,6 +63,7 @@ const studyDeckRoute = createRoute({
   component: StudyScreen,
 })
 const graphRoute = createRoute({ getParentRoute: () => appRoute, path: 'graph', component: GraphScreen })
+const cardsRoute = createRoute({ getParentRoute: () => appRoute, path: 'cards', component: CardsScreen })
 const apiKeysRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'settings/keys',
@@ -88,6 +90,7 @@ const routeTree = rootRoute.addChildren([
     studyRoute,
     studyDeckRoute,
     graphRoute,
+    cardsRoute,
     apiKeysRoute,
     connectRoute,
     toolsRoute,

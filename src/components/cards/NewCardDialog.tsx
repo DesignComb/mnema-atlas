@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useCreateCard } from '@/lib/hooks'
+import { useCreateCard, useDecks } from '@/lib/hooks'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -26,7 +26,13 @@ export function NewCardDialog({
 }) {
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
+  const [deckSel, setDeckSel] = useState('')
   const createCard = useCreateCard()
+  const { data: decks } = useDecks()
+
+  useEffect(() => {
+    if (open) setDeckSel(deckId ?? '')
+  }, [open, deckId])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,7 +42,7 @@ export function NewCardDialog({
         front: front.trim(),
         back: back.trim(),
         note_id: noteId,
-        deck_id: deckId,
+        deck_id: deckSel || undefined,
       })
       toast.success('Flashcard added — due now')
       setFront('')
@@ -55,6 +61,22 @@ export function NewCardDialog({
           <DialogDescription>It becomes due immediately and enters FSRS scheduling.</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="card-deck">Deck</Label>
+            <select
+              id="card-deck"
+              value={deckSel}
+              onChange={(e) => setDeckSel(e.target.value)}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-brand"
+            >
+              <option value="">No deck</option>
+              {decks?.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="card-front">Front</Label>
             <Textarea

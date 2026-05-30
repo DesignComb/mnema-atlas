@@ -12,6 +12,7 @@ export const qk = {
   notes: (deckId?: string) => ['notes', deckId ?? 'all'] as const,
   note: (id: string) => ['note', id] as const,
   cards: (deckId?: string) => ['cards', deckId ?? 'all'] as const,
+  cardsByNote: (noteId: string) => ['cards-by-note', noteId] as const,
   due: (deckId?: string) => ['due', deckId ?? 'all'] as const,
   graph: ['graph'] as const,
 }
@@ -34,6 +35,14 @@ export function useCards(deckId?: string) {
 
 export function useDueCards(deckId?: string) {
   return useQuery({ queryKey: qk.due(deckId), queryFn: () => api.listDueCards(deckId) })
+}
+
+export function useCardsByNote(noteId: string) {
+  return useQuery({
+    queryKey: qk.cardsByNote(noteId),
+    queryFn: () => api.listCardsByNote(noteId),
+    enabled: !!noteId,
+  })
 }
 
 export function useCreateDeck() {
@@ -72,6 +81,7 @@ export function useCreateCard() {
     mutationFn: (input: CreateFlashcardInput) => api.createCard(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cards'] })
+      qc.invalidateQueries({ queryKey: ['cards-by-note'] })
       qc.invalidateQueries({ queryKey: ['due'] })
     },
   })

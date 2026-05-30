@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from '@tanstack/react-router'
-import { Check, Cloud, Loader2, Plus } from 'lucide-react'
+import { Check, Cloud, Layers, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
-import { useNote, useUpdateNote } from '@/lib/hooks'
+import { useCardsByNote, useNote, useUpdateNote } from '@/lib/hooks'
 import { NoteEditor } from '@/components/editor/NoteEditor'
 import { NewCardDialog } from '@/components/cards/NewCardDialog'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
+import { relativeDue } from '@/lib/utils'
 
 type SaveStatus = 'idle' | 'saving' | 'saved'
 
 export function NoteScreen() {
   const { noteId } = useParams({ strict: false }) as { noteId: string }
   const { data: note, isLoading } = useNote(noteId)
+  const { data: noteCards } = useCardsByNote(noteId)
   const updateNote = useUpdateNote()
 
   const [title, setTitle] = useState('')
@@ -84,6 +86,24 @@ export function NoteScreen() {
             className="mb-4 w-full bg-transparent font-serif text-3xl font-semibold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/40"
           />
           <NoteEditor key={note.id} initialMarkdown={note.body} onChange={setBody} />
+
+          {noteCards && noteCards.length > 0 ? (
+            <section className="mt-10 space-y-3 border-t border-border pt-6">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Layers className="size-4 text-muted-foreground" /> Flashcards from this note
+                <span className="font-normal text-muted-foreground">· {noteCards.length}</span>
+              </h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {noteCards.map((c) => (
+                  <div key={c.id} className="rounded-xl border border-border bg-card p-3.5 shadow-soft">
+                    <p className="line-clamp-2 text-sm font-medium text-foreground">{c.front}</p>
+                    <p className="mt-1 line-clamp-2 text-[13px] text-muted-foreground">{c.back}</p>
+                    <p className="mt-2 text-[11px] text-muted-foreground/80">due {relativeDue(c.due)}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       </div>
       <NewCardDialog
