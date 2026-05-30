@@ -5,10 +5,12 @@ import { useCreateNote } from '@/lib/hooks'
 import { AppSidebar } from './AppSidebar'
 import { CommandPalette } from './CommandPalette'
 import { NewDeckDialog } from './NewDeckDialog'
+import { QuickImportDialog } from '@/components/cards/QuickImportDialog'
 
 export function AppLayout() {
   const [cmdOpen, setCmdOpen] = useState(false)
   const [deckOpen, setDeckOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const navigate = useNavigate()
   const createNote = useCreateNote()
 
@@ -18,6 +20,10 @@ export function AppLayout() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setCmdOpen((v) => !v)
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') {
+        e.preventDefault()
+        setImportOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -35,7 +41,11 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-      <AppSidebar onOpenCommand={() => setCmdOpen(true)} onNewDeck={() => setDeckOpen(true)} />
+      <AppSidebar
+        onOpenCommand={() => setCmdOpen(true)}
+        onNewDeck={() => setDeckOpen(true)}
+        onOpenImport={() => setImportOpen(true)}
+      />
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Outlet />
       </main>
@@ -45,8 +55,10 @@ export function AppLayout() {
         onOpenChange={setCmdOpen}
         onNewNote={() => void newNote()}
         onNewDeck={() => setDeckOpen(true)}
+        onImport={() => setImportOpen(true)}
       />
       <NewDeckDialog open={deckOpen} onOpenChange={setDeckOpen} />
+      <QuickImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   )
 }

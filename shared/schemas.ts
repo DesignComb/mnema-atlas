@@ -78,6 +78,28 @@ export const linkNotesInput = z.object({
 })
 export type LinkNotesInput = z.infer<typeof linkNotesInput>
 
+/**
+ * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
+ * emits inside a ```mnema fenced block for the in-app Quick Import. Cards link
+ * to notes by TITLE (the AI has no UUIDs); the importer resolves the join.
+ */
+export const importPayload = z
+  .object({
+    deck: z.string().trim().min(1).max(120).optional(),
+    notes: z
+      .array(z.object({ title, body: z.string().max(100_000).default('') }))
+      .max(200)
+      .default([]),
+    cards: z
+      .array(z.object({ front: flashcardFace, back: flashcardFace, note: z.string().optional() }))
+      .max(200)
+      .default([]),
+  })
+  .refine((p) => p.notes.length > 0 || p.cards.length > 0, {
+    message: 'Provide at least one note or card',
+  })
+export type ImportPayload = z.infer<typeof importPayload>
+
 /** Human-readable descriptions reused as MCP tool descriptions. */
 export const toolDescriptions = {
   create_note: 'Create a study note (markdown body). Returns the new note id.',

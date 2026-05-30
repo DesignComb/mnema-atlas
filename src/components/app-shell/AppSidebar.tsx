@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   Share2,
+  Sparkles,
   Wrench,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
@@ -38,9 +39,11 @@ const NAV = [
 export function AppSidebar({
   onOpenCommand,
   onNewDeck,
+  onOpenImport,
 }: {
   onOpenCommand: () => void
   onNewDeck: () => void
+  onOpenImport: () => void
 }) {
   const { user, signOut } = useAuth()
   const { data: decks } = useDecks()
@@ -151,6 +154,9 @@ export function AppSidebar({
           <DropdownMenuContent align="start" side="top" className="w-56">
             <DropdownMenuLabel>Signed in</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onOpenImport()}>
+              <Sparkles /> Import from AI
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to="/settings/connect">
                 <Plug /> Connect an AI

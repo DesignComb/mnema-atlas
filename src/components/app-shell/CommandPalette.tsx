@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Command } from 'cmdk'
 import { useNavigate } from '@tanstack/react-router'
-import { FilePlus2, FolderPlus, GraduationCap, Home, Search, Share2 } from 'lucide-react'
+import { FilePlus2, FolderPlus, GraduationCap, Home, Search, Share2, Sparkles } from 'lucide-react'
 import { useDecks, useNotes } from '@/lib/hooks'
 
 export function CommandPalette({
@@ -9,11 +9,13 @@ export function CommandPalette({
   onOpenChange,
   onNewNote,
   onNewDeck,
+  onImport,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   onNewNote: () => void
   onNewDeck: () => void
+  onImport: () => void
 }) {
   const navigate = useNavigate()
   const { data: decks } = useDecks()
@@ -50,6 +52,9 @@ export function CommandPalette({
           </Item>
           <Item onSelect={() => run(onNewDeck)} icon={<FolderPlus className="size-4" />}>
             New deck
+          </Item>
+          <Item onSelect={() => run(onImport)} icon={<Sparkles className="size-4" />}>
+            Import from AI
           </Item>
           <Item onSelect={() => run(() => navigate({ to: '/study' }))} icon={<GraduationCap className="size-4" />}>
             Start studying
