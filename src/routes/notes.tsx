@@ -67,7 +67,7 @@ export function NotesScreen() {
             <EmptyState
               icon={<FileText className="size-6" />}
               title="No notes yet"
-              description="Write your first study note, or connect an AI assistant via MCP to generate notes and flashcards for you."
+              description="Write your first study note, or connect an AI to generate notes and flashcards for you."
               action={
                 <Button variant="brand" size="sm" onClick={newNote}>
                   <FilePlus2 className="size-4" /> New note

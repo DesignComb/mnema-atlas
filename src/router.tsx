@@ -2,6 +2,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   Outlet,
   redirect,
 } from '@tanstack/react-router'
@@ -10,15 +11,8 @@ import { AppLayout } from '@/components/app-shell/AppLayout'
 import { LoginScreen } from '@/routes/login'
 import { HomeScreen } from '@/routes/home'
 import { NotesScreen } from '@/routes/notes'
-import { NoteScreen } from '@/routes/note'
 import { DeckScreen } from '@/routes/deck'
-import { StudyScreen } from '@/routes/study'
-import { GraphScreen } from '@/routes/graph'
-import { ApiKeysScreen } from '@/routes/api-keys'
-import { ConnectScreen } from '@/routes/connect'
-import { ToolsScreen } from '@/routes/tools'
 import { CardsScreen } from '@/routes/cards'
-import { GuideScreen } from '@/routes/guide'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -45,42 +39,55 @@ const appRoute = createRoute({
   component: AppLayout,
 })
 
+// Light, common screens stay eager; heavy/rare leaves are code-split so a new
+// user who only sees "/" doesn't download TipTap, force-graph, or motion.
 const homeRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: HomeScreen })
 const notesRoute = createRoute({ getParentRoute: () => appRoute, path: 'notes', component: NotesScreen })
+const deckRoute = createRoute({ getParentRoute: () => appRoute, path: 'decks/$deckId', component: DeckScreen })
+const cardsRoute = createRoute({ getParentRoute: () => appRoute, path: 'cards', component: CardsScreen })
 const noteRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'notes/$noteId',
-  component: NoteScreen,
+  component: lazyRouteComponent(() => import('@/routes/note'), 'NoteScreen'),
 })
-const deckRoute = createRoute({
+const studyRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: 'decks/$deckId',
-  component: DeckScreen,
+  path: 'study',
+  component: lazyRouteComponent(() => import('@/routes/study'), 'StudyScreen'),
 })
-const studyRoute = createRoute({ getParentRoute: () => appRoute, path: 'study', component: StudyScreen })
 const studyDeckRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'study/$deckId',
-  component: StudyScreen,
+  component: lazyRouteComponent(() => import('@/routes/study'), 'StudyScreen'),
 })
-const graphRoute = createRoute({ getParentRoute: () => appRoute, path: 'graph', component: GraphScreen })
-const cardsRoute = createRoute({ getParentRoute: () => appRoute, path: 'cards', component: CardsScreen })
-const guideRoute = createRoute({ getParentRoute: () => appRoute, path: 'guide', component: GuideScreen })
-const apiKeysRoute = createRoute({
+const graphRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: 'settings/keys',
-  component: ApiKeysScreen,
+  path: 'graph',
+  component: lazyRouteComponent(() => import('@/routes/graph'), 'GraphScreen'),
 })
-const connectRoute = createRoute({
+const guideRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: 'settings/connect',
-  component: ConnectScreen,
+  path: 'guide',
+  component: lazyRouteComponent(() => import('@/routes/guide'), 'GuideScreen'),
 })
-const toolsRoute = createRoute({
+const integrationsRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: 'settings/tools',
-  component: ToolsScreen,
+  path: 'settings/integrations',
+  component: lazyRouteComponent(() => import('@/routes/integrations'), 'IntegrationsScreen'),
 })
+
+// Back-compat: the old split settings pages now redirect into the merged one.
+const redirectToIntegrations = (path: string) =>
+  createRoute({
+    getParentRoute: () => appRoute,
+    path,
+    beforeLoad: () => {
+      throw redirect({ to: '/settings/integrations' })
+    },
+  })
+const keysRedirect = redirectToIntegrations('settings/keys')
+const connectRedirect = redirectToIntegrations('settings/connect')
+const toolsRedirect = redirectToIntegrations('settings/tools')
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
@@ -89,14 +96,15 @@ const routeTree = rootRoute.addChildren([
     notesRoute,
     noteRoute,
     deckRoute,
+    cardsRoute,
     studyRoute,
     studyDeckRoute,
     graphRoute,
-    cardsRoute,
     guideRoute,
-    apiKeysRoute,
-    connectRoute,
-    toolsRoute,
+    integrationsRoute,
+    keysRedirect,
+    connectRedirect,
+    toolsRedirect,
   ]),
 ])
 

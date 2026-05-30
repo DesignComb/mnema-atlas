@@ -6,6 +6,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Platform-correct modifier key for shortcut hints (⌘ on Mac, Ctrl elsewhere). */
+export const modKey =
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
+
 /** Format a Date (or ISO string) as a short, human "due in / ago" label. */
 export function relativeDue(due: string | Date, now: Date = new Date()): string {
   const d = typeof due === 'string' ? new Date(due) : due

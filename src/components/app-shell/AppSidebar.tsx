@@ -5,7 +5,6 @@ import {
   GraduationCap,
   HelpCircle,
   Home,
-  KeyRound,
   Layers,
   LogOut,
   Plug,
@@ -13,7 +12,6 @@ import {
   Search,
   Share2,
   Sparkles,
-  Wrench,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useDecks } from '@/lib/hooks'
@@ -24,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -135,14 +132,20 @@ export function AppSidebar({
             })
           ) : (
             <p className="px-2.5 py-2 text-[12.5px] leading-relaxed text-muted-foreground/70">
-              No decks yet. Create one, or let an AI assistant add content via MCP.
+              No decks yet. Create one, or let a connected AI add content.
             </p>
           )}
         </div>
       </ScrollArea>
 
-      {/* User menu */}
-      <div className="border-t border-sidebar-border p-2">
+      {/* Footer: pinned guide + user menu */}
+      <div className="space-y-0.5 border-t border-sidebar-border p-2">
+        <Link
+          to="/guide"
+          className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium text-sidebar-foreground transition hover:bg-sidebar-accent hover:text-foreground"
+        >
+          <HelpCircle className="size-4" /> How it works
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition hover:bg-sidebar-accent">
@@ -153,29 +156,12 @@ export function AppSidebar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="top" className="w-56">
-            <DropdownMenuLabel>Signed in</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/guide">
-                <HelpCircle /> How it works
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onOpenImport()}>
               <Sparkles /> Import from AI
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/settings/connect">
+              <Link to="/settings/integrations">
                 <Plug /> Connect an AI
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/settings/keys">
-                <KeyRound /> API keys
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/settings/tools">
-                <Wrench /> Tools
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

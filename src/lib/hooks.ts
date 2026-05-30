@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import * as api from './api'
+import { seedSampleDeck } from './sampleDeck'
 import type {
   CreateDeckInput,
   CreateFlashcardInput,
@@ -85,4 +88,36 @@ export function useCreateCard() {
       qc.invalidateQueries({ queryKey: ['due'] })
     },
   })
+}
+
+/** Onboarding: seed the sample deck, then drop the user into a review. */
+export function useSeedSample() {
+  const qc = useQueryClient()
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: seedSampleDeck,
+    onSuccess: async ({ deckId }) => {
+      await qc.invalidateQueries()
+      toast.success('Sample deck added — try a review!')
+      navigate({ to: '/study/$deckId', params: { deckId } })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to add sample deck'),
+  })
+}
+
+/** Create a blank note and open it (deduped from deck/notes/home). */
+export function useNewNote() {
+  const navigate = useNavigate()
+  const create = useCreateNote()
+  return {
+    isPending: create.isPending,
+    run: async () => {
+      try {
+        const note = await create.mutateAsync({ title: 'Untitled', body: '' })
+        navigate({ to: '/notes/$noteId', params: { noteId: note.id } })
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to create note')
+      }
+    },
+  }
 }

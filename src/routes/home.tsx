@@ -1,18 +1,21 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
-import { ArrowRight, FileText, GraduationCap, Layers, Sparkles } from 'lucide-react'
-import { useDecks, useDueCards, useNotes } from '@/lib/hooks'
+import { ArrowRight, FilePlus2, FileText, GraduationCap, Layers, Sparkles } from 'lucide-react'
+import { useDecks, useDueCards, useNewNote, useNotes, useSeedSample } from '@/lib/hooks'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
-import { relativeDue } from '@/lib/utils'
+import { modKey, relativeDue } from '@/lib/utils'
 
 export function HomeScreen() {
   const { data: due } = useDueCards()
   const { data: notes } = useNotes()
   const { data: decks } = useDecks()
+  const seed = useSeedSample()
+  const newNote = useNewNote()
 
   const dueCount = due?.length ?? 0
+  const isNew = (decks?.length ?? 0) === 0 && (notes?.length ?? 0) === 0
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
@@ -20,41 +23,62 @@ export function HomeScreen() {
       <PageHeader title="Today" subtitle={today} />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-8 px-6 py-8">
-          {/* Review hero */}
-          <motion.section
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-brand-muted/70 to-card p-6 shadow-soft"
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium uppercase tracking-wider text-brand">Spaced repetition</p>
-                <h2 className="font-serif text-2xl text-foreground">
-                  {dueCount > 0 ? (
-                    <>
-                      {dueCount} card{dueCount === 1 ? '' : 's'} due
-                    </>
-                  ) : (
-                    'All caught up 🌿'
-                  )}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {dueCount > 0
-                    ? 'Review them now to keep your memory fresh.'
-                    : 'Nothing to review right now. Add notes or come back later.'}
+          {isNew ? (
+            <motion.section
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-brand-muted/70 to-card p-6 shadow-soft"
+            >
+              <div className="absolute inset-0 bg-dots opacity-40" />
+              <div className="relative space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wider text-brand">Welcome</p>
+                <h2 className="font-serif text-2xl text-foreground">Let's get your first cards going</h2>
+                <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+                  Add a tiny sample deck to see the whole loop in 30 seconds, or write your first note. An AI can also
+                  fill your library for you —{' '}
+                  <Link to="/guide" className="font-medium text-brand hover:underline">see how it works</Link>.
                 </p>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button variant="brand" onClick={() => seed.mutate()} disabled={seed.isPending}>
+                    <Sparkles className="size-4" /> {seed.isPending ? 'Adding…' : 'Add a sample deck'}
+                  </Button>
+                  <Button variant="outline" onClick={() => void newNote.run()} disabled={newNote.isPending}>
+                    <FilePlus2 className="size-4" /> Write a note
+                  </Button>
+                </div>
               </div>
-              <GraduationCap className="size-12 shrink-0 text-brand/30" />
-            </div>
-            {dueCount > 0 ? (
-              <Button asChild variant="brand" className="mt-4">
-                <Link to="/study">
-                  Start review <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            ) : null}
-          </motion.section>
+            </motion.section>
+          ) : (
+            <motion.section
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-brand-muted/70 to-card p-6 shadow-soft"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium uppercase tracking-wider text-brand">Spaced repetition</p>
+                  <h2 className="font-serif text-2xl text-foreground">
+                    {dueCount > 0 ? `${dueCount} card${dueCount === 1 ? '' : 's'} due` : 'All caught up 🌿'}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {dueCount > 0
+                      ? 'Review them now to keep your memory fresh.'
+                      : 'Nothing to review right now — add notes or come back later.'}
+                  </p>
+                </div>
+                <GraduationCap className="size-12 shrink-0 text-brand/30" />
+              </div>
+              {dueCount > 0 ? (
+                <Button asChild variant="brand" className="mt-4">
+                  <Link to="/study">
+                    Start review <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              ) : null}
+            </motion.section>
+          )}
 
           {/* Stat tiles */}
           <section className="grid grid-cols-3 gap-3">
@@ -89,8 +113,9 @@ export function HomeScreen() {
             ) : (
               <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-card/50 px-4 py-5 text-sm text-muted-foreground">
                 <Sparkles className="size-4 text-brand" />
-                No notes yet — press <kbd className="rounded border border-border bg-card px-1.5 text-xs">⌘K</kbd>{' '}
-                to create one, or connect an AI assistant to fill them in for you.
+                No notes yet — press{' '}
+                <kbd className="rounded border border-border bg-card px-1.5 text-xs">{modKey}+K</kbd> to create one, or
+                connect an AI to fill them in.
               </div>
             )}
           </section>

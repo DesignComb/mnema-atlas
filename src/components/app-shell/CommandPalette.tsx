@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Command } from 'cmdk'
 import { useNavigate } from '@tanstack/react-router'
-import { FilePlus2, FolderPlus, GraduationCap, Home, Search, Share2, Sparkles } from 'lucide-react'
+import { FilePlus2, FolderPlus, GraduationCap, Home, Plug, Search, Share2, Sparkles } from 'lucide-react'
 import { useDecks, useNotes } from '@/lib/hooks'
 
 export function CommandPalette({
@@ -67,6 +67,12 @@ export function CommandPalette({
           </Item>
           <Item onSelect={() => run(() => navigate({ to: '/graph' }))} icon={<Share2 className="size-4" />}>
             Graph
+          </Item>
+          <Item
+            onSelect={() => run(() => navigate({ to: '/settings/integrations' }))}
+            icon={<Plug className="size-4" />}
+          >
+            Connect an AI
           </Item>
         </Command.Group>
 

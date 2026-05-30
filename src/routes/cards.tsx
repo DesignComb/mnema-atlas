@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { GraduationCap, Layers, Sparkles } from 'lucide-react'
-import { useCards, useDecks, useDueCards } from '@/lib/hooks'
+import { useCards, useDecks, useDueCards, useSeedSample } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 
@@ -8,6 +8,7 @@ export function CardsScreen() {
   const { data: cards } = useCards()
   const { data: due } = useDueCards()
   const { data: decks } = useDecks()
+  const seed = useSeedSample()
 
   const countByDeck = new Map<string, number>()
   cards?.forEach((c) => {
@@ -47,7 +48,12 @@ export function CardsScreen() {
             <EmptyState
               icon={<Sparkles className="size-6" />}
               title="No flashcards yet"
-              description="Add cards from a note, or let an AI assistant create them via MCP. They enter FSRS scheduling immediately."
+              description="Add a sample deck to see how it works, add cards from a note, or let a connected AI create them — they enter FSRS scheduling immediately."
+              action={
+                <Button variant="brand" size="sm" onClick={() => seed.mutate()} disabled={seed.isPending}>
+                  <Sparkles className="size-4" /> Add a sample deck
+                </Button>
+              }
             />
           ) : (
             <>

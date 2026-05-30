@@ -1,16 +1,8 @@
 import { type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import {
-  BookOpenCheck,
-  FileText,
-  GraduationCap,
-  KeyRound,
-  Layers,
-  Share2,
-  ShieldCheck,
-  Sparkles,
-} from 'lucide-react'
+import { BookOpenCheck, FileText, GraduationCap, Layers, Share2, ShieldCheck, Sparkles } from 'lucide-react'
 import { PageHeader } from '@/components/app-shell/PageHeader'
+import { modKey } from '@/lib/utils'
 
 export function GuideScreen() {
   return (
@@ -22,8 +14,8 @@ export function GuideScreen() {
           <section className="space-y-2">
             <h2 className="font-serif text-xl text-foreground">The idea</h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
-              Capture study notes, turn them into flashcards, and review a few each day — spaced repetition
-              makes them stick for the long term. You can even let an AI fill your library for you.
+              Capture study notes, turn them into flashcards, and review a few each day — spaced repetition makes them
+              stick. You can even let an AI fill your library for you.
             </p>
           </section>
 
@@ -33,7 +25,7 @@ export function GuideScreen() {
             <div className="grid gap-2.5 sm:grid-cols-2">
               <Step icon={<FileText />} title="1 · Capture" body="Write a note, or paste something you want to remember." />
               <Step icon={<Layers />} title="2 · Make cards" body="Turn a note into flashcards — a question and its answer." />
-              <Step icon={<GraduationCap />} title="3 · Review" body="Open Study and review what's due. We schedule the rest for you." />
+              <Step icon={<GraduationCap />} title="3 · Review" body="Open Study and review what's due. We schedule the rest." />
               <Step icon={<Share2 />} title="See connections" body="The Graph shows how your notes link together." />
             </div>
           </section>
@@ -45,42 +37,15 @@ export function GuideScreen() {
               <h2 className="font-serif text-xl text-foreground">Let an AI fill your library</h2>
             </div>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
-              Already chatting with ChatGPT, Claude, or another AI? You can have it drop notes and flashcards
-              straight into Mnema, so you never have to type them yourself.
+              Already chatting with ChatGPT, Claude, or another AI? Connect it once and it can drop notes &amp; flashcards
+              straight into Mnema. The full setup — create a key, pick your assistant, see what it can do — lives on{' '}
+              <Link to="/settings/integrations" className="font-medium text-brand hover:underline">Connect an AI</Link>.
             </p>
-
-            <div className="rounded-xl border border-border bg-muted/30 p-3.5">
-              <p className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
-                <KeyRound className="size-3.5 text-brand" /> What's an "API key"?
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                Think of it as a <strong className="text-foreground">guest pass</strong> you hand your AI. With it, the AI can{' '}
-                <strong className="text-foreground">only add</strong> notes &amp; flashcards to <em>your</em> library — it can
-                never edit or delete your things, and never touch anyone else's.
-              </p>
-            </div>
-
-            <ol className="space-y-2.5 text-[14px] leading-relaxed text-foreground">
-              <li>
-                <Num>1</Num> Go to{' '}
-                <Link to="/settings/keys" className="font-medium text-brand hover:underline">Settings → API keys</Link>, click{' '}
-                <strong>Create</strong>, and copy the key (it looks like <code className="rounded bg-muted px-1 text-[12px]">mk_…</code>). Keep it private.
-              </li>
-              <li>
-                <Num>2</Num> Go to{' '}
-                <Link to="/settings/connect" className="font-medium text-brand hover:underline">Connect an AI</Link>, pick the
-                assistant you use, and follow the one-line setup (paste your key where it asks).
-              </li>
-              <li>
-                <Num>3</Num> Back in your AI, just say <em>"save this as flashcards in Mnema."</em> They appear here instantly.
-              </li>
-            </ol>
-
             <div className="rounded-xl border border-dashed border-border p-3.5 text-[13px] leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">Using plain ChatGPT or Gemini (no setup)?</strong> Press{' '}
-              <kbd className="rounded border border-border bg-card px-1.5 text-[11px]">⌘I</kbd> for{' '}
-              <strong className="text-foreground">Import from AI</strong>: copy the prompt, paste it to your AI, then paste its
-              answer back here — it builds everything for you.
+              <strong className="text-foreground">No setup? (plain ChatGPT / Gemini)</strong> Press{' '}
+              <kbd className="rounded border border-border bg-card px-1.5 text-[11px]">{modKey}+I</kbd> for{' '}
+              <strong className="text-foreground">Import from AI</strong>: copy the prompt, paste it to your AI, then paste
+              its answer back here.
             </div>
           </section>
 
@@ -91,8 +56,8 @@ export function GuideScreen() {
               <h3 className="text-sm font-semibold text-foreground">Is it safe?</h3>
               <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
                 Yes. Keys are <strong className="text-foreground">add-only</strong> by default — an AI can only add to your
-                library, never change or delete it, and never see anyone else's. You can revoke a key anytime in{' '}
-                <Link to="/settings/keys" className="text-brand hover:underline">Settings → API keys</Link>.
+                library, never change or delete it, and never see anyone else's. Revoke a key anytime in{' '}
+                <Link to="/settings/integrations" className="text-brand hover:underline">Connect an AI</Link>.
               </p>
             </div>
           </section>
@@ -111,13 +76,5 @@ function Step({ icon, title, body }: { icon: ReactNode; title: string; body: str
       </div>
       <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{body}</p>
     </div>
-  )
-}
-
-function Num({ children }: { children: ReactNode }) {
-  return (
-    <span className="mr-1 inline-flex size-5 items-center justify-center rounded-full bg-brand-muted text-[11px] font-semibold text-brand">
-      {children}
-    </span>
   )
 }

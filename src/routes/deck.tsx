@@ -95,7 +95,7 @@ export function DeckScreen() {
               <EmptyState
                 icon={<Layers className="size-6" />}
                 title="No flashcards in this deck"
-                description="Add a card, or let an AI assistant create them via MCP."
+                description="Add a card, or let a connected AI create them."
                 action={
                   <Button variant="brand" size="sm" onClick={() => setCardOpen(true)}>
                     <Plus className="size-4" /> New card
