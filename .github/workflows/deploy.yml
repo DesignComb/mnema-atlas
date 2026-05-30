@@ -5,16 +5,19 @@ name: Deploy (Cloudflare)
 #
 # ── One-time setup ───────────────────────────────────────────────────────────
 # Add ONE GitHub Actions secret:  CLOUDFLARE_API_TOKEN
-#   Cloudflare dashboard → My Profile → API Tokens → Create Token → Custom token:
+#   Cloudflare → My Profile → API Tokens → Create Custom Token:
 #     • Account · Workers Scripts · Edit
 #     • Account · Cloudflare Pages · Edit
 #     • Account · Account Settings · Read
-#   Scope it to the account that owns dco.tw (i839855314i@gmail.com).
-#   GitHub repo → Settings → Secrets and variables → Actions → New secret.
+#   (owned by the account that holds dco.tw). Repo → Settings → Secrets → Actions.
 #
-# The VITE_* values below are client-side PUBLIC (publishable/anon key + URLs), safe to commit.
-# Worker secrets (SUPABASE_URL / SUPABASE_SECRET_KEY) already live on the Worker
-# (set via `wrangler secret put`) and persist across deploys — CI doesn't touch them.
+# VITE_* below are client-side PUBLIC (publishable key + URLs), safe to commit.
+# Worker secrets (SUPABASE_URL / SUPABASE_SECRET_KEY) live on the Worker already
+# (wrangler secret put) and persist across deploys.
+#
+# We use `npm install` (not `npm ci`): the lockfile is generated on Windows and
+# `npm ci`'s strict cross-platform tree check trips over Tailwind v4's optional
+# WASM-runtime deps on Linux runners.
 
 on:
   push:
@@ -33,8 +36,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: worker/package-lock.json
-      - run: npm ci
+      # The Worker bundles ../shared/schemas.ts, which imports zod from the ROOT node_modules.
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
         working-directory: worker
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
@@ -52,7 +56,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - name: Build
         env:
           VITE_SUPABASE_URL: https://enfiuplmzpsmfgrykmxg.supabase.co
