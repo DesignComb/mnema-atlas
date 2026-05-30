@@ -1,0 +1,24 @@
+{
+  "name": "mnema-atlas-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mnema Atlas edge API: MCP server (so external AI can add study content) + REST fallback, both backed by Supabase via the shared write RPCs.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
+    "hono": "^4.12.23",
+    "mcp-lite": "^0.10.0",
+    "zod": "^3.25.0",
+    "zod-to-json-schema": "^3.24.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250620.0",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.95.0"
+  }
+}

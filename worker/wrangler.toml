@@ -1,0 +1,27 @@
+name = "mnema-atlas-worker"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ── Public custom domain ─────────────────────────────────────────────
+# dco.tw is on Cloudflare, so deploy auto-creates the DNS record + SSL cert.
+# This is the URL external AIs connect to:  https://mnema-ai.dco.tw/{mcp,rest}
+routes = [
+  { pattern = "mnema-ai.dco.tw", custom_domain = true }
+]
+
+# ── Secrets (server-only — NEVER commit) ─────────────────────────────
+# Local dev: put them in worker/.dev.vars (see .dev.vars.example).
+# Production:  wrangler secret put SUPABASE_URL
+#              wrangler secret put SUPABASE_SECRET_KEY
+#
+# SUPABASE_URL         = https://YOUR-PROJECT.supabase.co
+# SUPABASE_SECRET_KEY  = sb_secret_...   (service/secret key — bypasses RLS)
+
+# ── OAuth (Phase 3b — claude.ai connector) ───────────────────────────
+# To accept the claude.ai web/desktop connector (OAuth 2.1 only), bind a KV
+# namespace for the OAuth provider and wrap index.ts with
+# @cloudflare/workers-oauth-provider. See README.
+# [[kv_namespaces]]
+# binding = "OAUTH_KV"
+# id = "<your-kv-id>"

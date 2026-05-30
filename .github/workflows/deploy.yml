@@ -1,0 +1,68 @@
+name: Deploy (Cloudflare)
+
+# On every push to main: deploy the Worker (→ mnema-ai.dco.tw) and the frontend
+# (→ Cloudflare Pages: mnema-atlas.pages.dev / mnema-atlas.dco.tw).
+#
+# ── One-time setup ───────────────────────────────────────────────────────────
+# Add ONE GitHub Actions secret:  CLOUDFLARE_API_TOKEN
+#   Cloudflare dashboard → My Profile → API Tokens → Create Token → Custom token:
+#     • Account · Workers Scripts · Edit
+#     • Account · Cloudflare Pages · Edit
+#     • Account · Account Settings · Read
+#   Scope it to the account that owns dco.tw (i839855314i@gmail.com).
+#   GitHub repo → Settings → Secrets and variables → Actions → New secret.
+#
+# The VITE_* values below are client-side PUBLIC (publishable/anon key + URLs), safe to commit.
+# Worker secrets (SUPABASE_URL / SUPABASE_SECRET_KEY) already live on the Worker
+# (set via `wrangler secret put`) and persist across deploys — CI doesn't touch them.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 95a418e79390090ee72a97d77fac66fe
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+        working-directory: worker
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          command: deploy
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: https://enfiuplmzpsmfgrykmxg.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_plbnYoh6H64YutUeTd8muA_lHXl00Vz
+          VITE_MCP_URL: https://mnema-ai.dco.tw/mcp
+          VITE_REST_URL: https://mnema-ai.dco.tw/rest
+        run: npm run build
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name mnema-atlas --branch main
