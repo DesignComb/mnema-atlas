@@ -136,7 +136,7 @@ function GraphCanvas({
       tg.neighbors.add(s.id)
     }
     nodes.forEach((n) => {
-      n.r = 2.2 + Math.min(n.deg, 8) * 0.55
+      n.r = 1.2 + Math.min(n.deg, 8) * 0.3 // small dots; the hit area is generous
     })
     return { nodes, links }
   }, [data])
@@ -337,7 +337,7 @@ function GraphCanvas({
             ctx.stroke()
           }}
           nodeCanvasObjectMode={() => 'replace'}
-          nodeCanvasObject={(node, ctx) => {
+          nodeCanvasObject={(node, ctx, scale) => {
             const x = node.x ?? 0
             const y = node.y ?? 0
             const r = node.r
@@ -347,11 +347,12 @@ function GraphCanvas({
             const isActive = active === node.id
             const isSource = linkSource === node.id
             const alpha = dim ? 0.18 : 1
+            const ringR = r + Math.max(3, 4 / scale) // visible even when the dot is tiny
 
             if (isActive || isSource) {
               ctx.beginPath()
-              ctx.arc(x, y, r + 3.5, 0, 2 * Math.PI)
-              ctx.fillStyle = nodeFill(node, isSource ? 0.32 : 0.16)
+              ctx.arc(x, y, ringR, 0, 2 * Math.PI)
+              ctx.fillStyle = nodeFill(node, isSource ? 0.3 : 0.15)
               ctx.fill()
             }
             ctx.beginPath()
@@ -359,18 +360,30 @@ function GraphCanvas({
             ctx.fillStyle = nodeFill(node, alpha)
             ctx.fill()
             if (isSource) {
-              ctx.lineWidth = 1.2
+              ctx.lineWidth = Math.max(0.8, 1.4 / scale)
               ctx.strokeStyle = `oklch(0.62 0.18 250 / 0.95)`
+              ctx.beginPath()
+              ctx.arc(x, y, ringR, 0, 2 * Math.PI)
               ctx.stroke()
             }
           }}
-          // Generous hit area (independent of the small visual dot) so nodes are
-          // easy to tap — essential for link mode on touch.
-          nodePointerAreaPaint={(node, color, ctx) => {
+          // Hit area = the dot (with a screen-min radius so tiny dots stay
+          // tappable) PLUS the label below it, so clicking the text selects the
+          // node too. Essential for link mode on touch.
+          nodePointerAreaPaint={(node, color, ctx, globalScale) => {
             ctx.fillStyle = color
+            const x = node.x ?? 0
+            const y = node.y ?? 0
+            const minR = Math.max(node.r + 3, 12 / globalScale)
             ctx.beginPath()
-            ctx.arc(node.x ?? 0, node.y ?? 0, node.r + 7, 0, 2 * Math.PI)
+            ctx.arc(x, y, minR, 0, 2 * Math.PI)
             ctx.fill()
+            const fs = Math.max(2.5, 9 / globalScale)
+            ctx.font = `500 ${fs}px Inter, sans-serif`
+            const text = node.title.length > 22 ? node.title.slice(0, 21) + '…' : node.title
+            const w = ctx.measureText(text).width
+            const ly = y + node.r + 1.5 / globalScale
+            ctx.fillRect(x - w / 2 - 1 / globalScale, ly, w + 2 / globalScale, fs + 2 / globalScale)
           }}
         />
       ) : null}
@@ -396,8 +409,16 @@ function GraphCanvas({
       <div className="absolute right-3 top-3 flex items-center gap-1.5">
         <button
           onClick={() => {
-            setLinkMode((v) => !v)
-            setLinkSource(null)
+            if (linkMode) {
+              setLinkMode(false)
+              setLinkSource(null)
+            } else {
+              // Carry the focused note in as the link source, so "select a note,
+              // then hit Link, then tap the target" just works.
+              setLinkMode(true)
+              setLinkSource(focusId)
+              setFocusId(null)
+            }
           }}
           className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-medium shadow-soft backdrop-blur transition ${
             linkMode ? 'border-brand bg-brand text-brand-foreground' : 'border-border bg-popover/90 text-muted-foreground hover:text-foreground'
@@ -552,7 +573,7 @@ function drawLabels(
   ctx.font = `500 ${fs}px Inter, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  const showAll = scale > 1.5
+  const showAll = scale > 1.2
   const cands = nodes.filter((n) => activeSet?.has(n.id) || showAll)
   const pr = (n: GNode) => (active === n.id ? 1e6 : activeSet?.has(n.id) ? 1e5 : 0) + n.deg
   cands.sort((a, b) => pr(b) - pr(a))
