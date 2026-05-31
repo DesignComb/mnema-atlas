@@ -119,7 +119,7 @@ export function StudyScreen() {
         </div>
       ) : null}
 
-      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto bg-dots px-6 py-10">
+      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto bg-dots px-4 py-6 sm:px-6 sm:py-10">
         {isLoading ? (
           <div className="h-64 w-full max-w-xl animate-pulse rounded-2xl bg-card" />
         ) : total === 0 ? (
@@ -172,9 +172,9 @@ export function StudyScreen() {
                 {/* Front */}
                 <button
                   onClick={() => !flipped && setFlipped(true)}
-                  className="flex min-h-44 w-full items-center justify-center px-8 py-10 text-center"
+                  className="flex min-h-40 w-full items-center justify-center px-6 py-8 text-center sm:min-h-44 sm:px-8 sm:py-10"
                 >
-                  <p className="font-serif text-2xl leading-snug text-foreground">{current.front}</p>
+                  <p className="font-serif text-xl leading-snug text-foreground sm:text-2xl">{current.front}</p>
                 </button>
 
                 {/* Back */}
@@ -186,8 +186,8 @@ export function StudyScreen() {
                       transition={{ duration: 0.25, ease: 'easeOut' }}
                       className="border-t border-border"
                     >
-                      <div className="px-8 py-8 text-center">
-                        <p className="whitespace-pre-wrap font-serif text-[17px] leading-relaxed text-foreground">
+                      <div className="px-6 py-6 text-center sm:px-8 sm:py-8">
+                        <p className="whitespace-pre-wrap font-serif text-base leading-relaxed text-foreground sm:text-[17px]">
                           {current.back}
                         </p>
                       </div>
@@ -205,7 +205,7 @@ export function StudyScreen() {
                   <kbd className="ml-1 rounded bg-brand-foreground/20 px-1.5 text-[11px]">Space</kbd>
                 </Button>
               ) : (
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {hints.map((h) => {
                     const meta = RATING_META[h.rating]
                     return (
@@ -213,7 +213,7 @@ export function StudyScreen() {
                         key={h.rating}
                         onClick={() => gradeCurrent(h.rating)}
                         className={cn(
-                          'flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-sm font-medium transition',
+                          'flex flex-col items-center gap-0.5 rounded-xl border px-2 py-3 text-sm font-medium transition sm:py-2.5',
                           TONE[meta.tone],
                         )}
                       >

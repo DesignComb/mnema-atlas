@@ -61,7 +61,7 @@ export function IntegrationsScreen() {
         icon={<Plug className="size-4" />}
       />
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl space-y-9 px-6 py-8">
+        <div className="mx-auto max-w-2xl space-y-9 px-4 py-6 sm:px-6 sm:py-8">
           <div className="flex items-start gap-2.5 rounded-xl border border-border bg-card p-4 text-[13px] leading-relaxed text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand" />
             <span>
@@ -72,14 +72,14 @@ export function IntegrationsScreen() {
           {/* 1 · Keys */}
           <section className="space-y-3">
             <SectionTitle n={1} icon={<KeyRound />}>{t('Create a key', '建立金鑰')}</SectionTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t('Key name (e.g. “Cursor laptop”)', '金鑰名稱（例如「Cursor 筆電」）')}
                 onKeyDown={(e) => e.key === 'Enter' && create.mutate()}
               />
-              <Button variant="brand" onClick={() => create.mutate()} disabled={create.isPending}>
+              <Button variant="brand" onClick={() => create.mutate()} disabled={create.isPending} className="shrink-0">
                 <Plus className="size-4" /> {t('Create', '建立')}
               </Button>
             </div>
@@ -148,7 +148,7 @@ export function IntegrationsScreen() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex-1 rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+                  className={`flex-1 rounded-md px-2 py-1.5 text-center text-[11px] font-medium leading-tight transition sm:px-3 sm:text-[13px] ${
                     tab === t.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -171,7 +171,7 @@ export function IntegrationsScreen() {
             {tab === 'chatgpt' && (
               <div className="space-y-2">
                 <CopyBlock code={OPENAPI_URL} />
-                <ol className="list-decimal space-y-1 pl-5 text-[13px] leading-relaxed text-muted-foreground">
+                <ol className="list-decimal space-y-1 pl-4 text-[13px] leading-relaxed text-muted-foreground sm:pl-5">
                   <li>New GPT → Configure → <strong className="text-foreground">Create new action</strong> → Import from URL → {t('paste the URL above.', '貼上上方的網址。')}</li>
                   <li>Authentication → <strong className="text-foreground">API Key</strong> → <strong className="text-foreground">Bearer</strong> → {t('paste your key.', '貼上你的金鑰。')}</li>
                   <li>{t('In chat: ', '在對話中輸入：')}"save this as flashcards in Mnema".</li>

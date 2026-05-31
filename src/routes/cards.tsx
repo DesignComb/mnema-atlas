@@ -58,14 +58,14 @@ export function CardsScreen() {
           totalDue > 0 ? (
             <Button asChild variant="brand" size="sm">
               <Link to="/study">
-                <GraduationCap className="size-4" /> {t('Study', '複習')} ({totalDue})
+                <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '複習')} </span>({totalDue})
               </Link>
             </Button>
           ) : undefined
         }
       />
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-2.5 px-6 py-6">
+        <div className="mx-auto max-w-3xl space-y-2.5 px-4 py-4 sm:px-6 sm:py-6">
           {isEmpty ? (
             <EmptyState
               icon={<Sparkles className="size-6" />}
@@ -83,7 +83,7 @@ export function CardsScreen() {
           ) : (
             <>
               {/* Learning-status overview */}
-              <div className="mb-1.5 grid grid-cols-4 gap-2">
+              <div className="mb-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <StateTile label={t('New', '新卡')} n={byState[0]} cls="text-sky-600 dark:text-sky-300" />
                 <StateTile label={t('Learning', '學習中')} n={byState[1] + byState[3]} cls="text-amber-600 dark:text-amber-300" />
                 <StateTile label={t('Review', '複習')} n={byState[2]} cls="text-emerald-600 dark:text-emerald-300" />

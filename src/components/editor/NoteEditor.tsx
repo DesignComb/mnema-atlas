@@ -44,7 +44,7 @@ export function NoteEditor({
     content: initialMarkdown,
     editorProps: {
       attributes: {
-        class: 'mnema-prose min-h-[50vh] max-w-none px-1 focus:outline-none',
+        class: 'mnema-prose min-h-[40vh] max-w-none px-1 focus:outline-none sm:min-h-[50vh]',
       },
     },
     onUpdate: ({ editor }) => onChange(getMarkdown(editor)),
@@ -72,7 +72,7 @@ function Toolbar({ editor }: { editor: Editor }) {
     { icon: Code, run: () => editor.chain().focus().toggleCodeBlock().run(), active: editor.isActive('codeBlock'), label: 'Code block' },
   ]
   return (
-    <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-card/80 px-1.5 py-1 backdrop-blur">
+    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-card/80 px-1.5 py-1 backdrop-blur sm:-mx-1">
       {items.map((it) => (
         <button
           key={it.label}
@@ -80,7 +80,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           title={it.label}
           onClick={it.run}
           className={cn(
-            'flex size-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground',
+            'flex size-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground sm:size-7',
             it.active && 'bg-brand-muted text-brand',
           )}
         >

@@ -122,7 +122,7 @@ export function NewCardDialog({
             <Label htmlFor="card-back">{t('Back', '背面')}</Label>
             <Textarea id="card-back" value={back} onChange={(e) => setBack(e.target.value)} placeholder={t('Answer', '答案')} />
           </div>
-          <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
             {editing ? (
               <Button
                 type="button"
@@ -133,13 +133,13 @@ export function NewCardDialog({
                 <Trash2 className="size-4" /> {confirmDel ? t('Confirm delete', '確認刪除') : t('Delete', '刪除')}
               </Button>
             ) : (
-              <span />
+              <span className="hidden sm:block" />
             )}
-            <div className="flex gap-2">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            <div className="flex gap-2 sm:justify-end">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none">
                 {t('Cancel', '取消')}
               </Button>
-              <Button type="submit" variant="brand" disabled={pending || !front.trim() || !back.trim()}>
+              <Button type="submit" variant="brand" disabled={pending || !front.trim() || !back.trim()} className="flex-1 sm:flex-none">
                 {pending ? t('Saving…', '儲存中…') : editing ? t('Save', '儲存') : t('Add card', '新增字卡')}
               </Button>
             </div>

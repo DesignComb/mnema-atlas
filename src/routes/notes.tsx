@@ -33,12 +33,12 @@ export function NotesScreen() {
         }
         actions={
           <Button variant="brand" size="sm" onClick={newNote} disabled={createNote.isPending}>
-            <FilePlus2 className="size-4" /> {t('New note', '新增筆記')}
+            <FilePlus2 className="size-4" /> <span className="hidden sm:inline">{t('New note', '新增筆記')}</span>
           </Button>
         }
       />
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl px-6 py-6">
+        <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (

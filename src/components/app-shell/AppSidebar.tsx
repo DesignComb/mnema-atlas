@@ -42,10 +42,14 @@ export function AppSidebar({
   onOpenCommand,
   onNewDeck,
   onOpenImport,
+  className,
 }: {
   onOpenCommand: () => void
   onNewDeck: () => void
   onOpenImport: () => void
+  /** Width + display are set by the caller so the same sidebar serves the
+   *  persistent desktop rail and the mobile slide-in drawer. */
+  className?: string
 }) {
   const { user, signOut } = useAuth()
   const { theme, toggle } = useTheme()
@@ -56,7 +60,7 @@ export function AppSidebar({
   const initials = (user?.email ?? '?').slice(0, 2).toUpperCase()
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+    <aside className={cn('h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar', className)}>
       {/* Brand */}
       <div className="flex items-center gap-2 px-4 pt-4 pb-2">
         <div className="flex size-7 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
@@ -177,7 +181,7 @@ export function AppSidebar({
               <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{user?.email}</span>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="top" className="w-56">
+          <DropdownMenuContent align="start" side="top" className="w-56 max-w-[calc(100vw-1.5rem)]">
             <DropdownMenuItem onSelect={() => onOpenImport()}>
               <Sparkles /> {t('Import from AI', '從 AI 匯入')}
             </DropdownMenuItem>

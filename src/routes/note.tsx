@@ -61,7 +61,7 @@ export function NoteScreen() {
     return (
       <>
         <PageHeader title={t('Note', '筆記')} />
-        <div className="mx-auto w-full max-w-3xl space-y-4 px-6 py-8">
+        <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
           <div className="h-9 w-2/3 animate-pulse rounded bg-card" />
           <div className="h-64 animate-pulse rounded bg-card/60" />
         </div>
@@ -81,10 +81,10 @@ export function NoteScreen() {
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
-              <Plus className="size-4" /> {t('Add flashcard', '新增字卡')}
+              <Plus className="size-4" /> <span className="hidden sm:inline">{t('Add flashcard', '新增字卡')}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={() => setAskOpen(true)}>
-              <Sparkles className="size-4" /> {t('Ask AI', '問 AI')}
+              <Sparkles className="size-4" /> <span className="hidden sm:inline">{t('Ask AI', '問 AI')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -113,12 +113,12 @@ export function NoteScreen() {
         }
       />
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl px-6 py-8">
+        <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t('Untitled', '未命名')}
-            className="mb-4 w-full bg-transparent font-serif text-3xl font-semibold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/40"
+            className="mb-4 w-full bg-transparent font-serif text-2xl font-semibold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/40 sm:text-3xl"
           />
           <NoteEditor key={note.id} initialMarkdown={note.body} onChange={setBody} />
 

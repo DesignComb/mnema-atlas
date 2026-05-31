@@ -36,7 +36,7 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="grid min-h-screen w-screen lg:grid-cols-2">
+    <div className="grid min-h-dvh w-screen lg:grid-cols-2">
       {/* Left — brand panel */}
       <div className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-10 lg:flex">
         <div className="absolute inset-0 bg-dots opacity-60" />
@@ -61,7 +61,7 @@ export function LoginScreen() {
       </div>
 
       {/* Right — sign in */}
-      <div className="flex items-center justify-center bg-background px-6 py-12">
+      <div className="flex items-center justify-center bg-background px-4 py-8 sm:px-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

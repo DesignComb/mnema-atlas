@@ -228,12 +228,12 @@ function GraphCanvas({ data, onOpen }: { data: GraphData; onOpen: (id: string) =
         style={{ background: 'radial-gradient(120% 100% at 50% 42%, transparent 58%, oklch(0.95 0.004 85 / 0.55) 100%)' }}
       />
 
-      <div className="pointer-events-none absolute right-4 top-4 text-[11px] text-muted-foreground/70">
+      <div className="pointer-events-none absolute right-3 top-3 hidden text-[11px] text-muted-foreground/70 sm:right-4 sm:top-4 sm:block">
         Click a node to focus · click again to open
       </div>
 
       {focusNode ? (
-        <div className="absolute bottom-5 left-1/2 w-72 -translate-x-1/2 rounded-xl border border-border bg-popover/95 p-3.5 shadow-pop backdrop-blur">
+        <div className="absolute bottom-3 left-1/2 w-[calc(100vw-1.5rem)] max-w-xs -translate-x-1/2 rounded-xl border border-border bg-popover/95 p-3.5 shadow-pop backdrop-blur sm:bottom-5 sm:w-72">
           <div className="flex items-center gap-2">
             <span className="size-2.5 shrink-0 rounded-full" style={{ background: deckColor(focusNode.deck_id) }} />
             <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{focusNode.title}</p>
@@ -243,7 +243,7 @@ function GraphCanvas({ data, onOpen }: { data: GraphData; onOpen: (id: string) =
           </p>
           <button
             onClick={() => onOpen(focusNode.id)}
-            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[13px] font-medium text-brand-foreground transition hover:opacity-90"
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition hover:opacity-90 sm:py-1.5 sm:text-[13px]"
           >
             Open note <ArrowUpRight className="size-3.5" />
           </button>

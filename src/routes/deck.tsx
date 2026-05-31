@@ -61,15 +61,15 @@ export function DeckScreen() {
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
-              <Plus className="size-4" /> {t('Card', '字卡')}
+              <Plus className="size-4" /> <span className="hidden sm:inline">{t('Card', '字卡')}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={newNote}>
-              <FilePlus2 className="size-4" /> {t('Note', '筆記')}
+              <FilePlus2 className="size-4" /> <span className="hidden sm:inline">{t('Note', '筆記')}</span>
             </Button>
             {dueCount > 0 ? (
               <Button asChild variant="brand" size="sm">
                 <Link to="/study/$deckId" params={{ deckId }}>
-                  <GraduationCap className="size-4" /> {t('Study', '複習')} ({dueCount})
+                  <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '複習')} </span>({dueCount})
                 </Link>
               </Button>
             ) : null}
@@ -88,7 +88,7 @@ export function DeckScreen() {
         }
       />
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-8 px-6 py-6">
+        <div className="mx-auto max-w-3xl space-y-8 px-4 py-4 sm:px-6 sm:py-6">
           {/* Flashcards (primary) */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">
