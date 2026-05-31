@@ -1,11 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, Cloud, Layers, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import * as api from '@/lib/api'
 import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useUpdateNote } from '@/lib/hooks'
-import { NoteEditor } from '@/components/editor/NoteEditor'
+
+// TipTap is heavy (~0.5 MB) and only the note editor needs it — split it into
+// its own chunk so the note shell (title, deck, cards) paints immediately.
+const NoteEditor = lazy(() =>
+  import('@/components/editor/NoteEditor').then((m) => ({ default: m.NoteEditor })),
+)
 import { NewCardDialog } from '@/components/cards/NewCardDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { AskAiDialog } from '@/components/cards/AskAiDialog'
@@ -166,7 +171,9 @@ export function NoteScreen() {
             </select>
             {setNoteDeck.isPending ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
           </div>
-          <NoteEditor key={note.id} initialMarkdown={note.body} onChange={setBody} />
+          <Suspense fallback={<div className="mt-2 h-64 animate-pulse rounded-lg bg-card/60" />}>
+            <NoteEditor key={note.id} initialMarkdown={note.body} onChange={setBody} />
+          </Suspense>
 
           {noteCards && noteCards.length > 0 ? (
             <section className="mt-10 space-y-3 border-t border-border pt-6">

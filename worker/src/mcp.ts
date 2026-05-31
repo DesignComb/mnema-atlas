@@ -3,6 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { z } from 'zod'
 import { toolAllowed, tools } from './tools'
+import { cleanError } from './errors'
 import type { Env } from './env'
 
 /**
@@ -30,7 +31,12 @@ export function buildMcpServer(env: Env, userId: string, scopes: string[]): McpS
             `forbidden: this key is add-only and cannot call '${tool.name}' (needs the 'edit' scope)`,
           )
         }
-        const result = await tool.run({ env, userId, via: 'mcp' }, args as Record<string, unknown>)
+        let result
+        try {
+          result = await tool.run({ env, userId, via: 'mcp' }, args as Record<string, unknown>)
+        } catch (e) {
+          throw new Error(cleanError(e).message)
+        }
         return {
           content: [{ type: 'text', text: result.summary }],
           structuredContent: result.data,

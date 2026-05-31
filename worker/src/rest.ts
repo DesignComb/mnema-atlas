@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { authenticate } from './auth'
+import { cleanError } from './errors'
 import { toolAllowed, toolByName, tools } from './tools'
 import type { Env } from './env'
 
@@ -53,6 +54,7 @@ rest.post('/:tool', async (c) => {
     )
     return c.json({ ok: true, summary: result.summary, data: result.data })
   } catch (e) {
-    return c.json({ error: e instanceof Error ? e.message : 'internal error' }, 500)
+    const { message, status } = cleanError(e)
+    return c.json({ error: message }, status)
   }
 })

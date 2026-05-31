@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
 import { useCreateNote } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 import { MobileNavContext } from '@/lib/mobile-nav'
 import { AppSidebar } from './AppSidebar'
 import { CommandPalette } from './CommandPalette'
@@ -17,12 +18,19 @@ export function AppLayout() {
   const [navOpen, setNavOpen] = useState(false)
   const navigate = useNavigate()
   const createNote = useCreateNote()
+  const t = useT()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const closeNavRef = useRef<HTMLButtonElement>(null)
 
   // Close the mobile nav drawer whenever the route changes (e.g. tapping a deck).
   useEffect(() => {
     setNavOpen(false)
   }, [pathname])
+
+  // Move focus into the drawer when it opens (a11y).
+  useEffect(() => {
+    if (navOpen) closeNavRef.current?.focus()
+  }, [navOpen])
 
   // ⌘K / Ctrl-K toggles the command palette; Esc closes the mobile drawer.
   useEffect(() => {
@@ -72,6 +80,10 @@ export function AppLayout() {
           )}
         />
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('Navigation menu', '導覽選單')}
+          inert={!navOpen}
           className={cn(
             'fixed inset-y-0 left-0 z-50 w-[84%] max-w-xs transition-transform duration-200 ease-out lg:hidden',
             navOpen ? 'translate-x-0 shadow-pop' : '-translate-x-full',
@@ -79,8 +91,9 @@ export function AppLayout() {
         >
           <AppSidebar className="flex w-full" {...sidebarProps} />
           <button
+            ref={closeNavRef}
             onClick={() => setNavOpen(false)}
-            aria-label="Close menu"
+            aria-label={t('Close menu', '關閉選單')}
             className="absolute right-2.5 top-2.5 rounded-md p-2 text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
           >
             <X className="size-4" />
