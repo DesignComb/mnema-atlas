@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
-import { FilePlus2, FileText, GraduationCap, Layers, Plus, Trash2 } from 'lucide-react'
+import { FilePlus2, FileText, GraduationCap, Layers, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCards, useCreateNote, useDecks, useDeleteDeck, useDueCards, useNotes } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { NewCardDialog } from '@/components/cards/NewCardDialog'
+import { NewDeckDialog } from '@/components/app-shell/NewDeckDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { Button } from '@/components/ui/button'
 import { relativeDue } from '@/lib/utils'
@@ -21,6 +22,7 @@ export function DeckScreen() {
   const navigate = useNavigate()
   const t = useT()
   const [cardOpen, setCardOpen] = useState(false)
+  const [renameOpen, setRenameOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
 
   async function removeDeck() {
@@ -71,6 +73,11 @@ export function DeckScreen() {
                 <Link to="/study/$deckId" params={{ deckId }}>
                   <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '複習')} </span>({dueCount})
                 </Link>
+              </Button>
+            ) : null}
+            {deck ? (
+              <Button variant="ghost" size="sm" onClick={() => setRenameOpen(true)} title={t('Rename deck', '重新命名牌組')}>
+                <Pencil className="size-4" />
               </Button>
             ) : null}
             <Button
@@ -150,6 +157,7 @@ export function DeckScreen() {
         </div>
       </div>
       <NewCardDialog open={cardOpen} onOpenChange={setCardOpen} deckId={deckId} />
+      {deck ? <NewDeckDialog open={renameOpen} onOpenChange={setRenameOpen} deck={deck} /> : null}
     </>
   )
 }

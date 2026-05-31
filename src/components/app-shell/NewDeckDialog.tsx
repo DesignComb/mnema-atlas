@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useCreateDeck } from '@/lib/hooks'
+import { useCreateDeck, useUpdateDeck } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
+import type { DeckRow } from '@/lib/database.types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,31 +16,56 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-export function NewDeckDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function NewDeckDialog({
+  open,
+  onOpenChange,
+  deck,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  /** When provided, the dialog renames this deck instead of creating one. */
+  deck?: DeckRow
+}) {
+  const editing = !!deck
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const createDeck = useCreateDeck()
+  const updateDeck = useUpdateDeck()
   const t = useT()
+
+  useEffect(() => {
+    if (open) {
+      setName(deck?.name ?? '')
+      setDescription(deck?.description ?? '')
+    }
+  }, [open, deck])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
     try {
-      await createDeck.mutateAsync({ name: name.trim(), description: description.trim() || undefined })
-      toast.success(t(`Deck “${name.trim()}” created`, `已建立牌組「${name.trim()}」`))
+      if (editing && deck) {
+        await updateDeck.mutateAsync({ id: deck.id, patch: { name: name.trim(), description: description.trim() || null } })
+        toast.success(t('Deck updated', '已更新牌組'))
+      } else {
+        await createDeck.mutateAsync({ name: name.trim(), description: description.trim() || undefined })
+        toast.success(t(`Deck “${name.trim()}” created`, `已建立牌組「${name.trim()}」`))
+      }
       setName('')
       setDescription('')
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to create deck', '建立牌組失敗'))
+      toast.error(err instanceof Error ? err.message : t('Failed to save deck', '儲存牌組失敗'))
     }
   }
+
+  const pending = createDeck.isPending || updateDeck.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('New deck', '新增牌組')}</DialogTitle>
+          <DialogTitle>{editing ? t('Edit deck', '編輯牌組') : t('New deck', '新增牌組')}</DialogTitle>
           <DialogDescription>{t('A deck groups related notes and flashcards.', '牌組用來歸納相關的筆記與字卡。')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-4">
@@ -66,8 +92,12 @@ export function NewDeckDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}
             </Button>
-            <Button type="submit" variant="brand" disabled={createDeck.isPending || !name.trim()}>
-              {createDeck.isPending ? t('Creating…', '建立中…') : t('Create deck', '建立牌組')}
+            <Button type="submit" variant="brand" disabled={pending || !name.trim()}>
+              {pending
+                ? t('Saving…', '儲存中…')
+                : editing
+                  ? t('Save', '儲存')
+                  : t('Create deck', '建立牌組')}
             </Button>
           </DialogFooter>
         </form>

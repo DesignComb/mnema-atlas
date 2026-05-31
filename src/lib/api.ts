@@ -60,6 +60,18 @@ export async function listLinks(): Promise<NoteLinkRow[]> {
   return unwrap(await supabase.from('note_links').select('*'))
 }
 
+/** Not-yet-due cards (soonest first) — the "study ahead / cram" queue. */
+export async function listAheadCards(deckId?: string, limit = 30): Promise<CardRow[]> {
+  let q = supabase
+    .from('cards')
+    .select('*')
+    .gt('due', new Date().toISOString())
+    .order('due', { ascending: true })
+    .limit(limit)
+  if (deckId) q = q.eq('deck_id', deckId)
+  return unwrap(await q)
+}
+
 /** Flashcards generated from / linked to a given note (provenance backlink). */
 export async function listCardsByNote(noteId: string): Promise<CardRow[]> {
   return unwrap(
@@ -203,6 +215,29 @@ export async function recordReview(
       p_log: log as Json,
     }),
   )
+}
+
+/**
+ * record_review with retry — the review queue advances optimistically, so a
+ * transient network blip must not silently lose a grade. Retries a few times
+ * with backoff; throws only if every attempt fails (caller surfaces that).
+ */
+export async function recordReviewSafe(
+  cardId: string,
+  card: unknown,
+  log: unknown,
+  retries = 3,
+): Promise<CardRow> {
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await recordReview(cardId, card, log)
+    } catch (err) {
+      lastErr = err
+      if (attempt < retries) await new Promise((r) => setTimeout(r, 400 * 2 ** attempt))
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('Failed to save review')
 }
 
 export async function updateCard(

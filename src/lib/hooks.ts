@@ -146,6 +146,44 @@ export function useDeleteDeck() {
   })
 }
 
+export function useUpdateDeck() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; patch: Parameters<typeof api.updateDeck>[1] }) => api.updateDeck(v.id, v.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.decks }),
+  })
+}
+
+/** Move a note to another deck (or out of all decks when deckId is null). */
+export function useSetNoteDeck() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { noteId: string; deckId: string | null }) => api.setNoteDeck(v.noteId, v.deckId),
+    onSuccess: (note) => {
+      qc.invalidateQueries({ queryKey: ['notes'] })
+      qc.invalidateQueries({ queryKey: qk.note(note.id) })
+      qc.invalidateQueries({ queryKey: ['cards'] })
+      qc.invalidateQueries({ queryKey: qk.graph })
+    },
+  })
+}
+
+/** Manual graph editing: create / remove an association between two notes. */
+export function useLinkNotes() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.linkNotes>[0]) => api.linkNotes(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.graph }),
+  })
+}
+export function useUnlinkNotes() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { a: string; b: string }) => api.unlinkNotes(v.a, v.b),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.graph }),
+  })
+}
+
 /** Create a blank note and open it (deduped from deck/notes/home). */
 export function useNewNote() {
   const navigate = useNavigate()

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { Check, Cloud, Layers, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCardsByNote, useDeleteNote, useNote, useUpdateNote } from '@/lib/hooks'
+import * as api from '@/lib/api'
+import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useUpdateNote } from '@/lib/hooks'
 import { NoteEditor } from '@/components/editor/NoteEditor'
 import { NewCardDialog } from '@/components/cards/NewCardDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
@@ -18,9 +20,12 @@ export function NoteScreen() {
   const { noteId } = useParams({ strict: false }) as { noteId: string }
   const { data: note, isLoading } = useNote(noteId)
   const { data: noteCards } = useCardsByNote(noteId)
+  const { data: decks } = useDecks()
   const updateNote = useUpdateNote()
+  const setNoteDeck = useSetNoteDeck()
   const deleteNote = useDeleteNote()
   const navigate = useNavigate()
+  const qc = useQueryClient()
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -29,6 +34,10 @@ export function NoteScreen() {
   const [askOpen, setAskOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
   const loadedId = useRef<string | null>(null)
+  // Latest values for the unmount-time "discard abandoned blank note" cleanup.
+  const discardedRef = useRef(false)
+  const latest = useRef({ title: '', body: '', cards: 0 })
+  latest.current = { title, body, cards: noteCards?.length ?? 0 }
 
   // Initialise local state once per note.
   useEffect(() => {
@@ -39,6 +48,25 @@ export function NoteScreen() {
       setStatus('idle')
     }
   }, [note])
+
+  // On leave, silently discard a note that was never filled in — so a stray
+  // "New note" click doesn't litter the library with empty "Untitled" notes.
+  useEffect(() => {
+    return () => {
+      const id = loadedId.current
+      const { title: tt, body: bb, cards } = latest.current
+      const blank = (!tt.trim() || tt.trim() === 'Untitled') && !bb.trim() && cards === 0
+      if (id && blank && !discardedRef.current) {
+        api
+          .deleteNote(id)
+          .then(() => {
+            qc.invalidateQueries({ queryKey: ['notes'] })
+            qc.invalidateQueries({ queryKey: ['graph'] })
+          })
+          .catch(() => {})
+      }
+    }
+  }, [qc])
 
   // Debounced autosave.
   useEffect(() => {
@@ -98,6 +126,7 @@ export function NoteScreen() {
                   return
                 }
                 try {
+                  discardedRef.current = true
                   await deleteNote.mutateAsync(note.id)
                   toast.success(t('Note deleted', '已刪除筆記'))
                   navigate({ to: '/notes' })
@@ -118,8 +147,25 @@ export function NoteScreen() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t('Untitled', '未命名')}
-            className="mb-4 w-full bg-transparent font-serif text-2xl font-semibold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/40 sm:text-3xl"
+            className="mb-3 w-full bg-transparent font-serif text-2xl font-semibold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/40 sm:text-3xl"
           />
+          {/* Deck — move this note between decks (or out of all of them). */}
+          <div className="mb-6 flex items-center gap-2">
+            <Layers className="size-3.5 shrink-0 text-muted-foreground" />
+            <select
+              value={note.deck_id ?? ''}
+              onChange={(e) => setNoteDeck.mutate({ noteId: note.id, deckId: e.target.value || null })}
+              className="max-w-[60%] truncate rounded-md border border-border bg-card px-2 py-1 text-[13px] text-muted-foreground outline-none transition hover:text-foreground focus:border-brand"
+            >
+              <option value="">{t('No deck', '無牌組')}</option>
+              {decks?.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            {setNoteDeck.isPending ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
+          </div>
           <NoteEditor key={note.id} initialMarkdown={note.body} onChange={setBody} />
 
           {noteCards && noteCards.length > 0 ? (

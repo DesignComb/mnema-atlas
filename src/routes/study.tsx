@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import { Check, Keyboard, PartyPopper, Sparkles } from 'lucide-react'
+import { AlertTriangle, Check, FastForward, Keyboard, Loader2, PartyPopper, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDecks, useDueCards } from '@/lib/hooks'
-import { recordReview } from '@/lib/api'
+import { listAheadCards, recordReviewSafe } from '@/lib/api'
 import { grade, previewIntervals, RATING_META, type IntervalHint } from '@/lib/srs'
 import type { Grade } from 'ts-fsrs'
 import type { CardRow } from '@/lib/database.types'
@@ -33,6 +33,9 @@ export function StudyScreen() {
   const [idx, setIdx] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [reviewed, setReviewed] = useState(0)
+  const [unsaved, setUnsaved] = useState(0) // reviews that failed every retry
+  const [cram, setCram] = useState(false) // studying ahead (not-yet-due cards)
+  const [cramLoading, setCramLoading] = useState(false)
 
   // Snapshot the due queue once so grading doesn't reshuffle mid-session.
   useEffect(() => {
@@ -47,16 +50,45 @@ export function StudyScreen() {
     (rating: Grade) => {
       if (!current) return
       const { card, log } = grade(current, rating)
-      // Optimistically advance; persist in the background.
-      recordReview(current.id, card, log).catch((err) =>
-        toast.error(err instanceof Error ? err.message : t('Failed to save review', '儲存複習紀錄失敗')),
-      )
+      // Optimistically advance; persist in the background with retry so a blip
+      // doesn't silently lose the grade. If every retry fails, flag it loudly.
+      recordReviewSafe(current.id, card, log).catch((err) => {
+        setUnsaved((u) => u + 1)
+        toast.error(
+          err instanceof Error
+            ? t(`Couldn't save a review: ${err.message}`, `有一筆複習未能儲存：${err.message}`)
+            : t('Failed to save a review', '有一筆複習未能儲存'),
+          { duration: 6000 },
+        )
+      })
       setReviewed((r) => r + 1)
       setFlipped(false)
       setIdx((i) => i + 1)
     },
     [current, t],
   )
+
+  // Study-ahead: pull not-yet-due cards into a fresh queue (cramming).
+  const startCram = useCallback(async () => {
+    setCramLoading(true)
+    try {
+      const ahead = await listAheadCards(deckId, 30)
+      if (!ahead.length) {
+        toast.success(t('Nothing scheduled ahead yet — add more cards.', '目前沒有可超前的卡片 — 多新增一些吧。'))
+        return
+      }
+      setQueue(ahead)
+      setIdx(0)
+      setReviewed(0)
+      setFlipped(false)
+      setUnsaved(0)
+      setCram(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('Failed to load cards', '載入卡片失敗'))
+    } finally {
+      setCramLoading(false)
+    }
+  }, [deckId, t])
 
   // When the session ends, refresh due counts everywhere.
   const done = queue !== null && idx >= total
@@ -97,7 +129,7 @@ export function StudyScreen() {
     <>
       <PageHeader
         title={t('Study', '學習')}
-        subtitle={deckName ?? undefined}
+        subtitle={cram ? t('Studying ahead', '超前複習') : (deckName ?? undefined)}
         icon={<Sparkles className="size-4" />}
         actions={
           total > 0 && !done ? (
@@ -131,9 +163,15 @@ export function StudyScreen() {
               '你已全部複習完畢。新字卡（包括 AI 新增的）一建立就會出現在這裡。',
             )}
             action={
-              <Button asChild variant="outline" size="sm">
-                <Link to="/">{t('Back to Today', '回到今天')}</Link>
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button variant="brand" size="sm" onClick={startCram} disabled={cramLoading}>
+                  {cramLoading ? <Loader2 className="size-4 animate-spin" /> : <FastForward className="size-4" />}
+                  {t('Study ahead', '超前複習')}
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/">{t('Back to Today', '回到今天')}</Link>
+                </Button>
+              </div>
             }
           />
         ) : done ? (
@@ -153,10 +191,25 @@ export function StudyScreen() {
                   `你複習了 ${reviewed} 張字卡，做得很好。`,
                 )}
               </p>
+              {unsaved > 0 ? (
+                <p className="flex items-center justify-center gap-1.5 text-[13px] text-amber-600">
+                  <AlertTriangle className="size-3.5" />
+                  {t(
+                    `${unsaved} review${unsaved === 1 ? '' : 's'} couldn't be saved — check your connection.`,
+                    `${unsaved} 筆複習未能儲存 — 請檢查網路連線。`,
+                  )}
+                </p>
+              ) : null}
             </div>
-            <Button asChild variant="brand">
-              <Link to="/">{t('Back to Today', '回到今天')}</Link>
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button variant="outline" onClick={startCram} disabled={cramLoading}>
+                {cramLoading ? <Loader2 className="size-4 animate-spin" /> : <FastForward className="size-4" />}
+                {t('Study ahead', '超前複習')}
+              </Button>
+              <Button asChild variant="brand">
+                <Link to="/">{t('Back to Today', '回到今天')}</Link>
+              </Button>
+            </div>
           </motion.div>
         ) : current ? (
           <div className="w-full max-w-xl">
