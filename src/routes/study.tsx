@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from '@tanstack/react-router'
+import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { AlertTriangle, Check, FastForward, Keyboard, Loader2, PartyPopper, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
@@ -25,8 +25,10 @@ export function StudyScreen() {
   const t = useT()
   const params = useParams({ strict: false }) as { deckId?: string }
   const deckId = params.deckId
+  const search = useSearch({ strict: false }) as { tag?: string }
+  const tag = search.tag
   const { data: decks } = useDecks()
-  const { data: dueCards, isLoading } = useDueCards(deckId)
+  const { data: dueCards, isLoading } = useDueCards(deckId, tag)
   const qc = useQueryClient()
 
   const [queue, setQueue] = useState<CardRow[] | null>(null)
@@ -36,6 +38,17 @@ export function StudyScreen() {
   const [unsaved, setUnsaved] = useState(0) // reviews that failed every retry
   const [cram, setCram] = useState(false) // studying ahead (not-yet-due cards)
   const [cramLoading, setCramLoading] = useState(false)
+
+  // Reset the whole session when the filter (deck or tag) changes — the route
+  // component is reused across /study, /study/$deckId, and /study?tag=…
+  useEffect(() => {
+    setQueue(null)
+    setIdx(0)
+    setReviewed(0)
+    setFlipped(false)
+    setUnsaved(0)
+    setCram(false)
+  }, [deckId, tag])
 
   // Snapshot the due queue once so grading doesn't reshuffle mid-session.
   useEffect(() => {
@@ -72,7 +85,7 @@ export function StudyScreen() {
   const startCram = useCallback(async () => {
     setCramLoading(true)
     try {
-      const ahead = await listAheadCards(deckId, 30)
+      const ahead = await listAheadCards(deckId, tag, 30)
       if (!ahead.length) {
         toast.success(t('Nothing scheduled ahead yet — add more cards.', '目前沒有可超前的卡片 — 多新增一些吧。'))
         return
@@ -88,7 +101,7 @@ export function StudyScreen() {
     } finally {
       setCramLoading(false)
     }
-  }, [deckId, t])
+  }, [deckId, tag, t])
 
   // When the session ends, refresh due counts everywhere.
   const done = queue !== null && idx >= total
@@ -129,7 +142,7 @@ export function StudyScreen() {
     <>
       <PageHeader
         title={t('Study', '學習')}
-        subtitle={cram ? t('Studying ahead', '超前複習') : (deckName ?? undefined)}
+        subtitle={cram ? t('Studying ahead', '超前複習') : tag ? `#${tag}` : (deckName ?? undefined)}
         icon={<Sparkles className="size-4" />}
         actions={
           total > 0 && !done ? (

@@ -53,6 +53,10 @@ const noteRoute = createRoute({
 const studyRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'study',
+  // ?tag=… lets you review one tag across all decks.
+  validateSearch: (search: Record<string, unknown>): { tag?: string } => ({
+    tag: typeof search.tag === 'string' && search.tag ? search.tag : undefined,
+  }),
   component: lazyRouteComponent(() => import('@/routes/study'), 'StudyScreen'),
 })
 const studyDeckRoute = createRoute({

@@ -80,6 +80,7 @@ export type Database = {
           scheduled_days: number
           stability: number | null
           state: number
+          tags: string[]
           updated_at: string
           user_id: string
         }
@@ -101,6 +102,7 @@ export type Database = {
           scheduled_days?: number
           stability?: number | null
           state?: number
+          tags?: string[]
           updated_at?: string
           user_id: string
         }
@@ -122,6 +124,7 @@ export type Database = {
           scheduled_days?: number
           stability?: number | null
           state?: number
+          tags?: string[]
           updated_at?: string
           user_id?: string
         }
@@ -386,6 +389,7 @@ export type Database = {
           scheduled_days: number
           stability: number | null
           state: number
+          tags: string[]
           updated_at: string
           user_id: string
         }
@@ -444,6 +448,7 @@ export type Database = {
           scheduled_days: number
           stability: number | null
           state: number
+          tags: string[]
           updated_at: string
           user_id: string
         }[]
@@ -542,6 +547,7 @@ export type Database = {
           scheduled_days: number
           stability: number | null
           state: number
+          tags: string[]
           updated_at: string
           user_id: string
         }
@@ -570,6 +576,37 @@ export type Database = {
           to: "notes"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      set_card_tags: {
+        Args: { p_card_id: string; p_tags: string[]; p_user_id: string | null }
+        Returns: {
+          back: string
+          created_at: string
+          created_via: string
+          deck_id: string | null
+          difficulty: number | null
+          due: string
+          elapsed_days: number
+          front: string
+          id: string
+          lapses: number
+          last_review: string | null
+          learning_steps: number
+          note_id: string | null
+          reps: number
+          scheduled_days: number
+          stability: number | null
+          state: number
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cards"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       set_note_deck: {
@@ -643,6 +680,7 @@ export type Database = {
           scheduled_days: number
           stability: number | null
           state: number
+          tags: string[]
           updated_at: string
           user_id: string
         }

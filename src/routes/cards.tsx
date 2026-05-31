@@ -4,6 +4,8 @@ import { useCards, useDecks, useDueCards, useSeedSample } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
+import { tagChipStyle } from '@/lib/tags'
 
 function StateTile({ label, n, cls }: { label: string; n: number; cls: string }) {
   return (
@@ -20,6 +22,15 @@ export function CardsScreen() {
   const { data: decks } = useDecks()
   const seed = useSeedSample()
   const t = useT()
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+
+  // Tag overview → study by tag (across decks).
+  const tagTotal = new Map<string, number>()
+  const tagDue = new Map<string, number>()
+  cards?.forEach((c) => c.tags?.forEach((tg) => tagTotal.set(tg, (tagTotal.get(tg) ?? 0) + 1)))
+  due?.forEach((c) => c.tags?.forEach((tg) => tagDue.set(tg, (tagDue.get(tg) ?? 0) + 1)))
+  const tagList = Array.from(tagTotal.keys()).sort()
 
   const countByDeck = new Map<string, number>()
   cards?.forEach((c) => {
@@ -89,6 +100,35 @@ export function CardsScreen() {
                 <StateTile label={t('Review', '複習')} n={byState[2]} cls="text-emerald-600 dark:text-emerald-300" />
                 <StateTile label={t('Due now', '現在到期')} n={totalDue} cls="text-brand" />
               </div>
+
+              {/* Study by tag — pick a tag to review across all decks. */}
+              {tagList.length ? (
+                <div className="mb-1.5">
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    {t('Study by tag', '依標籤複習')}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tagList.map((tg) => {
+                      const n = tagTotal.get(tg) ?? 0
+                      const d = tagDue.get(tg) ?? 0
+                      return (
+                        <Link
+                          key={tg}
+                          to="/study"
+                          search={{ tag: tg }}
+                          style={tagChipStyle(tg, isDark)}
+                          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-85"
+                          title={t(`Study “${tg}”`, `複習「${tg}」`)}
+                        >
+                          {tg}
+                          <span className="tabular-nums opacity-70">{d > 0 ? `${d}/${n}` : n}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               {deckList.map((d) => {
                 const n = countByDeck.get(d.id) ?? 0
                 const dd = dueByDeck.get(d.id) ?? 0

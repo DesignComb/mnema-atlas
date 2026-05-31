@@ -16,7 +16,7 @@ export const qk = {
   note: (id: string) => ['note', id] as const,
   cards: (deckId?: string) => ['cards', deckId ?? 'all'] as const,
   cardsByNote: (noteId: string) => ['cards-by-note', noteId] as const,
-  due: (deckId?: string) => ['due', deckId ?? 'all'] as const,
+  due: (deckId?: string, tag?: string) => ['due', deckId ?? 'all', tag ?? 'all'] as const,
   graph: ['graph'] as const,
 }
 
@@ -36,8 +36,8 @@ export function useCards(deckId?: string) {
   return useQuery({ queryKey: qk.cards(deckId), queryFn: () => api.listCards(deckId) })
 }
 
-export function useDueCards(deckId?: string) {
-  return useQuery({ queryKey: qk.due(deckId), queryFn: () => api.listDueCards(deckId) })
+export function useDueCards(deckId?: string, tag?: string) {
+  return useQuery({ queryKey: qk.due(deckId, tag), queryFn: () => api.listDueCards(deckId, tag) })
 }
 
 export function useCardsByNote(noteId: string) {
@@ -164,6 +164,19 @@ export function useSetNoteDeck() {
       qc.invalidateQueries({ queryKey: qk.note(note.id) })
       qc.invalidateQueries({ queryKey: ['cards'] })
       qc.invalidateQueries({ queryKey: qk.graph })
+    },
+  })
+}
+
+/** Set a flashcard's tags (enables study-by-tag). */
+export function useSetCardTags() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { cardId: string; tags: string[] }) => api.setCardTags(v.cardId, v.tags),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cards'] })
+      qc.invalidateQueries({ queryKey: ['cards-by-note'] })
+      qc.invalidateQueries({ queryKey: ['due'] })
     },
   })
 }

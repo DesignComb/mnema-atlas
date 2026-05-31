@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCreateCard, useDecks, useDeleteCard, useUpdateCard } from '@/lib/hooks'
+import { useCards, useCreateCard, useDecks, useDeleteCard, useNotes, useSetCardTags, useUpdateCard } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import type { CardRow } from '@/lib/database.types'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { TagInput } from '@/components/editor/TagInput'
 import {
   Dialog,
   DialogContent,
@@ -33,21 +34,34 @@ export function NewCardDialog({
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
   const [deckSel, setDeckSel] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [confirmDel, setConfirmDel] = useState(false)
   const createCard = useCreateCard()
   const updateCard = useUpdateCard()
   const deleteCard = useDeleteCard()
+  const setCardTags = useSetCardTags()
   const { data: decks } = useDecks()
+  const { data: notes } = useNotes()
+  const { data: allCards } = useCards()
   const t = useT()
+
+  // Tag suggestions = every tag already used on a note or card.
+  const tagSuggestions = Array.from(
+    new Set([...(notes ?? []).flatMap((n) => n.tags ?? []), ...(allCards ?? []).flatMap((c) => c.tags ?? [])]),
+  ).sort()
+  const notesRef = useRef(notes)
+  notesRef.current = notes
 
   useEffect(() => {
     if (open) {
       setFront(card?.front ?? '')
       setBack(card?.back ?? '')
       setDeckSel(card?.deck_id ?? deckId ?? '')
+      // New cards inherit their source note's tags as a sensible default.
+      setTags(card?.tags ?? (noteId ? notesRef.current?.find((n) => n.id === noteId)?.tags ?? [] : []))
       setConfirmDel(false)
     }
-  }, [open, card, deckId])
+  }, [open, card, deckId, noteId])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -58,9 +72,16 @@ export function NewCardDialog({
           id: card.id,
           patch: { front: front.trim(), back: back.trim(), deck_id: deckSel || null },
         })
+        await setCardTags.mutateAsync({ cardId: card.id, tags })
         toast.success(t('Flashcard updated', '已更新字卡'))
       } else {
-        await createCard.mutateAsync({ front: front.trim(), back: back.trim(), note_id: noteId, deck_id: deckSel || undefined })
+        const created = await createCard.mutateAsync({
+          front: front.trim(),
+          back: back.trim(),
+          note_id: noteId,
+          deck_id: deckSel || undefined,
+        })
+        if (tags.length) await setCardTags.mutateAsync({ cardId: created.id, tags })
         toast.success(t('Flashcard added — due now', '已新增字卡 — 立即到期'))
       }
       onOpenChange(false)
@@ -121,6 +142,12 @@ export function NewCardDialog({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="card-back">{t('Back', '背面')}</Label>
             <Textarea id="card-back" value={back} onChange={(e) => setBack(e.target.value)} placeholder={t('Answer', '答案')} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>{t('Tags', '標籤')}</Label>
+            <div className="rounded-lg border border-border bg-card px-2.5 py-2">
+              <TagInput tags={tags} onChange={setTags} suggestions={tagSuggestions} listId="mnema-card-tags" />
+            </div>
           </div>
           <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
             {editing ? (

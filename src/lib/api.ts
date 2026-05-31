@@ -38,14 +38,15 @@ export async function getNote(noteId: string): Promise<NoteRow | null> {
   return unwrap(res)
 }
 
-export async function listCards(deckId?: string): Promise<CardRow[]> {
+export async function listCards(deckId?: string, tag?: string): Promise<CardRow[]> {
   let q = supabase.from('cards').select('*').order('due', { ascending: true })
   if (deckId) q = q.eq('deck_id', deckId)
+  if (tag) q = q.contains('tags', [tag])
   return unwrap(await q)
 }
 
-/** Cards due now (the review queue), oldest-due first. */
-export async function listDueCards(deckId?: string, limit = 60): Promise<CardRow[]> {
+/** Cards due now (the review queue), oldest-due first. Optionally filter by tag. */
+export async function listDueCards(deckId?: string, tag?: string, limit = 60): Promise<CardRow[]> {
   let q = supabase
     .from('cards')
     .select('*')
@@ -53,6 +54,7 @@ export async function listDueCards(deckId?: string, limit = 60): Promise<CardRow
     .order('due', { ascending: true })
     .limit(limit)
   if (deckId) q = q.eq('deck_id', deckId)
+  if (tag) q = q.contains('tags', [tag])
   return unwrap(await q)
 }
 
@@ -61,7 +63,7 @@ export async function listLinks(): Promise<NoteLinkRow[]> {
 }
 
 /** Not-yet-due cards (soonest first) — the "study ahead / cram" queue. */
-export async function listAheadCards(deckId?: string, limit = 30): Promise<CardRow[]> {
+export async function listAheadCards(deckId?: string, tag?: string, limit = 30): Promise<CardRow[]> {
   let q = supabase
     .from('cards')
     .select('*')
@@ -69,6 +71,7 @@ export async function listAheadCards(deckId?: string, limit = 30): Promise<CardR
     .order('due', { ascending: true })
     .limit(limit)
   if (deckId) q = q.eq('deck_id', deckId)
+  if (tag) q = q.contains('tags', [tag])
   return unwrap(await q)
 }
 
@@ -154,6 +157,11 @@ export async function setNoteDeck(noteId: string, deckId: string | null): Promis
 /** Replace the whole tag set on a note (drives graph colour / clustering). */
 export async function setNoteTags(noteId: string, tags: string[]): Promise<NoteRow> {
   return unwrap(await supabase.rpc('set_note_tags', { p_user_id: null, p_note_id: noteId, p_tags: tags }))
+}
+
+/** Replace the whole tag set on a flashcard (enables study-by-tag). */
+export async function setCardTags(cardId: string, tags: string[]): Promise<CardRow> {
+  return unwrap(await supabase.rpc('set_card_tags', { p_user_id: null, p_card_id: cardId, p_tags: tags }))
 }
 
 export async function createCard(input: CreateFlashcardInput): Promise<CardRow> {

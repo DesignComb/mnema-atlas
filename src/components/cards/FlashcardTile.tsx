@@ -4,6 +4,8 @@ import { FileText, Pencil } from 'lucide-react'
 import type { CardRow } from '@/lib/database.types'
 import { relativeDue } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
+import { tagChipStyle } from '@/lib/tags'
 import { NewCardDialog } from './NewCardDialog'
 
 /** FSRS state → label + colour, so each card shows its learning status at a glance. */
@@ -17,6 +19,8 @@ const STATE_META: Record<number, { label: string; zh: string; cls: string }> = {
 export function FlashcardTile({ card, noteTitle }: { card: CardRow; noteTitle?: string }) {
   const [editing, setEditing] = useState(false)
   const t = useT()
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const meta = STATE_META[card.state] ?? STATE_META[0]
   return (
     <div className="group relative rounded-xl border border-border bg-card p-3.5 shadow-soft">
@@ -49,6 +53,15 @@ export function FlashcardTile({ card, noteTitle }: { card: CardRow; noteTitle?: 
           </Link>
         ) : null}
       </div>
+      {card.tags?.length ? (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {card.tags.map((tg) => (
+            <span key={tg} style={tagChipStyle(tg, isDark)} className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+              {tg}
+            </span>
+          ))}
+        </div>
+      ) : null}
       <NewCardDialog open={editing} onOpenChange={setEditing} card={card} />
     </div>
   )
