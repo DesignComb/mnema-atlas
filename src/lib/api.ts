@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { ApiKeyRow, CardRow, DeckRow, NoteRow, NoteLinkRow } from './database.types'
+import type { ApiKeyRow, CardRow, DeckRow, Json, NoteRow, NoteLinkRow } from './database.types'
 import type {
   CreateDeckInput,
   CreateFlashcardInput,
@@ -87,8 +87,8 @@ export async function createDeck(input: CreateDeckInput): Promise<DeckRow> {
     await supabase.rpc('create_deck', {
       p_user_id: null,
       p_name: input.name,
-      p_parent_deck_id: input.parent_deck_id ?? null,
-      p_description: input.description ?? null,
+      p_parent_deck_id: input.parent_deck_id ?? undefined,
+      p_description: input.description ?? undefined,
     }),
   )
 }
@@ -99,7 +99,7 @@ export async function createNote(input: CreateNoteInput): Promise<NoteRow> {
       p_user_id: null,
       p_title: input.title,
       p_body: input.body ?? '',
-      p_deck_id: input.deck_id ?? null,
+      p_deck_id: input.deck_id ?? undefined,
       p_created_via: 'ui',
     }),
   )
@@ -110,10 +110,32 @@ export async function updateNote(input: UpdateNoteInput): Promise<NoteRow> {
     await supabase.rpc('update_note', {
       p_user_id: null,
       p_note_id: input.note_id,
-      p_title: input.title ?? null,
-      p_body: input.body ?? null,
-      p_deck_id: input.deck_id ?? null,
+      p_title: input.title ?? undefined,
+      p_body: input.body ?? undefined,
+      p_deck_id: input.deck_id ?? undefined,
     }),
+  )
+}
+
+/** Rename / re-describe a deck (null = leave unchanged). */
+export async function updateDeck(
+  deckId: string,
+  patch: { name?: string; description?: string | null },
+): Promise<DeckRow> {
+  return unwrap(
+    await supabase.rpc('update_deck', {
+      p_user_id: null,
+      p_deck_id: deckId,
+      p_name: patch.name ?? undefined,
+      p_description: patch.description ?? undefined,
+    }),
+  )
+}
+
+/** Move a note to another deck — or out of all decks (deckId = null). */
+export async function setNoteDeck(noteId: string, deckId: string | null): Promise<NoteRow> {
+  return unwrap(
+    await supabase.rpc('set_note_deck', { p_user_id: null, p_note_id: noteId, p_deck_id: deckId ?? undefined }),
   )
 }
 
@@ -123,8 +145,8 @@ export async function createCard(input: CreateFlashcardInput): Promise<CardRow> 
       p_user_id: null,
       p_front: input.front,
       p_back: input.back,
-      p_note_id: input.note_id ?? null,
-      p_deck_id: input.deck_id ?? null,
+      p_note_id: input.note_id ?? undefined,
+      p_deck_id: input.deck_id ?? undefined,
       p_created_via: 'ui',
     }),
   )
@@ -144,8 +166,8 @@ export async function createFlashcardsBulk(
   return unwrap(
     await supabase.rpc('create_flashcards_bulk', {
       p_user_id: null,
-      p_cards: cards,
-      p_deck_id: deckId ?? null,
+      p_cards: cards as unknown as Json,
+      p_deck_id: deckId ?? undefined,
       p_created_via: 'ui',
     }),
   )
@@ -163,6 +185,11 @@ export async function linkNotes(input: LinkNotesInput): Promise<NoteLinkRow> {
   )
 }
 
+/** Remove the association(s) between two notes (either direction). */
+export async function unlinkNotes(a: string, b: string): Promise<number> {
+  return unwrap(await supabase.rpc('unlink_notes', { p_user_id: null, p_a: a, p_b: b }))
+}
+
 export async function recordReview(
   cardId: string,
   card: unknown,
@@ -172,8 +199,8 @@ export async function recordReview(
     await supabase.rpc('record_review', {
       p_user_id: null,
       p_card_id: cardId,
-      p_card: card as never,
-      p_log: log as never,
+      p_card: card as Json,
+      p_log: log as Json,
     }),
   )
 }
@@ -186,10 +213,10 @@ export async function updateCard(
     await supabase.rpc('update_card', {
       p_user_id: null,
       p_card_id: cardId,
-      p_front: patch.front ?? null,
-      p_back: patch.back ?? null,
-      p_deck_id: patch.deck_id ?? null,
-      p_note_id: patch.note_id ?? null,
+      p_front: patch.front ?? undefined,
+      p_back: patch.back ?? undefined,
+      p_deck_id: patch.deck_id ?? undefined,
+      p_note_id: patch.note_id ?? undefined,
     }),
   )
 }

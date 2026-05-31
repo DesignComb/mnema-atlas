@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from './database.types'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
@@ -15,7 +16,7 @@ if (!url || !publishableKey) {
  * is mediated by Row Level Security, so this key is safe to ship to the client.
  * Writes go through SECURITY DEFINER RPCs (see src/lib/api.ts), never raw inserts.
  */
-export const supabase = createClient(url ?? '', publishableKey ?? '', {
+export const supabase = createClient<Database>(url ?? '', publishableKey ?? '', {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
