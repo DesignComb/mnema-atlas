@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -16,7 +16,11 @@ type Layout = 'force' | 'radial' | 'tree'
 type ColorBy = 'tag' | 'deck'
 const UNTAGGED = '·none'
 
-interface GNode {
+interface Pt {
+  x: number
+  y: number
+}
+interface GNode extends Pt {
   id: string
   title: string
   deck_id: string | null
@@ -24,8 +28,6 @@ interface GNode {
   deg: number
   r: number
   neighbors: Set<string>
-  x?: number
-  y?: number
   vx?: number
   vy?: number
   fx?: number
@@ -99,7 +101,6 @@ function GraphCanvas({
   const posRef = useRef(new Map<string, { x: number; y: number; vx: number; vy: number }>())
   const didFitRef = useRef(false)
 
-  // Pick the grouping key for a node under the current colour mode.
   const groupKey = useCallback(
     (n: GNode) => (colorBy === 'tag' ? n.tags[0] ?? UNTAGGED : n.deck_id ?? UNTAGGED),
     [colorBy],
@@ -111,18 +112,16 @@ function GraphCanvas({
     [colorBy, deckNames],
   )
 
-  // Default to whichever mode actually has data (tags preferred, else decks).
   useEffect(() => {
     const anyTag = data.nodes.some((n) => n.tags.length)
     if (!anyTag && data.nodes.some((n) => n.deck_id)) setColorBy('deck')
-    // run once per dataset
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   const graph = useMemo(() => {
     const nodes: GNode[] = data.nodes.map((n) => {
       const p = posRef.current.get(n.id)
-      return { ...n, tags: n.tags ?? [], deg: 0, r: 4, neighbors: new Set<string>(), x: p?.x, y: p?.y, vx: p?.vx, vy: p?.vy }
+      return { ...n, tags: n.tags ?? [], deg: 0, r: 4, neighbors: new Set<string>(), x: p?.x ?? 0, y: p?.y ?? 0, vx: p?.vx, vy: p?.vy }
     })
     const byId = new Map(nodes.map((n) => [n.id, n]))
     const links: GLink[] = []
@@ -137,7 +136,7 @@ function GraphCanvas({
       tg.neighbors.add(s.id)
     }
     nodes.forEach((n) => {
-      n.r = 1.8 + Math.min(n.deg, 8) * 0.5 // smaller, quieter dots
+      n.r = 2.2 + Math.min(n.deg, 8) * 0.55
     })
     return { nodes, links }
   }, [data])
@@ -155,8 +154,21 @@ function GraphCanvas({
     return () => ro.disconnect()
   }, [])
 
-  // Configure forces + fixed positions whenever the data, layout, or grouping
-  // changes. Force layout clusters by group; radial/tree pin positions.
+  // zoomToFit, but clamp so a sparse graph doesn't slam to max zoom.
+  const fitView = useCallback((ms = 400) => {
+    const fg = fgRef.current
+    if (!fg) return
+    fg.zoomToFit(ms, 55)
+    window.setTimeout(() => {
+      const fg2 = fgRef.current
+      if (!fg2) return
+      const z = fg2.zoom()
+      if (z > 1.8) fg2.zoom(1.8, 200)
+      else if (z < 0.35) fg2.zoom(0.35, 200)
+    }, ms + 50)
+  }, [])
+
+  // Forces + fixed positions for the chosen layout.
   useEffect(() => {
     const fg = fgRef.current
     if (!fg) return
@@ -168,8 +180,8 @@ function GraphCanvas({
         n.fx = undefined
         n.fy = undefined
       })
-      charge?.strength(-95)
-      linkF?.distance((l) => 34 + (1 - Math.min(l.weight, 3) / 3) * 22)
+      charge?.strength(-70)
+      linkF?.distance((l) => 30 + (1 - Math.min(l.weight, 3) / 3) * 20)
       fg.d3Force('collide', forceCollide<GNode>().radius((n) => n.r + 5).iterations(2))
       fg.d3Force('group', clusterForce(groupKeyRef))
     } else {
@@ -186,10 +198,10 @@ function GraphCanvas({
       })
     }
     fg.d3ReheatSimulation()
-    const id = setTimeout(() => fgRef.current?.zoomToFit(420, 70), layout === 'force' ? 600 : 80)
+    const id = setTimeout(() => fitView(420), layout === 'force' ? 650 : 90)
     return () => clearTimeout(id)
     // size.w: re-run once the canvas (and thus fgRef) has actually mounted.
-  }, [graph, layout, colorBy, groupKey, size.w])
+  }, [graph, layout, colorBy, groupKey, size.w, fitView])
 
   const active = focusId ?? hoverId ?? linkSource
   const activeSet = useMemo(() => {
@@ -202,14 +214,14 @@ function GraphCanvas({
   }, [active, nodeById])
 
   const focusNode = focusId ? nodeById.get(focusId) : null
-  const ink = isDark ? '0.86 0.01 85' : '0.34 0.012 60'
+  const ink = isDark ? '0.88 0.01 85' : '0.32 0.012 60'
   const paper = isDark ? '0.21 0.012 70' : '0.994 0.003 95'
 
   function groupColor(key: string, l: number, c: number, a: number): string {
     if (key === UNTAGGED) return `oklch(${isDark ? 0.62 : 0.64} 0.006 250 / ${a})`
     return `oklch(${l} ${c} ${tagHue(key)} / ${a})`
   }
-  const nodeFill = (n: GNode, alpha: number) => groupColor(groupKey(n), isDark ? 0.72 : 0.6, 0.085, alpha)
+  const nodeFill = (n: GNode, alpha: number) => groupColor(groupKey(n), isDark ? 0.74 : 0.58, 0.09, alpha)
 
   const handleNodeClick = useCallback(
     (n: GNode) => {
@@ -261,14 +273,14 @@ function GraphCanvas({
           height={size.h}
           graphData={graph}
           backgroundColor="rgba(0,0,0,0)"
-          warmupTicks={layout === 'force' ? 60 : 0}
-          cooldownTicks={layout === 'force' ? 120 : 0}
-          d3VelocityDecay={0.3}
-          minZoom={0.3}
-          maxZoom={8}
+          warmupTicks={layout === 'force' ? 80 : 0}
+          cooldownTicks={layout === 'force' ? 110 : 0}
+          d3VelocityDecay={0.4}
+          minZoom={0.25}
+          maxZoom={6}
           onEngineStop={() => {
             if (!didFitRef.current) {
-              fgRef.current?.zoomToFit(420, 70)
+              fitView(420)
               didFitRef.current = true
             }
           }}
@@ -276,8 +288,8 @@ function GraphCanvas({
           onNodeClick={handleNodeClick}
           onLinkClick={handleLinkClick}
           onBackgroundClick={() => (linkMode ? setLinkSource(null) : setFocusId(null))}
-          // Cluster hulls behind everything — a soft union-of-discs blob per group.
-          onRenderFramePre={(ctx) => {
+          // Category outlines (convex-hull boxes) behind everything.
+          onRenderFramePre={(ctx, scale) => {
             const groups = new Map<string, GNode[]>()
             for (const n of graph.nodes) {
               const k = groupKey(n)
@@ -286,44 +298,29 @@ function GraphCanvas({
               if (arr) arr.push(n)
               else groups.set(k, [n])
             }
+            ctx.lineJoin = 'round'
             for (const [key, members] of groups) {
-              ctx.beginPath()
-              for (const n of members) {
-                const r = n.r + 13
-                ctx.moveTo((n.x ?? 0) + r, n.y ?? 0)
-                ctx.arc(n.x ?? 0, n.y ?? 0, r, 0, 2 * Math.PI)
-              }
-              ctx.fillStyle = groupColor(key, isDark ? 0.6 : 0.66, 0.1, isDark ? 0.12 : 0.1)
-              ctx.fill()
-              // faint group label at the centroid
-              const label = groupLabel(key)
-              if (label && members.length > 1) {
-                let cx = 0, cy = 0, minY = Infinity
-                for (const n of members) { cx += n.x ?? 0; cy += n.y ?? 0; minY = Math.min(minY, n.y ?? 0) }
-                cx /= members.length
-                ctx.font = `600 5px Inter, sans-serif`
-                ctx.textAlign = 'center'
-                ctx.textBaseline = 'bottom'
-                ctx.fillStyle = groupColor(key, isDark ? 0.74 : 0.5, 0.12, 0.85)
-                ctx.fillText(label.length > 22 ? label.slice(0, 21) + '…' : label, cx, minY - 16)
-              }
+              drawHull(ctx, members, key, groupColor, groupLabel(key), scale, isDark)
             }
           }}
-          // Guide line while connecting two notes.
-          onRenderFramePost={(ctx) => {
-            if (!linkMode || !linkSource) return
-            const s = nodeById.get(linkSource)
-            const tg = hoverId && hoverId !== linkSource ? nodeById.get(hoverId) : null
-            if (!s || s.x == null) return
-            ctx.save()
-            ctx.setLineDash([4, 4])
-            ctx.strokeStyle = `oklch(0.62 0.16 250 / 0.8)`
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(s.x, s.y ?? 0)
-            if (tg && tg.x != null) ctx.lineTo(tg.x, tg.y ?? 0)
-            ctx.stroke()
-            ctx.restore()
+          // Connecting guide line + decluttered node labels on top.
+          onRenderFramePost={(ctx, scale) => {
+            if (linkMode && linkSource) {
+              const s = nodeById.get(linkSource)
+              const tg = hoverId && hoverId !== linkSource ? nodeById.get(hoverId) : null
+              if (s) {
+                ctx.save()
+                ctx.setLineDash([4, 3])
+                ctx.strokeStyle = `oklch(0.62 0.18 250 / 0.85)`
+                ctx.lineWidth = 1.2 / scale
+                ctx.beginPath()
+                ctx.moveTo(s.x, s.y)
+                ctx.lineTo(tg ? tg.x : s.x, tg ? tg.y : s.y)
+                ctx.stroke()
+                ctx.restore()
+              }
+            }
+            drawLabels(ctx, scale, graph.nodes, activeSet, active, ink, paper)
           }}
           linkCanvasObjectMode={() => 'replace'}
           linkCanvasObject={(l, ctx) => {
@@ -331,7 +328,7 @@ function GraphCanvas({
             const tg = l.target as GNode
             if (s.x == null || tg.x == null) return
             const inFocus = !activeSet || (activeSet.has(s.id) && activeSet.has(tg.id))
-            const a = inFocus ? (isDark ? 0.32 : 0.26) : 0.05
+            const a = inFocus ? (isDark ? 0.34 : 0.28) : 0.05
             ctx.strokeStyle = `oklch(${isDark ? '0.72 0.008 250' : '0.52 0.006 250'} / ${a})`
             ctx.lineWidth = (0.3 + Math.min(l.weight, 3) * 0.3) * (inFocus ? 1.3 : 1)
             ctx.beginPath()
@@ -340,7 +337,7 @@ function GraphCanvas({
             ctx.stroke()
           }}
           nodeCanvasObjectMode={() => 'replace'}
-          nodeCanvasObject={(node, ctx, scale) => {
+          nodeCanvasObject={(node, ctx) => {
             const x = node.x ?? 0
             const y = node.y ?? 0
             const r = node.r
@@ -354,7 +351,7 @@ function GraphCanvas({
             if (isActive || isSource) {
               ctx.beginPath()
               ctx.arc(x, y, r + 3.5, 0, 2 * Math.PI)
-              ctx.fillStyle = nodeFill(node, isSource ? 0.3 : 0.16)
+              ctx.fillStyle = nodeFill(node, isSource ? 0.32 : 0.16)
               ctx.fill()
             }
             ctx.beginPath()
@@ -363,29 +360,16 @@ function GraphCanvas({
             ctx.fill()
             if (isSource) {
               ctx.lineWidth = 1.2
-              ctx.strokeStyle = `oklch(0.62 0.16 250 / 0.95)`
+              ctx.strokeStyle = `oklch(0.62 0.18 250 / 0.95)`
               ctx.stroke()
             }
-
-            const showLabel = scale > 2.1 || isActive || isSource || (activeSet?.has(node.id) ?? false)
-            if (showLabel) {
-              const label = node.title.length > 22 ? node.title.slice(0, 21) + '…' : node.title
-              const fs = Math.max(7, 8 / scale + 1)
-              ctx.font = `500 ${fs}px Inter, sans-serif`
-              ctx.textAlign = 'center'
-              ctx.textBaseline = 'top'
-              const ly = y + r + 1.5
-              ctx.lineWidth = 2
-              ctx.strokeStyle = `oklch(${paper} / ${dim ? 0.4 : 0.8})`
-              ctx.strokeText(label, x, ly)
-              ctx.fillStyle = `oklch(${ink} / ${dim ? 0.4 : 0.9})`
-              ctx.fillText(label, x, ly)
-            }
           }}
+          // Generous hit area (independent of the small visual dot) so nodes are
+          // easy to tap — essential for link mode on touch.
           nodePointerAreaPaint={(node, color, ctx) => {
             ctx.fillStyle = color
             ctx.beginPath()
-            ctx.arc(node.x ?? 0, node.y ?? 0, node.r + 4, 0, 2 * Math.PI)
+            ctx.arc(node.x ?? 0, node.y ?? 0, node.r + 7, 0, 2 * Math.PI)
             ctx.fill()
           }}
         />
@@ -423,7 +407,7 @@ function GraphCanvas({
           <Link2 className="size-3.5" /> {t('Link', '連結')}
         </button>
         <button
-          onClick={() => fgRef.current?.zoomToFit(420, 70)}
+          onClick={() => fitView(400)}
           className="flex items-center justify-center rounded-lg border border-border bg-popover/90 p-1.5 text-muted-foreground shadow-soft backdrop-blur transition hover:text-foreground"
           title={t('Fit to screen', '縮放至全圖')}
         >
@@ -476,7 +460,7 @@ function GraphCanvas({
   )
 }
 
-function SegBtn({ active, onClick, title, children }: { active: boolean; onClick: () => void; title: string; children: React.ReactNode }) {
+function SegBtn({ active, onClick, title, children }: { active: boolean; onClick: () => void; title: string; children: ReactNode }) {
   return (
     <button
       onClick={onClick}
@@ -490,16 +474,139 @@ function SegBtn({ active, onClick, title, children }: { active: boolean; onClick
   )
 }
 
-// ── d3 cluster force: pull same-group nodes toward their shared centroid ──
+// ── category outline: convex hull (or circle for ≤2 nodes), filled + stroked ──
+function drawHull(
+  ctx: CanvasRenderingContext2D,
+  members: GNode[],
+  key: string,
+  color: (k: string, l: number, c: number, a: number) => string,
+  label: string,
+  scale: number,
+  isDark: boolean,
+) {
+  const pad = 15
+  let cx = 0
+  let cy = 0
+  let minY = Infinity
+  for (const n of members) {
+    cx += n.x
+    cy += n.y
+    minY = Math.min(minY, n.y - n.r)
+  }
+  cx /= members.length
+  cy /= members.length
+
+  ctx.fillStyle = color(key, isDark ? 0.62 : 0.66, 0.1, isDark ? 0.14 : 0.11)
+  ctx.strokeStyle = color(key, isDark ? 0.7 : 0.55, 0.12, isDark ? 0.55 : 0.5)
+  ctx.lineWidth = 1.1 / scale
+
+  if (members.length <= 2) {
+    let rad = 0
+    for (const n of members) rad = Math.max(rad, Math.hypot(n.x - cx, n.y - cy) + n.r)
+    rad += pad
+    ctx.beginPath()
+    ctx.arc(cx, cy, rad, 0, 2 * Math.PI)
+    ctx.fill()
+    ctx.stroke()
+    minY = cy - rad
+  } else {
+    const hull = convexHull(members.map((n) => ({ x: n.x, y: n.y })))
+    ctx.beginPath()
+    hull.forEach((p, i) => {
+      const dx = p.x - cx
+      const dy = p.y - cy
+      const d = Math.hypot(dx, dy) || 1
+      const ex = p.x + (dx / d) * pad
+      const ey = p.y + (dy / d) * pad
+      minY = Math.min(minY, ey)
+      if (i === 0) ctx.moveTo(ex, ey)
+      else ctx.lineTo(ex, ey)
+    })
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+  }
+
+  if (label) {
+    const fs = Math.max(2.5, 11 / scale)
+    ctx.font = `600 ${fs}px Inter, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'bottom'
+    ctx.fillStyle = color(key, isDark ? 0.8 : 0.45, 0.13, 0.95)
+    const text = label.length > 24 ? label.slice(0, 23) + '…' : label
+    ctx.fillText(text, cx, minY - 3 / scale)
+  }
+}
+
+// ── decluttered node labels (greedy: skip any that would overlap) ──
+function drawLabels(
+  ctx: CanvasRenderingContext2D,
+  scale: number,
+  nodes: GNode[],
+  activeSet: Set<string> | null,
+  active: string | null,
+  ink: string,
+  paper: string,
+) {
+  const fs = Math.max(2.5, 9 / scale)
+  ctx.font = `500 ${fs}px Inter, sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'top'
+  const showAll = scale > 1.5
+  const cands = nodes.filter((n) => activeSet?.has(n.id) || showAll)
+  const pr = (n: GNode) => (active === n.id ? 1e6 : activeSet?.has(n.id) ? 1e5 : 0) + n.deg
+  cands.sort((a, b) => pr(b) - pr(a))
+
+  const placed: { x0: number; y0: number; x1: number; y1: number }[] = []
+  const gap = 1 / scale
+  for (const n of cands) {
+    const dim = activeSet != null && !activeSet.has(n.id)
+    const text = n.title.length > 22 ? n.title.slice(0, 21) + '…' : n.title
+    const w = ctx.measureText(text).width
+    const x = n.x
+    const y = n.y + n.r + 1.5 / scale
+    const box = { x0: x - w / 2 - gap, y0: y - gap, x1: x + w / 2 + gap, y1: y + fs + gap }
+    if (placed.some((b) => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0)) continue
+    placed.push(box)
+    ctx.lineWidth = 2 / scale
+    ctx.strokeStyle = `oklch(${paper} / ${dim ? 0.4 : 0.82})`
+    ctx.strokeText(text, x, y)
+    ctx.fillStyle = `oklch(${ink} / ${dim ? 0.4 : 0.92})`
+    ctx.fillText(text, x, y)
+  }
+}
+
+function convexHull(pts: Pt[]): Pt[] {
+  if (pts.length < 3) return pts.slice()
+  const p = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y)
+  const cross = (o: Pt, a: Pt, b: Pt) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
+  const lower: Pt[] = []
+  for (const q of p) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop()
+    lower.push(q)
+  }
+  const upper: Pt[] = []
+  for (let i = p.length - 1; i >= 0; i--) {
+    const q = p[i]
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop()
+    upper.push(q)
+  }
+  lower.pop()
+  upper.pop()
+  return lower.concat(upper)
+}
+
+// ── d3 cluster force: pull same-group nodes together (ignores the ungrouped) ──
 function clusterForce(groupKeyRef: { current: (n: GNode) => string }) {
   let nodes: GNode[] = []
   function force(alpha: number) {
     const cen = new Map<string, { x: number; y: number; n: number }>()
     for (const n of nodes) {
       const k = groupKeyRef.current(n)
+      if (k === UNTAGGED) continue
       const c = cen.get(k) ?? { x: 0, y: 0, n: 0 }
-      c.x += n.x ?? 0
-      c.y += n.y ?? 0
+      c.x += n.x
+      c.y += n.y
       c.n++
       cen.set(k, c)
     }
@@ -507,12 +614,14 @@ function clusterForce(groupKeyRef: { current: (n: GNode) => string }) {
       c.x /= c.n
       c.y /= c.n
     })
-    const k = 0.5 * alpha
+    const k = 0.13 * alpha
     for (const n of nodes) {
-      const c = cen.get(groupKeyRef.current(n))
+      const key = groupKeyRef.current(n)
+      if (key === UNTAGGED) continue
+      const c = cen.get(key)
       if (!c) continue
-      n.vx = (n.vx ?? 0) + (c.x - (n.x ?? 0)) * k
-      n.vy = (n.vy ?? 0) + (c.y - (n.y ?? 0)) * k
+      n.vx = (n.vx ?? 0) + (c.x - n.x) * k
+      n.vy = (n.vy ?? 0) + (c.y - n.y) * k
     }
   }
   force.initialize = (n: GNode[]) => {
@@ -521,9 +630,8 @@ function clusterForce(groupKeyRef: { current: (n: GNode) => string }) {
   return force
 }
 
-// ── Radial layout: groups evenly around a ring, members in a mini-circle ──
 function radialPositions(nodes: GNode[], groupKey: (n: GNode) => string) {
-  const pos = new Map<string, { x: number; y: number }>()
+  const pos = new Map<string, Pt>()
   const keys = Array.from(new Set(nodes.map(groupKey)))
   const G = keys.length || 1
   const R = Math.max(140, G * 46)
@@ -534,9 +642,8 @@ function radialPositions(nodes: GNode[], groupKey: (n: GNode) => string) {
     const members = nodes.filter((n) => groupKey(n) === key)
     const rr = Math.max(0, Math.min(members.length, 16) * 7)
     members.forEach((n, i) => {
-      if (members.length === 1) {
-        pos.set(n.id, { x: cx, y: cy })
-      } else {
+      if (members.length === 1) pos.set(n.id, { x: cx, y: cy })
+      else {
         const a2 = (2 * Math.PI * i) / members.length
         pos.set(n.id, { x: cx + Math.cos(a2) * rr, y: cy + Math.sin(a2) * rr })
       }
@@ -545,23 +652,19 @@ function radialPositions(nodes: GNode[], groupKey: (n: GNode) => string) {
   return pos
 }
 
-// ── Tree layout: BFS-layer each connected component, rows by depth ──
 function treePositions(nodes: GNode[], links: GLink[]) {
-  const pos = new Map<string, { x: number; y: number }>()
+  const pos = new Map<string, Pt>()
   const adj = new Map<string, string[]>()
   nodes.forEach((n) => adj.set(n.id, []))
   const idOf = (e: string | GNode) => (typeof e === 'object' ? e.id : e)
   for (const l of links) {
-    const s = idOf(l.source)
-    const t = idOf(l.target)
-    adj.get(s)?.push(t)
-    adj.get(t)?.push(s)
+    adj.get(idOf(l.source))?.push(idOf(l.target))
+    adj.get(idOf(l.target))?.push(idOf(l.source))
   }
   const remaining = new Set(nodes.map((n) => n.id))
   const byDepth = new Map<number, string[]>()
   const degree = (id: string) => adj.get(id)?.length ?? 0
   while (remaining.size) {
-    // root = most-connected remaining node (component anchor)
     let root = ''
     let best = -1
     for (const id of remaining) if (degree(id) > best) { best = degree(id); root = id }
@@ -569,7 +672,9 @@ function treePositions(nodes: GNode[], links: GLink[]) {
     remaining.delete(root)
     while (queue.length) {
       const [id, d] = queue.shift()!
-      ;(byDepth.get(d) ?? byDepth.set(d, []).get(d)!).push(id)
+      const row = byDepth.get(d) ?? []
+      row.push(id)
+      byDepth.set(d, row)
       for (const nb of adj.get(id) ?? []) {
         if (remaining.has(nb)) {
           remaining.delete(nb)
@@ -579,7 +684,7 @@ function treePositions(nodes: GNode[], links: GLink[]) {
     }
   }
   const rowH = 64
-  const colW = 60
+  const colW = 58
   byDepth.forEach((ids, depth) => {
     const w = (ids.length - 1) * colW
     ids.forEach((id, i) => pos.set(id, { x: i * colW - w / 2, y: depth * rowH }))
