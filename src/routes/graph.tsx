@@ -278,6 +278,7 @@ function GraphCanvas({
           d3VelocityDecay={0.4}
           minZoom={0.25}
           maxZoom={6}
+          enableNodeDrag={!linkMode}
           onEngineStop={() => {
             if (!didFitRef.current) {
               fitView(420)
@@ -388,16 +389,17 @@ function GraphCanvas({
         />
       ) : null}
 
-      {/* Top-left: layout + colour-by. */}
-      <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5">
-        <div className="flex items-center rounded-lg border border-border bg-popover/90 p-0.5 shadow-soft backdrop-blur">
+      {/* Top-left: layout + colour-by. Container ignores pointer events so taps
+          fall through to the canvas; only the buttons themselves capture. */}
+      <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap items-center gap-1.5">
+        <div className="pointer-events-auto flex items-center rounded-lg border border-border bg-popover/90 p-0.5 shadow-soft backdrop-blur">
           <SegBtn active={layout === 'force'} onClick={() => setLayout('force')} title={t('Web (force)', '網狀(力導)')}><Waypoints className="size-3.5" /></SegBtn>
           <SegBtn active={layout === 'radial'} onClick={() => setLayout('radial')} title={t('Radial by group', '依群組放射')}><Circle className="size-3.5" /></SegBtn>
           <SegBtn active={layout === 'tree'} onClick={() => setLayout('tree')} title={t('Tree', '樹狀')}><GitFork className="size-3.5" /></SegBtn>
         </div>
         <button
           onClick={() => setColorBy((v) => (v === 'tag' ? 'deck' : 'tag'))}
-          className="flex items-center gap-1.5 rounded-lg border border-border bg-popover/90 px-2.5 py-1.5 text-[12px] font-medium text-muted-foreground shadow-soft backdrop-blur transition hover:text-foreground"
+          className="pointer-events-auto flex items-center gap-1.5 rounded-lg border border-border bg-popover/90 px-2.5 py-1.5 text-[12px] font-medium text-muted-foreground shadow-soft backdrop-blur transition hover:text-foreground"
           title={t('Colour by tag or deck', '依標籤或牌組上色')}
         >
           {colorBy === 'tag' ? <Tag className="size-3.5" /> : <Folder className="size-3.5" />}
@@ -406,7 +408,7 @@ function GraphCanvas({
       </div>
 
       {/* Top-right: link + fit. */}
-      <div className="absolute right-3 top-3 flex items-center gap-1.5">
+      <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5">
         <button
           onClick={() => {
             if (linkMode) {
@@ -420,7 +422,7 @@ function GraphCanvas({
               setFocusId(null)
             }
           }}
-          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-medium shadow-soft backdrop-blur transition ${
+          className={`pointer-events-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-medium shadow-soft backdrop-blur transition ${
             linkMode ? 'border-brand bg-brand text-brand-foreground' : 'border-border bg-popover/90 text-muted-foreground hover:text-foreground'
           }`}
           title={t('Link notes', '連結筆記')}
@@ -429,23 +431,24 @@ function GraphCanvas({
         </button>
         <button
           onClick={() => fitView(400)}
-          className="flex items-center justify-center rounded-lg border border-border bg-popover/90 p-1.5 text-muted-foreground shadow-soft backdrop-blur transition hover:text-foreground"
+          className="pointer-events-auto flex items-center justify-center rounded-lg border border-border bg-popover/90 p-1.5 text-muted-foreground shadow-soft backdrop-blur transition hover:text-foreground"
           title={t('Fit to screen', '縮放至全圖')}
         >
           <Maximize2 className="size-3.5" />
         </button>
       </div>
 
-      {/* Link-mode hint. */}
+      {/* Link-mode hint. pointer-events-none so it never covers the nodes you're
+          trying to tap (it sits over the top-centre of the canvas). */}
       {linkMode ? (
-        <div className="absolute left-1/2 top-14 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-brand/40 bg-popover/95 px-3 py-1.5 text-[12px] text-foreground shadow-pop backdrop-blur">
+        <div className="pointer-events-none absolute left-1/2 top-14 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-brand/40 bg-popover/95 px-3 py-1.5 text-[12px] text-foreground shadow-pop backdrop-blur">
           <Unlink className="size-3.5 shrink-0 text-brand" />
           <span className="truncate">
             {linkSource
               ? t('Now tap the note to connect to — or tap a line to remove it.', '再點要連到的筆記 — 或點一條線移除它。')
               : t('Tap a note, then another, to connect them.', '先點一則筆記,再點另一則,即可連結。')}
           </span>
-          <button onClick={() => { setLinkMode(false); setLinkSource(null) }} className="-mr-1 rounded p-0.5 hover:text-brand" aria-label={t('Exit link mode', '結束連結模式')}>
+          <button onClick={() => { setLinkMode(false); setLinkSource(null) }} className="pointer-events-auto -mr-1 rounded p-0.5 hover:text-brand" aria-label={t('Exit link mode', '結束連結模式')}>
             <X className="size-3.5" />
           </button>
         </div>
@@ -469,9 +472,40 @@ function GraphCanvas({
               <span className="text-xs text-muted-foreground">{t(`${focusNode.deg} connection${focusNode.deg === 1 ? '' : 's'}`, `${focusNode.deg} 個關聯`)}</span>
             )}
           </div>
+          {/* Connect to another note — a reliable, list-based alternative to
+              tapping on the canvas. */}
+          {graph.nodes.length > 1 ? (
+            <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1.5">
+              <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+              <select
+                value=""
+                onChange={(e) => {
+                  const tid = e.target.value
+                  if (!tid) return
+                  link.mutate(
+                    { source_note_id: focusNode.id, target_note_id: tid, link_type: 'related', weight: 1 },
+                    {
+                      onSuccess: () => toast.success(t('Connected', '已連結')),
+                      onError: (err) => toast.error(err instanceof Error ? err.message : t('Failed to link', '建立關聯失敗')),
+                    },
+                  )
+                }}
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none"
+              >
+                <option value="">{t('Connect to…', '連結到…')}</option>
+                {graph.nodes
+                  .filter((n) => n.id !== focusNode.id && !focusNode.neighbors.has(n.id))
+                  .map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.title || t('Untitled', '未命名')}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          ) : null}
           <button
             onClick={() => onOpen(focusNode.id)}
-            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition hover:opacity-90 sm:py-1.5 sm:text-[13px]"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition hover:opacity-90 sm:py-1.5 sm:text-[13px]"
           >
             {t('Open note', '開啟筆記')} <ArrowUpRight className="size-3.5" />
           </button>
