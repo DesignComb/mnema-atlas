@@ -1,11 +1,9 @@
 /**
  * Auto-generated from the live Supabase schema (Management API types endpoint),
- * shaped for @supabase/postgrest-js. Regenerate after a migration with:
- *   npm run db:types        (local Docker)
- * or re-fetch GET /v1/projects/{ref}/types/typescript with the Supabase PAT.
- *
- * Convenience row aliases (DeckRow, NoteRow, …) are appended at the bottom so
- * the rest of the app keeps importing stable names.
+ * shaped for @supabase/postgrest-js. Regenerate after a migration by re-fetching
+ * GET /v1/projects/{ref}/types/typescript with the Supabase PAT (or npm run db:types).
+ * p_user_id is widened to string|null for the null-sentinel RPC convention;
+ * row aliases are appended below.
  */
 
 export type Json =
@@ -234,6 +232,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          tags: string[]
           title: string
           updated_at: string
           user_id: string
@@ -244,6 +243,7 @@ export type Database = {
           deck_id?: string | null
           id?: string
           search_tsv?: unknown
+          tags?: string[]
           title: string
           updated_at?: string
           user_id: string
@@ -254,6 +254,7 @@ export type Database = {
           deck_id?: string | null
           id?: string
           search_tsv?: unknown
+          tags?: string[]
           title?: string
           updated_at?: string
           user_id?: string
@@ -467,6 +468,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          tags: string[]
           title: string
           updated_at: string
           user_id: string
@@ -558,6 +560,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          tags: string[]
           title: string
           updated_at: string
           user_id: string
@@ -577,6 +580,27 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "notes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_note_tags: {
+        Args: { p_note_id: string; p_tags: string[]; p_user_id: string | null }
+        Returns: {
+          body: string
+          created_at: string
+          deck_id: string | null
+          id: string
+          search_tsv: unknown
+          tags: string[]
           title: string
           updated_at: string
           user_id: string
@@ -666,6 +690,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          tags: string[]
           title: string
           updated_at: string
           user_id: string

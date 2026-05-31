@@ -5,6 +5,7 @@ import { Check, Cloud, Layers, Loader2, Plus, Sparkles, Trash2 } from 'lucide-re
 import { toast } from 'sonner'
 import * as api from '@/lib/api'
 import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useUpdateNote } from '@/lib/hooks'
+import { TagEditor } from '@/components/editor/TagEditor'
 
 // TipTap is heavy (~0.5 MB) and only the note editor needs it — split it into
 // its own chunk so the note shell (title, deck, cards) paints immediately.
@@ -155,7 +156,7 @@ export function NoteScreen() {
             className="mb-3 w-full bg-transparent font-serif text-2xl font-semibold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/40 sm:text-3xl"
           />
           {/* Deck — move this note between decks (or out of all of them). */}
-          <div className="mb-6 flex items-center gap-2">
+          <div className="mb-2 flex items-center gap-2">
             <Layers className="size-3.5 shrink-0 text-muted-foreground" />
             <select
               value={note.deck_id ?? ''}
@@ -170,6 +171,10 @@ export function NoteScreen() {
               ))}
             </select>
             {setNoteDeck.isPending ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
+          </div>
+          {/* Tags — colour & cluster this note in the graph. */}
+          <div className="mb-6">
+            <TagEditor noteId={note.id} tags={note.tags ?? []} />
           </div>
           <Suspense fallback={<div className="mt-2 h-64 animate-pulse rounded-lg bg-card/60" />}>
             <NoteEditor key={note.id} initialMarkdown={note.body} onChange={setBody} />

@@ -80,7 +80,7 @@ export async function listCardsByNote(noteId: string): Promise<CardRow[]> {
 }
 
 export interface GraphData {
-  nodes: { id: string; title: string; deck_id: string | null }[]
+  nodes: { id: string; title: string; deck_id: string | null; tags: string[] }[]
   edges: { source: string; target: string; type: string; weight: number }[]
 }
 
@@ -149,6 +149,11 @@ export async function setNoteDeck(noteId: string, deckId: string | null): Promis
   return unwrap(
     await supabase.rpc('set_note_deck', { p_user_id: null, p_note_id: noteId, p_deck_id: deckId ?? undefined }),
   )
+}
+
+/** Replace the whole tag set on a note (drives graph colour / clustering). */
+export async function setNoteTags(noteId: string, tags: string[]): Promise<NoteRow> {
+  return unwrap(await supabase.rpc('set_note_tags', { p_user_id: null, p_note_id: noteId, p_tags: tags }))
 }
 
 export async function createCard(input: CreateFlashcardInput): Promise<CardRow> {

@@ -168,6 +168,19 @@ export function useSetNoteDeck() {
   })
 }
 
+/** Set a note's tags (drives the graph's colours / clusters). */
+export function useSetNoteTags() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { noteId: string; tags: string[] }) => api.setNoteTags(v.noteId, v.tags),
+    onSuccess: (note) => {
+      qc.invalidateQueries({ queryKey: ['notes'] })
+      qc.invalidateQueries({ queryKey: qk.note(note.id) })
+      qc.invalidateQueries({ queryKey: qk.graph })
+    },
+  })
+}
+
 /** Manual graph editing: create / remove an association between two notes. */
 export function useLinkNotes() {
   const qc = useQueryClient()
