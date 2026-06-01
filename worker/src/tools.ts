@@ -1,13 +1,29 @@
 import { z } from 'zod'
 import {
+  createDayInput,
   createDeckInput,
   createFlashcardInput,
   createFlashcardsBulkInput,
+  createItemInput,
+  createItemsBulkInput,
+  createItineraryInput,
   createNoteInput,
+  createTripBulkInput,
+  deleteDayInput,
+  deleteItemInput,
+  deleteItineraryInput,
+  getItineraryInput,
   getNoteInput,
   linkNotesInput,
+  reorderDaysInput,
+  reorderItemsInput,
   searchNotesInput,
+  setItemDayInput,
+  setItemLocationInput,
   toolDescriptions,
+  updateDayInput,
+  updateItemInput,
+  updateItineraryInput,
   updateNoteInput,
 } from '../../shared/schemas'
 import { callRpc, ownedSelect, serviceClient } from './db'
@@ -164,6 +180,277 @@ export const tools: ToolDef[] = [
         p_weight: a.weight ?? 1,
       })
       return { summary: `Linked notes (${a.link_type ?? 'reference'})`, data: link }
+    },
+  },
+
+  // ─────────────────────────── Travel itineraries ───────────────────────────
+  {
+    name: 'list_itineraries',
+    description: toolDescriptions.list_itineraries,
+    schema: noArgs,
+    readOnly: true,
+    run: async (ctx) => {
+      const { data, error } = await serviceClient(ctx.env)
+        .from('itineraries')
+        .select('id, title, destination, start_date, end_date, default_currency, timezone, updated_at')
+        .eq('owner_id', ctx.userId)
+        .order('start_date', { ascending: false, nullsFirst: false })
+      if (error) throw new Error(error.message)
+      const rows = (data ?? []) as unknown[]
+      return { summary: `${rows.length} trip(s)`, data: rows }
+    },
+  },
+  {
+    name: 'get_itinerary',
+    description: toolDescriptions.get_itinerary,
+    schema: getItineraryInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const tree = await callRpc<{ title: string }>(ctx.env, ctx.userId, 'get_itinerary', { p_id: a.itinerary_id })
+      return { summary: `Trip “${tree.title}”`, data: tree }
+    },
+  },
+  {
+    name: 'create_itinerary',
+    description: toolDescriptions.create_itinerary,
+    schema: createItineraryInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const trip = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'create_itinerary', {
+        p_title: a.title,
+        p_destination: a.destination ?? null,
+        p_start_date: a.start_date ?? null,
+        p_end_date: a.end_date ?? null,
+        p_timezone: a.timezone ?? null,
+        p_default_currency: a.default_currency ?? null,
+        p_cover_url: a.cover_url ?? null,
+        p_notes: a.notes ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Created trip “${trip.title}” (${trip.id})`, data: trip }
+    },
+  },
+  {
+    name: 'create_trip_bulk',
+    description: toolDescriptions.create_trip_bulk,
+    schema: createTripBulkInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const tree = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'create_trip_bulk', {
+        p_trip: a,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Created trip “${tree.title}” (${tree.id}) with days and activities`, data: tree }
+    },
+  },
+  {
+    name: 'update_itinerary',
+    description: toolDescriptions.update_itinerary,
+    schema: updateItineraryInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const trip = await callRpc<{ title: string }>(ctx.env, ctx.userId, 'update_itinerary', {
+        p_itinerary_id: a.itinerary_id,
+        p_title: a.title ?? null,
+        p_destination: a.destination ?? null,
+        p_start_date: a.start_date ?? null,
+        p_end_date: a.end_date ?? null,
+        p_timezone: a.timezone ?? null,
+        p_default_currency: a.default_currency ?? null,
+        p_cover_url: a.cover_url ?? null,
+        p_notes: a.notes ?? null,
+      })
+      return { summary: `Updated trip “${trip.title}”`, data: trip }
+    },
+  },
+  {
+    name: 'delete_itinerary',
+    description: toolDescriptions.delete_itinerary,
+    schema: deleteItineraryInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_itinerary', { p_itinerary_id: a.itinerary_id })
+      return { summary: 'Trip deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'create_day',
+    description: toolDescriptions.create_day,
+    schema: createDayInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const day = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'create_day', {
+        p_itinerary_id: a.itinerary_id,
+        p_day_date: a.day_date ?? null,
+        p_label: a.label ?? null,
+        p_sort_order: a.sort_order ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Added day (${day.id})`, data: day }
+    },
+  },
+  {
+    name: 'update_day',
+    description: toolDescriptions.update_day,
+    schema: updateDayInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const day = await callRpc(ctx.env, ctx.userId, 'update_day', {
+        p_day_id: a.day_id,
+        p_day_date: a.day_date ?? null,
+        p_label: a.label ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: 'Day updated', data: day }
+    },
+  },
+  {
+    name: 'delete_day',
+    description: toolDescriptions.delete_day,
+    schema: deleteDayInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_day', { p_day_id: a.day_id })
+      return { summary: 'Day removed', data: { ok: true } }
+    },
+  },
+  {
+    name: 'reorder_days',
+    description: toolDescriptions.reorder_days,
+    schema: reorderDaysInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'reorder_days', { p_itinerary_id: a.itinerary_id, p_day_ids: a.day_ids })
+      return { summary: 'Days reordered', data: { ok: true } }
+    },
+  },
+  {
+    name: 'create_item',
+    description: toolDescriptions.create_item,
+    schema: createItemInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const item = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'create_item', {
+        p_title: a.title,
+        p_day_id: a.day_id ?? null,
+        p_itinerary_id: a.itinerary_id ?? null,
+        p_place: a.place ?? null,
+        p_lat: a.lat ?? null,
+        p_lng: a.lng ?? null,
+        p_category: a.category ?? null,
+        p_start_time: a.start_time ?? null,
+        p_end_time: a.end_time ?? null,
+        p_end_day_offset: a.end_day_offset ?? null,
+        p_transport_mode: a.transport_mode ?? null,
+        p_transport_detail: a.transport_detail ?? null,
+        p_cost: a.cost ?? null,
+        p_currency: a.currency ?? null,
+        p_booking_url: a.booking_url ?? null,
+        p_booking_ref: a.booking_ref ?? null,
+        p_notes: a.notes ?? null,
+        p_sort_order: a.sort_order ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Added activity “${item.title}” (${item.id})`, data: item }
+    },
+  },
+  {
+    name: 'create_items_bulk',
+    description: toolDescriptions.create_items_bulk,
+    schema: createItemsBulkInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const items = await callRpc<unknown[]>(ctx.env, ctx.userId, 'create_items_bulk', {
+        p_day_id: a.day_id,
+        p_items: a.items,
+      })
+      return { summary: `Added ${items.length} activities`, data: items }
+    },
+  },
+  {
+    name: 'update_item',
+    description: toolDescriptions.update_item,
+    schema: updateItemInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const item = await callRpc<{ title: string }>(ctx.env, ctx.userId, 'update_item', {
+        p_item_id: a.item_id,
+        p_title: a.title ?? null,
+        p_place: a.place ?? null,
+        p_lat: a.lat ?? null,
+        p_lng: a.lng ?? null,
+        p_category: a.category ?? null,
+        p_start_time: a.start_time ?? null,
+        p_end_time: a.end_time ?? null,
+        p_end_day_offset: a.end_day_offset ?? null,
+        p_transport_mode: a.transport_mode ?? null,
+        p_transport_detail: a.transport_detail ?? null,
+        p_cost: a.cost ?? null,
+        p_currency: a.currency ?? null,
+        p_booking_url: a.booking_url ?? null,
+        p_booking_ref: a.booking_ref ?? null,
+        p_notes: a.notes ?? null,
+        p_sort_order: a.sort_order ?? null,
+        p_expected_updated_at: a.expected_updated_at ?? null,
+      })
+      return { summary: `Updated activity “${item.title}”`, data: item }
+    },
+  },
+  {
+    name: 'delete_item',
+    description: toolDescriptions.delete_item,
+    schema: deleteItemInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_item', { p_item_id: a.item_id })
+      return { summary: 'Activity deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'set_item_location',
+    description: toolDescriptions.set_item_location,
+    schema: setItemLocationInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const item = await callRpc(ctx.env, ctx.userId, 'set_item_location', {
+        p_item_id: a.item_id,
+        p_lat: a.lat,
+        p_lng: a.lng,
+      })
+      return { summary: 'Location set', data: item }
+    },
+  },
+  {
+    name: 'set_item_day',
+    description: toolDescriptions.set_item_day,
+    schema: setItemDayInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const item = await callRpc(ctx.env, ctx.userId, 'set_item_day', {
+        p_item_id: a.item_id,
+        p_day_id: a.day_id,
+      })
+      return { summary: 'Activity moved', data: item }
+    },
+  },
+  {
+    name: 'reorder_items',
+    description: toolDescriptions.reorder_items,
+    schema: reorderItemsInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'reorder_items', { p_day_id: a.day_id ?? null, p_item_ids: a.item_ids })
+      return { summary: 'Activities reordered', data: { ok: true } }
     },
   },
 ]

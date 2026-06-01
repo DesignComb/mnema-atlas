@@ -207,6 +207,20 @@ export const createTripBulkInput = z.object({
 })
 export type CreateTripBulkInput = z.infer<typeof createTripBulkInput>
 
+// Small itinerary tool inputs (ids + ordering) — used by the worker AI tools.
+export const getItineraryInput = z.object({ itinerary_id: uuid })
+export const deleteItineraryInput = z.object({ itinerary_id: uuid })
+export const deleteDayInput = z.object({ day_id: uuid })
+export const deleteItemInput = z.object({ item_id: uuid })
+export const reorderDaysInput = z.object({ itinerary_id: uuid, day_ids: z.array(uuid).max(200) })
+export const reorderItemsInput = z.object({ day_id: uuid.optional(), item_ids: z.array(uuid).max(500) })
+export const setItemLocationInput = z.object({
+  item_id: uuid,
+  lat: z.number().min(-90).max(90).nullable(),
+  lng: z.number().min(-180).max(180).nullable(),
+})
+export const setItemDayInput = z.object({ item_id: uuid, day_id: uuid.nullable() })
+
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
  * emits inside a ```mnema fenced block for the in-app Quick Import. Cards link
@@ -240,4 +254,24 @@ export const toolDescriptions = {
   create_flashcard: 'Create one spaced-repetition flashcard (front/back). Schedulable immediately.',
   create_flashcards_bulk: 'Create many flashcards in one call.',
   link_notes: 'Create a typed link between two notes (feeds the knowledge graph).',
+  // Travel itineraries
+  list_itineraries: 'List the user’s travel trips (itineraries).',
+  get_itinerary: 'Fetch one trip as a tree: days, activities, and per-currency cost totals.',
+  create_itinerary: 'Create a travel trip. Returns the new trip id.',
+  update_itinerary: 'Update a trip’s title, destination, dates, timezone, currency, or notes.',
+  delete_itinerary: 'Delete a trip and all its days and activities.',
+  create_day: 'Add a day to a trip. Returns the new day id.',
+  update_day: 'Update a day’s date, label, or order.',
+  delete_day: 'Remove a day from a trip (its activities fall back to Unscheduled).',
+  reorder_days: 'Set the order of a trip’s days by passing the day ids in the desired order.',
+  create_item:
+    'Add one activity to a day (pass day_id) or to the unscheduled bucket (pass itinerary_id). Returns the new activity id.',
+  create_items_bulk: 'Add many activities to one day in a single call.',
+  create_trip_bulk:
+    'Author a whole trip (days + activities) in one call. Returns the full tree with generated ids.',
+  update_item: 'Update an activity’s fields (only the fields you pass change).',
+  delete_item: 'Delete an activity.',
+  set_item_location: 'Set or clear an activity’s map coordinates (pass null to clear).',
+  set_item_day: 'Move an activity to another day, or to Unscheduled (day_id = null).',
+  reorder_items: 'Set the order of activities within a day by passing the item ids in the desired order.',
 } as const
