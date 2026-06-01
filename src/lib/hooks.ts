@@ -28,6 +28,7 @@ export const qk = {
   graph: ['graph'] as const,
   itineraries: ['itineraries'] as const,
   itinerary: (id: string) => ['itinerary', id] as const,
+  shareLinks: (itineraryId: string) => ['share-links', itineraryId] as const,
 }
 
 export function useDecks() {
@@ -317,6 +318,29 @@ export function useCreateTripBulk() {
   return useMutation({
     mutationFn: (input: CreateTripBulkInput) => api.createTripBulk(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.itineraries }),
+  })
+}
+
+export function useShareLinks(itineraryId: string) {
+  return useQuery({
+    queryKey: qk.shareLinks(itineraryId),
+    queryFn: () => api.listShareLinks(itineraryId),
+    enabled: !!itineraryId,
+  })
+}
+export function useCreateShareLink() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { itineraryId: string; hideCosts?: boolean }) =>
+      api.createShareLink(v.itineraryId, { hideCosts: v.hideCosts }),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: qk.shareLinks(v.itineraryId) }),
+  })
+}
+export function useRevokeShareLink() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; itineraryId: string }) => api.revokeShareLink(v.id),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: qk.shareLinks(v.itineraryId) }),
   })
 }
 

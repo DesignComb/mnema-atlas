@@ -529,6 +529,50 @@ export type Database = {
           },
         ]
       }
+      share_links: {
+        Row: {
+          can_edit: boolean
+          created_at: string
+          expires_at: string | null
+          hide_costs: boolean
+          id: string
+          itinerary_id: string
+          owner_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          can_edit?: boolean
+          created_at?: string
+          expires_at?: string | null
+          hide_costs?: boolean
+          id?: string
+          itinerary_id: string
+          owner_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          can_edit?: boolean
+          created_at?: string
+          expires_at?: string | null
+          hide_costs?: boolean
+          id?: string
+          itinerary_id?: string
+          owner_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_links_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -818,6 +862,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_share_link: {
+        Args: {
+          p_expires_at?: string
+          p_hide_costs?: boolean
+          p_itinerary_id: string
+          p_user_id: string | null
+        }
+        Returns: {
+          can_edit: boolean
+          created_at: string
+          expires_at: string | null
+          hide_costs: boolean
+          id: string
+          itinerary_id: string
+          owner_id: string
+          revoked_at: string | null
+          token: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "share_links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_trip_bulk: {
         Args: { p_created_via?: string; p_trip: Json; p_user_id: string | null }
         Returns: Json
@@ -851,8 +920,16 @@ export type Database = {
         Args: { p_id: string; p_user_id: string | null }
         Returns: Json
       }
+      get_shared_itinerary: { Args: { p_token: string }; Returns: Json }
       itinerary_item_json: {
         Args: { i: Database["public"]["Tables"]["itinerary_items"]["Row"] }
+        Returns: Json
+      }
+      itinerary_item_public_json: {
+        Args: {
+          i: Database["public"]["Tables"]["itinerary_items"]["Row"]
+          p_hide_costs: boolean
+        }
         Returns: Json
       }
       link_notes: {
@@ -877,6 +954,26 @@ export type Database = {
           to: "note_links"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      list_share_links: {
+        Args: { p_itinerary_id: string; p_user_id: string | null }
+        Returns: {
+          can_edit: boolean
+          created_at: string
+          expires_at: string | null
+          hide_costs: boolean
+          id: string
+          itinerary_id: string
+          owner_id: string
+          revoked_at: string | null
+          token: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "share_links"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       record_review: {
@@ -921,6 +1018,10 @@ export type Database = {
       }
       reorder_items: {
         Args: { p_day_id: string; p_item_ids: Json; p_user_id: string | null }
+        Returns: boolean
+      }
+      revoke_share_link: {
+        Args: { p_id: string; p_user_id: string | null }
         Returns: boolean
       }
       search_notes: {
@@ -1446,3 +1547,4 @@ export type ApiKeyRow = PublicTables['api_keys']['Row']
 export type ItineraryRow = PublicTables['itineraries']['Row']
 export type ItineraryDayRow = PublicTables['itinerary_days']['Row']
 export type ItineraryItemRow = PublicTables['itinerary_items']['Row']
+export type ShareLinkRow = PublicTables['share_links']['Row']

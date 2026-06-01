@@ -26,6 +26,13 @@ const loginRoute = createRoute({
   component: LoginScreen,
 })
 
+// Public, no-auth route: anyone with a share token can view a trip read-only.
+const sharedTripRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 's/$token',
+  component: lazyRouteComponent(() => import('@/routes/shared-trip'), 'SharedTripScreen'),
+})
+
 /** Pathless layout route: everything under here requires a session. */
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -105,6 +112,7 @@ const toolsRedirect = redirectToIntegrations('settings/tools')
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  sharedTripRoute,
   appRoute.addChildren([
     homeRoute,
     notesRoute,

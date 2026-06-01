@@ -220,6 +220,13 @@ export const setItemLocationInput = z.object({
   lng: z.number().min(-180).max(180).nullable(),
 })
 export const setItemDayInput = z.object({ item_id: uuid, day_id: uuid.nullable() })
+export const createShareLinkInput = z.object({
+  itinerary_id: uuid,
+  hide_costs: z.boolean().optional(),
+  expires_at: z.string().optional(),
+})
+export const revokeShareLinkInput = z.object({ share_link_id: uuid })
+export const listShareLinksInput = z.object({ itinerary_id: uuid })
 
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
@@ -274,4 +281,8 @@ export const toolDescriptions = {
   set_item_location: 'Set or clear an activity’s map coordinates (pass null to clear).',
   set_item_day: 'Move an activity to another day, or to Unscheduled (day_id = null).',
   reorder_items: 'Set the order of activities within a day by passing the item ids in the desired order.',
+  list_share_links: 'List a trip’s public share links.',
+  create_share_link:
+    'Create a public read-only share link for a trip. Optionally hide costs. Returns a token; the link is /s/<token>.',
+  revoke_share_link: 'Revoke a public share link so it can no longer be viewed.',
 } as const

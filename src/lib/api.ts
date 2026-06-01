@@ -9,6 +9,7 @@ import type {
   Json,
   NoteRow,
   NoteLinkRow,
+  ShareLinkRow,
 } from './database.types'
 import type {
   CreateDayInput,
@@ -535,6 +536,51 @@ export async function createTripBulk(input: CreateTripBulkInput): Promise<Itiner
       p_created_via: 'ui',
     }),
   ) as unknown as ItineraryTree
+}
+
+// ── Public share links ────────────────────────────────────────────
+/** A trip as seen through a public share link (owner-free, optionally cost-free). */
+export interface SharedTrip {
+  id: string
+  title: string
+  destination: string | null
+  start_date: string | null
+  end_date: string | null
+  timezone: string | null
+  default_currency: string
+  notes: string | null
+  hide_costs: boolean
+  days: ItineraryDay[]
+  unscheduled: ItineraryItem[]
+  cost_by_currency: Record<string, number>
+}
+
+export async function listShareLinks(itineraryId: string): Promise<ShareLinkRow[]> {
+  return unwrap(await supabase.rpc('list_share_links', { p_user_id: null, p_itinerary_id: itineraryId }))
+}
+
+export async function createShareLink(
+  itineraryId: string,
+  opts: { hideCosts?: boolean; expiresAt?: string | null } = {},
+): Promise<ShareLinkRow> {
+  return unwrap(
+    await supabase.rpc('create_share_link', {
+      p_user_id: null,
+      p_itinerary_id: itineraryId,
+      p_hide_costs: opts.hideCosts ?? false,
+      p_expires_at: opts.expiresAt ?? undefined,
+    }),
+  )
+}
+
+export async function revokeShareLink(id: string): Promise<void> {
+  const res = await supabase.rpc('revoke_share_link', { p_user_id: null, p_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+/** Public, anon-callable read of a shared trip by token (null if missing/expired). */
+export async function getSharedItinerary(token: string): Promise<SharedTrip | null> {
+  return unwrap(await supabase.rpc('get_shared_itinerary', { p_token: token })) as unknown as SharedTrip | null
 }
 
 export interface CreatedApiKey {

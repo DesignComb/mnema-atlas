@@ -10,6 +10,7 @@ import {
   MapPin,
   Pencil,
   Plus,
+  Share2,
   Trash2,
   Map as MapIcon,
 } from 'lucide-react'
@@ -27,6 +28,7 @@ import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { TripDialog } from '@/components/trips/TripDialog'
 import { DayDialog } from '@/components/trips/DayDialog'
 import { ItemDialog } from '@/components/trips/ItemDialog'
+import { ShareDialog } from '@/components/trips/ShareDialog'
 import { Button } from '@/components/ui/button'
 import { CATEGORY_META, categoryOf, fmtCost, fmtDateRange, fmtTimeRange, mapsUrl, safeHttps } from '@/lib/itinerary'
 import { useT } from '@/lib/i18n'
@@ -43,6 +45,7 @@ export function TripScreen() {
   const t = useT()
 
   const [tripDialog, setTripDialog] = useState(false)
+  const [shareDialog, setShareDialog] = useState(false)
   const [dayDialog, setDayDialog] = useState<{ open: boolean; day?: ItineraryDay }>({ open: false })
   const [itemDialog, setItemDialog] = useState<{ open: boolean; item?: ItineraryItem; dayId?: string | null }>({
     open: false,
@@ -146,6 +149,9 @@ export function TripScreen() {
           <>
             <Button variant="outline" size="sm" onClick={() => setDayDialog({ open: true })}>
               <CalendarPlus className="size-4" /> <span className="hidden sm:inline">{t('Day', '日期')}</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShareDialog(true)}>
+              <Share2 className="size-4" /> <span className="hidden sm:inline">{t('Share', '分享')}</span>
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setTripDialog(true)} title={t('Edit trip', '編輯行程')}>
               <Pencil className="size-4" />
@@ -252,6 +258,7 @@ export function TripScreen() {
       </div>
 
       <TripDialog open={tripDialog} onOpenChange={setTripDialog} trip={tripRow(trip)} />
+      <ShareDialog open={shareDialog} onOpenChange={setShareDialog} itineraryId={trip.id} />
       <DayDialog
         open={dayDialog.open}
         onOpenChange={(v) => setDayDialog((s) => ({ ...s, open: v }))}

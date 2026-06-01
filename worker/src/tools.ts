@@ -8,6 +8,7 @@ import {
   createItemsBulkInput,
   createItineraryInput,
   createNoteInput,
+  createShareLinkInput,
   createTripBulkInput,
   deleteDayInput,
   deleteItemInput,
@@ -15,8 +16,10 @@ import {
   getItineraryInput,
   getNoteInput,
   linkNotesInput,
+  listShareLinksInput,
   reorderDaysInput,
   reorderItemsInput,
+  revokeShareLinkInput,
   searchNotesInput,
   setItemDayInput,
   setItemLocationInput,
@@ -451,6 +454,44 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       await callRpc(ctx.env, ctx.userId, 'reorder_items', { p_day_id: a.day_id ?? null, p_item_ids: a.item_ids })
       return { summary: 'Activities reordered', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_share_links',
+    description: toolDescriptions.list_share_links,
+    schema: listShareLinksInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const links = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_share_links', {
+        p_itinerary_id: a.itinerary_id,
+      })
+      return { summary: `${links.length} share link(s)`, data: links }
+    },
+  },
+  {
+    name: 'create_share_link',
+    description: toolDescriptions.create_share_link,
+    schema: createShareLinkInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const link = await callRpc<{ token: string }>(ctx.env, ctx.userId, 'create_share_link', {
+        p_itinerary_id: a.itinerary_id,
+        p_hide_costs: a.hide_costs ?? false,
+        p_expires_at: a.expires_at ?? null,
+      })
+      return { summary: `Created share link (/s/${link.token})`, data: link }
+    },
+  },
+  {
+    name: 'revoke_share_link',
+    description: toolDescriptions.revoke_share_link,
+    schema: revokeShareLinkInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'revoke_share_link', { p_id: a.share_link_id })
+      return { summary: 'Share link revoked', data: { ok: true } }
     },
   },
 ]
