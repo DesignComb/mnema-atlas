@@ -10,8 +10,12 @@ import type {
   NoteRow,
   NoteLinkRow,
   ShareLinkRow,
+  TripBookingRow,
+  TripChecklistRow,
 } from './database.types'
 import type {
+  CreateBookingInput,
+  CreateChecklistInput,
   CreateDayInput,
   CreateDeckInput,
   CreateFlashcardInput,
@@ -21,6 +25,8 @@ import type {
   CreateNoteInput,
   CreateTripBulkInput,
   LinkNotesInput,
+  UpdateBookingInput,
+  UpdateChecklistInput,
   UpdateDayInput,
   UpdateItemInput,
   UpdateItineraryInput,
@@ -322,6 +328,33 @@ export interface ItineraryItem {
   booking_ref: string | null
   notes: string | null
   sort_order: number
+  status: 'idea' | 'tentative' | 'planned' | 'done'
+  assignees: string[]
+}
+export interface TripBooking {
+  id: string
+  type: 'flight' | 'lodging' | 'transport' | 'ticket' | 'car' | 'other'
+  title: string
+  start_at: string | null
+  end_at: string | null
+  from_label: string | null
+  to_label: string | null
+  location: string | null
+  confirmation: string | null
+  cost: number | null
+  currency: string | null
+  url: string | null
+  notes: string | null
+  sort_order: number
+}
+export interface ChecklistItem {
+  id: string
+  kind: 'packing' | 'todo'
+  text: string
+  category: string | null
+  assignee: string | null
+  done: boolean
+  sort_order: number
 }
 export interface ItineraryDay {
   id: string
@@ -342,10 +375,14 @@ export interface ItineraryTree {
   default_currency: string
   cover_url: string | null
   notes: string | null
+  travelers: string[]
+  budget_total: number | null
   created_at: string
   updated_at: string
   days: ItineraryDay[]
   unscheduled: ItineraryItem[]
+  bookings: TripBooking[]
+  checklist: ChecklistItem[]
   cost_by_currency: Record<string, number>
 }
 
@@ -364,7 +401,7 @@ export async function getItinerary(id: string): Promise<ItineraryTree> {
 }
 
 export async function createItinerary(input: CreateItineraryInput): Promise<ItineraryRow> {
-  return unwrap(
+  const row = unwrap<ItineraryRow>(
     await supabase.rpc('create_itinerary', {
       p_user_id: null,
       p_title: input.title,
@@ -378,6 +415,15 @@ export async function createItinerary(input: CreateItineraryInput): Promise<Itin
       p_created_via: 'ui',
     }),
   )
+  // create_itinerary RPC doesn't take travelers/budget — set them in a follow-up.
+  if (input.travelers?.length || input.budget_total != null) {
+    return updateItinerary({
+      itinerary_id: row.id,
+      travelers: input.travelers,
+      budget_total: input.budget_total,
+    })
+  }
+  return row
 }
 
 export async function updateItinerary(input: UpdateItineraryInput): Promise<ItineraryRow> {
@@ -393,6 +439,8 @@ export async function updateItinerary(input: UpdateItineraryInput): Promise<Itin
       p_default_currency: input.default_currency ?? undefined,
       p_cover_url: input.cover_url ?? undefined,
       p_notes: input.notes ?? undefined,
+      p_travelers: input.travelers ?? undefined,
+      p_budget_total: input.budget_total ?? undefined,
     }),
   )
 }
@@ -538,6 +586,93 @@ export async function createTripBulk(input: CreateTripBulkInput): Promise<Itiner
       p_created_via: 'ui',
     }),
   ) as unknown as ItineraryTree
+}
+
+// ── Trip v2: reservations, checklist, item status/assignees ────────
+export async function createBooking(input: CreateBookingInput): Promise<TripBookingRow> {
+  return unwrap(
+    await supabase.rpc('create_booking', {
+      p_user_id: null,
+      p_itinerary_id: input.itinerary_id,
+      p_type: input.type ?? undefined,
+      p_title: input.title,
+      p_start_at: input.start_at ?? undefined,
+      p_end_at: input.end_at ?? undefined,
+      p_from_label: input.from_label ?? undefined,
+      p_to_label: input.to_label ?? undefined,
+      p_location: input.location ?? undefined,
+      p_confirmation: input.confirmation ?? undefined,
+      p_cost: input.cost ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_url: input.url ?? undefined,
+      p_notes: input.notes ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function updateBooking(input: UpdateBookingInput): Promise<TripBookingRow> {
+  return unwrap(
+    await supabase.rpc('update_booking', {
+      p_user_id: null,
+      p_booking_id: input.booking_id,
+      p_type: input.type ?? undefined,
+      p_title: input.title ?? undefined,
+      p_start_at: input.start_at ?? undefined,
+      p_end_at: input.end_at ?? undefined,
+      p_from_label: input.from_label ?? undefined,
+      p_to_label: input.to_label ?? undefined,
+      p_location: input.location ?? undefined,
+      p_confirmation: input.confirmation ?? undefined,
+      p_cost: input.cost ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_url: input.url ?? undefined,
+      p_notes: input.notes ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function deleteBooking(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_booking', { p_user_id: null, p_booking_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function createChecklistItem(input: CreateChecklistInput): Promise<TripChecklistRow> {
+  return unwrap(
+    await supabase.rpc('create_checklist_item', {
+      p_user_id: null,
+      p_itinerary_id: input.itinerary_id,
+      p_kind: input.kind ?? undefined,
+      p_text: input.text,
+      p_category: input.category ?? undefined,
+      p_assignee: input.assignee ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function updateChecklistItem(input: UpdateChecklistInput): Promise<TripChecklistRow> {
+  return unwrap(
+    await supabase.rpc('update_checklist_item', {
+      p_user_id: null,
+      p_item_id: input.item_id,
+      p_text: input.text ?? undefined,
+      p_category: input.category ?? undefined,
+      p_done: input.done ?? undefined,
+      p_assignee: input.assignee ?? undefined,
+      p_kind: input.kind ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function deleteChecklistItem(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_checklist_item', { p_user_id: null, p_item_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function setItemStatus(itemId: string, status: ItineraryItem['status']): Promise<ItineraryItemRow> {
+  return unwrap(await supabase.rpc('set_item_status', { p_user_id: null, p_item_id: itemId, p_status: status }))
+}
+export async function setItemAssignees(itemId: string, assignees: string[]): Promise<ItineraryItemRow> {
+  return unwrap(await supabase.rpc('set_item_assignees', { p_user_id: null, p_item_id: itemId, p_assignees: assignees }))
 }
 
 // ── Public share links ────────────────────────────────────────────

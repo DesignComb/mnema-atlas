@@ -32,6 +32,9 @@ import { DayDialog } from '@/components/trips/DayDialog'
 import { ItemDialog } from '@/components/trips/ItemDialog'
 import { ShareDialog } from '@/components/trips/ShareDialog'
 import { MembersDialog } from '@/components/trips/MembersDialog'
+import { BookingsTab, BudgetTab, PackingTab } from '@/components/trips/TripSections'
+
+type TripTab = 'itinerary' | 'bookings' | 'budget' | 'packing'
 import { Button } from '@/components/ui/button'
 import { CATEGORY_META, categoryOf, fmtCost, fmtDateRange, fmtTimeRange, mapsUrl, safeHttps } from '@/lib/itinerary'
 import { useT } from '@/lib/i18n'
@@ -48,6 +51,7 @@ export function TripScreen() {
   const t = useT()
   useItineraryRealtime(tripId)
 
+  const [tab, setTab] = useState<TripTab>('itinerary')
   const [tripDialog, setTripDialog] = useState(false)
   const [shareDialog, setShareDialog] = useState(false)
   const [membersDialog, setMembersDialog] = useState(false)
@@ -208,6 +212,44 @@ export function TripScreen() {
             ) : null}
           </div>
 
+          {/* Travelers */}
+          {trip.travelers.length ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {trip.travelers.map((name) => (
+                <span key={name} className="rounded-full bg-muted px-2 py-0.5 text-[12px] text-muted-foreground">
+                  {name}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Section tabs */}
+          <div className="flex gap-1 rounded-lg bg-muted/60 p-0.5 text-[13px]">
+            {(
+              [
+                ['itinerary', 'Itinerary', '行程'],
+                ['bookings', 'Reservations', '訂位'],
+                ['budget', 'Budget', '預算'],
+                ['packing', 'Packing', '打包'],
+              ] as const
+            ).map(([k, en, zh]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setTab(k)}
+                className={`flex-1 rounded-md px-2 py-1.5 font-medium transition ${tab === k ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {t(en, zh)}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'bookings' ? <BookingsTab trip={trip} canEdit={canEdit} /> : null}
+          {tab === 'budget' ? <BudgetTab trip={trip} /> : null}
+          {tab === 'packing' ? <PackingTab trip={trip} canEdit={canEdit} /> : null}
+
+          {tab === 'itinerary' ? (
+            <>
           {/* Cost rollup */}
           {costEntries.length ? (
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-soft">
@@ -291,6 +333,8 @@ export function TripScreen() {
               <CalendarPlus className="size-4" /> {t('Add day', '新增日期')}
             </Button>
           ) : null}
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -308,6 +352,7 @@ export function TripScreen() {
         onOpenChange={(v) => setItemDialog((s) => ({ ...s, open: v }))}
         itineraryId={trip.id}
         days={trip.days}
+        travelers={trip.travelers}
         defaultDayId={itemDialog.dayId}
         defaultCurrency={trip.default_currency}
         item={itemDialog.item}
@@ -328,6 +373,8 @@ function tripRow(trip: ReturnType<typeof useItinerary>['data'] & {}) {
     default_currency: trip.default_currency,
     cover_url: trip.cover_url,
     notes: trip.notes,
+    travelers: trip.travelers,
+    budget_total: trip.budget_total,
   } as Parameters<typeof TripDialog>[0]['trip']
 }
 
@@ -456,6 +503,22 @@ function ItemRow({
           <span className="text-sm font-medium text-foreground">{item.title}</span>
           {cost ? (
             <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">{cost}</span>
+          ) : null}
+          {item.status === 'done' ? (
+            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {t('Done', '完成')}
+            </span>
+          ) : item.status === 'tentative' ? (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              {t('Tentative', '待確認')}
+            </span>
+          ) : item.status === 'idea' ? (
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
+              {t('Idea', '想法')}
+            </span>
+          ) : null}
+          {item.assignees?.length ? (
+            <span className="text-[11px] text-muted-foreground">· {item.assignees.join(' · ')}</span>
           ) : null}
         </div>
         {item.transport_detail ? (

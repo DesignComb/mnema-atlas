@@ -34,6 +34,8 @@ export function TripDialog({
   const [endDate, setEndDate] = useState('')
   const [timezone, setTimezone] = useState('')
   const [currency, setCurrency] = useState('')
+  const [travelers, setTravelers] = useState('')
+  const [budget, setBudget] = useState('')
   const [notes, setNotes] = useState('')
   const create = useCreateItinerary()
   const update = useUpdateItinerary()
@@ -48,6 +50,8 @@ export function TripDialog({
       setEndDate(trip?.end_date ?? '')
       setTimezone(trip?.timezone ?? '')
       setCurrency(trip?.default_currency ?? '')
+      setTravelers((trip?.travelers ?? []).join(', '))
+      setBudget(trip?.budget_total != null ? String(trip.budget_total) : '')
       setNotes(trip?.notes ?? '')
     }
   }, [open, trip])
@@ -55,6 +59,7 @@ export function TripDialog({
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
+    const budgetNum = budget.trim() === '' ? undefined : Number(budget)
     const fields = {
       title: title.trim(),
       destination: destination.trim() || undefined,
@@ -62,6 +67,11 @@ export function TripDialog({
       end_date: endDate || undefined,
       timezone: timezone.trim() || undefined,
       default_currency: currency.trim() || undefined,
+      travelers: travelers
+        .split(/[,，、]/)
+        .map((s) => s.trim())
+        .filter(Boolean),
+      budget_total: budgetNum != null && !Number.isNaN(budgetNum) ? budgetNum : undefined,
       notes: notes.trim() || undefined,
     }
     try {
@@ -138,6 +148,27 @@ export function TripDialog({
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 placeholder="TWD"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="trip-travelers">{t('Travelers', '同行者')}</Label>
+              <Input
+                id="trip-travelers"
+                value={travelers}
+                onChange={(e) => setTravelers(e.target.value)}
+                placeholder="Hao, Tracy"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="trip-budget">{t('Budget', '預算')}</Label>
+              <Input
+                id="trip-budget"
+                inputMode="decimal"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                placeholder="0"
               />
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useCreateItem, useSetItemDay, useUpdateItem } from '@/lib/hooks'
+import { useCreateItem, useSetItemAssignees, useSetItemDay, useSetItemStatus, useUpdateItem } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import { CATEGORIES, CATEGORY_META, categoryOf, type Category } from '@/lib/itinerary'
 import type { ItineraryDay, ItineraryItem } from '@/lib/api'
@@ -29,6 +29,7 @@ export function ItemDialog({
   onOpenChange,
   itineraryId,
   days,
+  travelers = [],
   defaultDayId,
   defaultCurrency,
   item,
@@ -37,6 +38,7 @@ export function ItemDialog({
   onOpenChange: (v: boolean) => void
   itineraryId: string
   days: ItineraryDay[]
+  travelers?: string[]
   /** Preselected day when adding (null/undefined → unscheduled). */
   defaultDayId?: string | null
   defaultCurrency?: string | null
@@ -48,8 +50,19 @@ export function ItemDialog({
   const create = useCreateItem()
   const update = useUpdateItem()
   const setItemDay = useSetItemDay()
+  const setStatus = useSetItemStatus()
+  const setAssignees = useSetItemAssignees()
+
+  const STATUSES: { v: ItineraryItem['status']; en: string; zh: string }[] = [
+    { v: 'idea', en: 'Idea', zh: '想法' },
+    { v: 'tentative', en: 'Tentative', zh: '待確認' },
+    { v: 'planned', en: 'Planned', zh: '已排' },
+    { v: 'done', en: 'Done', zh: '完成' },
+  ]
 
   const [title, setTitle] = useState('')
+  const [status, setStatusV] = useState<ItineraryItem['status']>('planned')
+  const [assignees, setAssigneesV] = useState<string[]>([])
   const [category, setCategory] = useState<Category>('sight')
   const [place, setPlace] = useState('')
   const [startTime, setStartTime] = useState('')
@@ -65,6 +78,8 @@ export function ItemDialog({
   useEffect(() => {
     if (!open) return
     setTitle(item?.title ?? '')
+    setStatusV(item?.status ?? 'planned')
+    setAssigneesV(item?.assignees ?? [])
     setCategory(categoryOf(item?.category))
     setPlace(item?.place ?? '')
     setStartTime(item?.start_time?.slice(0, 5) ?? '')
@@ -100,16 +115,23 @@ export function ItemDialog({
       notes: notes.trim() || undefined,
     }
     try {
+      let id: string
       if (editing && item) {
         await update.mutateAsync({ item_id: item.id, ...fields, expected_updated_at: undefined })
+        id = item.id
         const nextDay = dayId === UNSCHEDULED ? null : dayId
         if (nextDay !== (item.day_id ?? null)) {
           await setItemDay.mutateAsync({ itemId: item.id, dayId: nextDay })
         }
-      } else if (dayId === UNSCHEDULED) {
-        await create.mutateAsync({ itinerary_id: itineraryId, ...fields })
       } else {
-        await create.mutateAsync({ day_id: dayId, ...fields })
+        const row = await create.mutateAsync(
+          dayId === UNSCHEDULED ? { itinerary_id: itineraryId, ...fields } : { day_id: dayId, ...fields },
+        )
+        id = row.id
+      }
+      if (status !== (item?.status ?? 'planned')) await setStatus.mutateAsync({ itemId: id, status })
+      if (assignees.join(',') !== (item?.assignees ?? []).join(',')) {
+        await setAssignees.mutateAsync({ itemId: id, assignees })
       }
       onOpenChange(false)
     } catch (err) {
@@ -117,7 +139,8 @@ export function ItemDialog({
     }
   }
 
-  const pending = create.isPending || update.isPending || setItemDay.isPending
+  const pending =
+    create.isPending || update.isPending || setItemDay.isPending || setStatus.isPending || setAssignees.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -164,6 +187,46 @@ export function ItemDialog({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="item-status">{t('Status', '狀態')}</Label>
+              <select
+                id="item-status"
+                className={selectClass}
+                value={status}
+                onChange={(e) => setStatusV(e.target.value as ItineraryItem['status'])}
+              >
+                {STATUSES.map((s) => (
+                  <option key={s.v} value={s.v}>
+                    {t(s.en, s.zh)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {travelers.length ? (
+              <div className="flex flex-col gap-1.5">
+                <Label>{t('For', '給誰')}</Label>
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {travelers.map((name) => {
+                    const on = assignees.includes(name)
+                    return (
+                      <button
+                        type="button"
+                        key={name}
+                        onClick={() =>
+                          setAssigneesV(on ? assignees.filter((a) => a !== name) : [...assignees, name])
+                        }
+                        className={`rounded-full border px-2.5 py-1 text-[12px] transition ${on ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'}`}
+                      >
+                        {name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-1.5">

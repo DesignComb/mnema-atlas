@@ -177,6 +177,7 @@ export type Database = {
       }
       itineraries: {
         Row: {
+          budget_total: number | null
           cover_url: string | null
           created_at: string
           created_via: string
@@ -189,9 +190,11 @@ export type Database = {
           start_date: string | null
           timezone: string | null
           title: string
+          travelers: string[]
           updated_at: string
         }
         Insert: {
+          budget_total?: number | null
           cover_url?: string | null
           created_at?: string
           created_via?: string
@@ -204,9 +207,11 @@ export type Database = {
           start_date?: string | null
           timezone?: string | null
           title: string
+          travelers?: string[]
           updated_at?: string
         }
         Update: {
+          budget_total?: number | null
           cover_url?: string | null
           created_at?: string
           created_via?: string
@@ -219,6 +224,7 @@ export type Database = {
           start_date?: string | null
           timezone?: string | null
           title?: string
+          travelers?: string[]
           updated_at?: string
         }
         Relationships: []
@@ -269,6 +275,7 @@ export type Database = {
       }
       itinerary_items: {
         Row: {
+          assignees: string[]
           booking_ref: string | null
           booking_url: string | null
           category: string
@@ -289,12 +296,14 @@ export type Database = {
           place: string | null
           sort_order: number
           start_time: string | null
+          status: string
           title: string
           transport_detail: string | null
           transport_mode: string | null
           updated_at: string
         }
         Insert: {
+          assignees?: string[]
           booking_ref?: string | null
           booking_url?: string | null
           category?: string
@@ -315,12 +324,14 @@ export type Database = {
           place?: string | null
           sort_order?: number
           start_time?: string | null
+          status?: string
           title: string
           transport_detail?: string | null
           transport_mode?: string | null
           updated_at?: string
         }
         Update: {
+          assignees?: string[]
           booking_ref?: string | null
           booking_url?: string | null
           category?: string
@@ -341,6 +352,7 @@ export type Database = {
           place?: string | null
           sort_order?: number
           start_time?: string | null
+          status?: string
           title?: string
           transport_detail?: string | null
           transport_mode?: string | null
@@ -605,6 +617,139 @@ export type Database = {
           },
         ]
       }
+      trip_bookings: {
+        Row: {
+          confirmation: string | null
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          currency: string | null
+          end_at: string | null
+          from_label: string | null
+          id: string
+          itinerary_id: string
+          location: string | null
+          notes: string | null
+          owner_id: string
+          sort_order: number
+          start_at: string | null
+          title: string
+          to_label: string | null
+          type: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          confirmation?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          created_via?: string
+          currency?: string | null
+          end_at?: string | null
+          from_label?: string | null
+          id?: string
+          itinerary_id: string
+          location?: string | null
+          notes?: string | null
+          owner_id: string
+          sort_order?: number
+          start_at?: string | null
+          title: string
+          to_label?: string | null
+          type?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          confirmation?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          created_via?: string
+          currency?: string | null
+          end_at?: string | null
+          from_label?: string | null
+          id?: string
+          itinerary_id?: string
+          location?: string | null
+          notes?: string | null
+          owner_id?: string
+          sort_order?: number
+          start_at?: string | null
+          title?: string
+          to_label?: string | null
+          type?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_bookings_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_checklist: {
+        Row: {
+          assignee: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          done: boolean
+          id: string
+          itinerary_id: string
+          kind: string
+          owner_id: string
+          sort_order: number
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          assignee?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_via?: string
+          done?: boolean
+          id?: string
+          itinerary_id: string
+          kind?: string
+          owner_id: string
+          sort_order?: number
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          assignee?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_via?: string
+          done?: boolean
+          id?: string
+          itinerary_id?: string
+          kind?: string
+          owner_id?: string
+          sort_order?: number
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_checklist_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -638,6 +783,85 @@ export type Database = {
           id: string
           key_prefix: string
         }[]
+      }
+      create_booking: {
+        Args: {
+          p_confirmation?: string
+          p_cost?: number
+          p_created_via?: string
+          p_currency?: string
+          p_end_at?: string
+          p_from_label?: string
+          p_itinerary_id: string
+          p_location?: string
+          p_notes?: string
+          p_sort_order?: number
+          p_start_at?: string
+          p_title: string
+          p_to_label?: string
+          p_type: string
+          p_url?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          confirmation: string | null
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          currency: string | null
+          end_at: string | null
+          from_label: string | null
+          id: string
+          itinerary_id: string
+          location: string | null
+          notes: string | null
+          owner_id: string
+          sort_order: number
+          start_at: string | null
+          title: string
+          to_label: string | null
+          type: string
+          updated_at: string
+          url: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trip_bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_bookings_bulk: {
+        Args: { p_bookings: Json; p_itinerary_id: string; p_user_id: string | null }
+        Returns: {
+          confirmation: string | null
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          currency: string | null
+          end_at: string | null
+          from_label: string | null
+          id: string
+          itinerary_id: string
+          location: string | null
+          notes: string | null
+          owner_id: string
+          sort_order: number
+          start_at: string | null
+          title: string
+          to_label: string | null
+          type: string
+          updated_at: string
+          url: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "trip_bookings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       create_card: {
         Args: {
@@ -673,6 +897,63 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "cards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_checklist_bulk: {
+        Args: { p_items: Json; p_itinerary_id: string; p_user_id: string | null }
+        Returns: {
+          assignee: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          done: boolean
+          id: string
+          itinerary_id: string
+          kind: string
+          owner_id: string
+          sort_order: number
+          text: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "trip_checklist"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      create_checklist_item: {
+        Args: {
+          p_assignee?: string
+          p_category?: string
+          p_created_via?: string
+          p_itinerary_id: string
+          p_kind: string
+          p_sort_order?: number
+          p_text: string
+          p_user_id: string | null
+        }
+        Returns: {
+          assignee: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          done: boolean
+          id: string
+          itinerary_id: string
+          kind: string
+          owner_id: string
+          sort_order: number
+          text: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trip_checklist"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -787,6 +1068,7 @@ export type Database = {
           p_user_id: string | null
         }
         Returns: {
+          assignees: string[]
           booking_ref: string | null
           booking_url: string | null
           category: string
@@ -807,6 +1089,7 @@ export type Database = {
           place: string | null
           sort_order: number
           start_time: string | null
+          status: string
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -822,6 +1105,7 @@ export type Database = {
       create_items_bulk: {
         Args: { p_day_id: string; p_items: Json; p_user_id: string | null }
         Returns: {
+          assignees: string[]
           booking_ref: string | null
           booking_url: string | null
           category: string
@@ -842,6 +1126,7 @@ export type Database = {
           place: string | null
           sort_order: number
           start_time: string | null
+          status: string
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -868,6 +1153,7 @@ export type Database = {
           p_user_id: string | null
         }
         Returns: {
+          budget_total: number | null
           cover_url: string | null
           created_at: string
           created_via: string
@@ -880,6 +1166,7 @@ export type Database = {
           start_date: string | null
           timezone: string | null
           title: string
+          travelers: string[]
           updated_at: string
         }
         SetofOptions: {
@@ -944,8 +1231,16 @@ export type Database = {
         Args: { p_created_via?: string; p_trip: Json; p_user_id: string | null }
         Returns: Json
       }
+      delete_booking: {
+        Args: { p_booking_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       delete_card: {
         Args: { p_card_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      delete_checklist_item: {
+        Args: { p_item_id: string; p_user_id: string | null }
         Returns: boolean
       }
       delete_day: {
@@ -1148,9 +1443,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      set_item_day: {
-        Args: { p_day_id: string; p_item_id: string; p_user_id: string | null }
+      set_item_assignees: {
+        Args: { p_assignees: string[]; p_item_id: string; p_user_id: string | null }
         Returns: {
+          assignees: string[]
           booking_ref: string | null
           booking_url: string | null
           category: string
@@ -1171,6 +1467,44 @@ export type Database = {
           place: string | null
           sort_order: number
           start_time: string | null
+          status: string
+          title: string
+          transport_detail: string | null
+          transport_mode: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "itinerary_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_item_day: {
+        Args: { p_day_id: string; p_item_id: string; p_user_id: string | null }
+        Returns: {
+          assignees: string[]
+          booking_ref: string | null
+          booking_url: string | null
+          category: string
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          currency: string | null
+          day_id: string | null
+          end_day_offset: number
+          end_time: string | null
+          id: string
+          itinerary_id: string
+          lat: number | null
+          lng: number | null
+          notes: string | null
+          owner_id: string
+          place: string | null
+          sort_order: number
+          start_time: string | null
+          status: string
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -1191,6 +1525,7 @@ export type Database = {
           p_user_id: string | null
         }
         Returns: {
+          assignees: string[]
           booking_ref: string | null
           booking_url: string | null
           category: string
@@ -1211,6 +1546,44 @@ export type Database = {
           place: string | null
           sort_order: number
           start_time: string | null
+          status: string
+          title: string
+          transport_detail: string | null
+          transport_mode: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "itinerary_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_item_status: {
+        Args: { p_item_id: string; p_status: string; p_user_id: string | null }
+        Returns: {
+          assignees: string[]
+          booking_ref: string | null
+          booking_url: string | null
+          category: string
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          currency: string | null
+          day_id: string | null
+          end_day_offset: number
+          end_time: string | null
+          id: string
+          itinerary_id: string
+          lat: number | null
+          lng: number | null
+          notes: string | null
+          owner_id: string
+          place: string | null
+          sort_order: number
+          start_time: string | null
+          status: string
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -1267,6 +1640,53 @@ export type Database = {
         Args: { p_a: string; p_b: string; p_user_id: string | null }
         Returns: number
       }
+      update_booking: {
+        Args: {
+          p_booking_id: string
+          p_confirmation?: string
+          p_cost?: number
+          p_currency?: string
+          p_end_at?: string
+          p_from_label?: string
+          p_location?: string
+          p_notes?: string
+          p_sort_order?: number
+          p_start_at?: string
+          p_title?: string
+          p_to_label?: string
+          p_type?: string
+          p_url?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          confirmation: string | null
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          currency: string | null
+          end_at: string | null
+          from_label: string | null
+          id: string
+          itinerary_id: string
+          location: string | null
+          notes: string | null
+          owner_id: string
+          sort_order: number
+          start_at: string | null
+          title: string
+          to_label: string | null
+          type: string
+          updated_at: string
+          url: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trip_bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_card: {
         Args: {
           p_back?: string
@@ -1301,6 +1721,39 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "cards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_checklist_item: {
+        Args: {
+          p_assignee?: string
+          p_category?: string
+          p_done?: boolean
+          p_item_id: string
+          p_kind?: string
+          p_sort_order?: number
+          p_text?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          assignee: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          done: boolean
+          id: string
+          itinerary_id: string
+          kind: string
+          owner_id: string
+          sort_order: number
+          text: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trip_checklist"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1377,6 +1830,7 @@ export type Database = {
           p_user_id: string | null
         }
         Returns: {
+          assignees: string[]
           booking_ref: string | null
           booking_url: string | null
           category: string
@@ -1397,6 +1851,7 @@ export type Database = {
           place: string | null
           sort_order: number
           start_time: string | null
+          status: string
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -1411,6 +1866,7 @@ export type Database = {
       }
       update_itinerary: {
         Args: {
+          p_budget_total?: number
           p_cover_url?: string
           p_default_currency?: string
           p_destination?: string
@@ -1420,9 +1876,11 @@ export type Database = {
           p_start_date?: string
           p_timezone?: string
           p_title?: string
+          p_travelers?: string[]
           p_user_id: string | null
         }
         Returns: {
+          budget_total: number | null
           cover_url: string | null
           created_at: string
           created_via: string
@@ -1435,6 +1893,7 @@ export type Database = {
           start_date: string | null
           timezone: string | null
           title: string
+          travelers: string[]
           updated_at: string
         }
         SetofOptions: {
@@ -1622,3 +2081,5 @@ export type ItineraryDayRow = PublicTables['itinerary_days']['Row']
 export type ItineraryItemRow = PublicTables['itinerary_items']['Row']
 export type ShareLinkRow = PublicTables['share_links']['Row']
 export type ItineraryMemberRow = PublicTables['itinerary_members']['Row']
+export type TripBookingRow = PublicTables['trip_bookings']['Row']
+export type TripChecklistRow = PublicTables['trip_checklist']['Row']

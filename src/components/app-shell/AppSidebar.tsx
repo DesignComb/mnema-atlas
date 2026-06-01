@@ -31,14 +31,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-const NAV = [
+const NAV_STUDY = [
   { to: '/', label: 'Today', zh: '今天', icon: Home, exact: true },
   { to: '/notes', label: 'Notes', zh: '筆記', icon: FileText, exact: false },
   { to: '/cards', label: 'Flashcards', zh: '閃卡', icon: Layers, exact: false },
-  { to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false },
   { to: '/graph', label: 'Graph', zh: '圖譜', icon: Share2, exact: false },
   { to: '/study', label: 'Study', zh: '複習', icon: GraduationCap, exact: false },
 ] as const
+const NAV_TRAVEL = [{ to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false }] as const
 
 export function AppSidebar({
   onOpenCommand,
@@ -59,6 +59,10 @@ export function AppSidebar({
   const { data: decks } = useDecks()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
+  // Top-level space: Study vs Travel. Travel routes (/trips, /s) flip the rail.
+  const space: 'study' | 'travel' = pathname.startsWith('/trips') ? 'travel' : 'study'
+  const nav = space === 'travel' ? NAV_TRAVEL : NAV_STUDY
+
   const initials = (user?.email ?? '?').slice(0, 2).toUpperCase()
 
   return (
@@ -69,6 +73,28 @@ export function AppSidebar({
           <BookOpenCheck className="size-4" />
         </div>
         <span className="font-serif text-[17px] font-semibold tracking-tight text-foreground">Mnema Atlas</span>
+      </div>
+
+      {/* Space switcher: Study ↔ Travel */}
+      <div className="mx-3 mb-2 grid grid-cols-2 gap-1 rounded-lg bg-sidebar-accent/60 p-0.5">
+        <Link
+          to="/"
+          className={cn(
+            'flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium transition',
+            space === 'study' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <BookOpenCheck className="size-3.5" /> {t('Study', '讀書')}
+        </Link>
+        <Link
+          to="/trips"
+          className={cn(
+            'flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium transition',
+            space === 'travel' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <MapIcon className="size-3.5" /> {t('Travel', '旅遊')}
+        </Link>
       </div>
 
       {/* Search / Cmd-K */}
@@ -87,7 +113,7 @@ export function AppSidebar({
 
       {/* Primary nav */}
       <nav className="flex flex-col gap-0.5 px-3 py-1">
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to)
           return (
             <Link
@@ -107,6 +133,8 @@ export function AppSidebar({
         })}
       </nav>
 
+      {space === 'study' ? (
+      <>
       {/* Decks */}
       <div className="flex items-center justify-between px-4 pt-4 pb-1">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
@@ -149,6 +177,10 @@ export function AppSidebar({
           )}
         </div>
       </ScrollArea>
+      </>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       {/* Footer: pinned guide + user menu */}
       <div className="space-y-0.5 border-t border-sidebar-border p-2">

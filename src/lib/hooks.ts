@@ -6,6 +6,8 @@ import * as api from './api'
 import { supabase } from './supabase'
 import { seedSampleDeck } from './sampleDeck'
 import type {
+  CreateBookingInput,
+  CreateChecklistInput,
   CreateDayInput,
   CreateDeckInput,
   CreateFlashcardInput,
@@ -14,11 +16,14 @@ import type {
   CreateItineraryInput,
   CreateNoteInput,
   CreateTripBulkInput,
+  UpdateBookingInput,
+  UpdateChecklistInput,
   UpdateDayInput,
   UpdateItemInput,
   UpdateItineraryInput,
   UpdateNoteInput,
 } from '@shared/schemas'
+import type { ItineraryItem } from './api'
 
 export const qk = {
   decks: ['decks'] as const,
@@ -315,6 +320,48 @@ export function useCreateItemsBulk() {
     mutationFn: (input: CreateItemsBulkInput) => api.createItemsBulk(input),
     onSuccess: () => bumpTrips(qc),
   })
+}
+export function useSetItemStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { itemId: string; status: ItineraryItem['status'] }) => api.setItemStatus(v.itemId, v.status),
+    onSuccess: () => bumpTrips(qc),
+  })
+}
+export function useSetItemAssignees() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { itemId: string; assignees: string[] }) => api.setItemAssignees(v.itemId, v.assignees),
+    onSuccess: () => bumpTrips(qc),
+  })
+}
+
+// ── Reservations (bookings) ──
+export function useCreateBooking() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateBookingInput) => api.createBooking(input), onSuccess: () => bumpTrips(qc) })
+}
+export function useUpdateBooking() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateBookingInput) => api.updateBooking(input), onSuccess: () => bumpTrips(qc) })
+}
+export function useDeleteBooking() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteBooking(id), onSuccess: () => bumpTrips(qc) })
+}
+
+// ── Checklist (packing / to-dos) ──
+export function useCreateChecklistItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateChecklistInput) => api.createChecklistItem(input), onSuccess: () => bumpTrips(qc) })
+}
+export function useUpdateChecklistItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateChecklistInput) => api.updateChecklistItem(input), onSuccess: () => bumpTrips(qc) })
+}
+export function useDeleteChecklistItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteChecklistItem(id), onSuccess: () => bumpTrips(qc) })
 }
 export function useCreateTripBulk() {
   const qc = useQueryClient()

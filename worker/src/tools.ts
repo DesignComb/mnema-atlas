@@ -5,12 +5,18 @@ import {
   createFlashcardInput,
   createFlashcardsBulkInput,
   createItemInput,
+  createBookingInput,
+  createBookingsBulkInput,
+  createChecklistBulkInput,
+  createChecklistInput,
   createItemsBulkInput,
   createItineraryInput,
   createNoteInput,
   createShareLinkInput,
   createTripBulkInput,
+  deleteBookingInput,
   deleteCardInput,
+  deleteChecklistInput,
   deleteDayInput,
   deleteDeckInput,
   deleteItemInput,
@@ -27,13 +33,17 @@ import {
   revokeShareLinkInput,
   searchNotesInput,
   setCardTagsInput,
+  setItemAssigneesInput,
   setItemDayInput,
   setItemLocationInput,
+  setItemStatusInput,
   setNoteDeckInput,
   setNoteTagsInput,
   toolDescriptions,
   unlinkNotesInput,
+  updateBookingInput,
   updateCardInput,
+  updateChecklistInput,
   updateDayInput,
   updateDeckInput,
   updateItemInput,
@@ -453,6 +463,8 @@ export const tools: ToolDef[] = [
         p_default_currency: a.default_currency ?? null,
         p_cover_url: a.cover_url ?? null,
         p_notes: a.notes ?? null,
+        p_travelers: a.travelers ?? null,
+        p_budget_total: a.budget_total ?? null,
       })
       return { summary: `Updated trip “${trip.title}”`, data: trip }
     },
@@ -644,6 +656,168 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       await callRpc(ctx.env, ctx.userId, 'reorder_items', { p_day_id: a.day_id ?? null, p_item_ids: a.item_ids })
       return { summary: 'Activities reordered', data: { ok: true } }
+    },
+  },
+  {
+    name: 'set_item_status',
+    description: toolDescriptions.set_item_status,
+    schema: setItemStatusInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const item = await callRpc(ctx.env, ctx.userId, 'set_item_status', { p_item_id: a.item_id, p_status: a.status })
+      return { summary: `Activity marked ${a.status}`, data: item }
+    },
+  },
+  {
+    name: 'set_item_assignees',
+    description: toolDescriptions.set_item_assignees,
+    schema: setItemAssigneesInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const item = await callRpc(ctx.env, ctx.userId, 'set_item_assignees', {
+        p_item_id: a.item_id,
+        p_assignees: a.assignees,
+      })
+      return { summary: 'Activity assignees set', data: item }
+    },
+  },
+  {
+    name: 'create_booking',
+    description: toolDescriptions.create_booking,
+    schema: createBookingInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const b = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'create_booking', {
+        p_itinerary_id: a.itinerary_id,
+        p_type: a.type ?? null,
+        p_title: a.title,
+        p_start_at: a.start_at ?? null,
+        p_end_at: a.end_at ?? null,
+        p_from_label: a.from_label ?? null,
+        p_to_label: a.to_label ?? null,
+        p_location: a.location ?? null,
+        p_confirmation: a.confirmation ?? null,
+        p_cost: a.cost ?? null,
+        p_currency: a.currency ?? null,
+        p_url: a.url ?? null,
+        p_notes: a.notes ?? null,
+        p_sort_order: a.sort_order ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Added reservation “${b.title}” (${b.id})`, data: b }
+    },
+  },
+  {
+    name: 'create_bookings_bulk',
+    description: toolDescriptions.create_bookings_bulk,
+    schema: createBookingsBulkInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'create_bookings_bulk', {
+        p_itinerary_id: a.itinerary_id,
+        p_bookings: a.bookings,
+      })
+      return { summary: `Added ${rows.length} reservations`, data: rows }
+    },
+  },
+  {
+    name: 'update_booking',
+    description: toolDescriptions.update_booking,
+    schema: updateBookingInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const b = await callRpc(ctx.env, ctx.userId, 'update_booking', {
+        p_booking_id: a.booking_id,
+        p_type: a.type ?? null,
+        p_title: a.title ?? null,
+        p_start_at: a.start_at ?? null,
+        p_end_at: a.end_at ?? null,
+        p_from_label: a.from_label ?? null,
+        p_to_label: a.to_label ?? null,
+        p_location: a.location ?? null,
+        p_confirmation: a.confirmation ?? null,
+        p_cost: a.cost ?? null,
+        p_currency: a.currency ?? null,
+        p_url: a.url ?? null,
+        p_notes: a.notes ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: 'Reservation updated', data: b }
+    },
+  },
+  {
+    name: 'delete_booking',
+    description: toolDescriptions.delete_booking,
+    schema: deleteBookingInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_booking', { p_booking_id: a.booking_id })
+      return { summary: 'Reservation deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'create_checklist_item',
+    description: toolDescriptions.create_checklist_item,
+    schema: createChecklistInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const c = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'create_checklist_item', {
+        p_itinerary_id: a.itinerary_id,
+        p_kind: a.kind ?? null,
+        p_text: a.text,
+        p_category: a.category ?? null,
+        p_assignee: a.assignee ?? null,
+        p_sort_order: a.sort_order ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Added ${a.kind ?? 'todo'} item (${c.id})`, data: c }
+    },
+  },
+  {
+    name: 'create_checklist_bulk',
+    description: toolDescriptions.create_checklist_bulk,
+    schema: createChecklistBulkInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'create_checklist_bulk', {
+        p_itinerary_id: a.itinerary_id,
+        p_items: a.items,
+      })
+      return { summary: `Added ${rows.length} checklist items`, data: rows }
+    },
+  },
+  {
+    name: 'update_checklist_item',
+    description: toolDescriptions.update_checklist_item,
+    schema: updateChecklistInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const c = await callRpc(ctx.env, ctx.userId, 'update_checklist_item', {
+        p_item_id: a.item_id,
+        p_text: a.text ?? null,
+        p_category: a.category ?? null,
+        p_done: a.done ?? null,
+        p_assignee: a.assignee ?? null,
+        p_kind: a.kind ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: 'Checklist item updated', data: c }
+    },
+  },
+  {
+    name: 'delete_checklist_item',
+    description: toolDescriptions.delete_checklist_item,
+    schema: deleteChecklistInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_checklist_item', { p_item_id: a.item_id })
+      return { summary: 'Checklist item deleted', data: { ok: true } }
     },
   },
   {

@@ -126,6 +126,8 @@ const clockTime = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Use HH:MM')
 const currency = z.string().trim().min(1).max(8)
 const placeUrl = z.string().trim().url().max(2_000)
 
+const travelers = z.array(z.string().trim().min(1).max(40)).max(20)
+
 export const createItineraryInput = z.object({
   title: z.string().trim().min(1, 'Title is required').max(300),
   destination: z.string().trim().max(300).optional(),
@@ -135,6 +137,8 @@ export const createItineraryInput = z.object({
   default_currency: currency.optional(),
   cover_url: placeUrl.optional(),
   notes: z.string().max(20_000).optional(),
+  travelers: travelers.optional(),
+  budget_total: z.number().min(0).max(1e12).optional(),
 })
 export type CreateItineraryInput = z.infer<typeof createItineraryInput>
 
@@ -148,6 +152,8 @@ export const updateItineraryInput = z.object({
   default_currency: currency.optional(),
   cover_url: placeUrl.optional(),
   notes: z.string().max(20_000).optional(),
+  travelers: travelers.optional(),
+  budget_total: z.number().min(0).max(1e12).optional(),
 })
 export type UpdateItineraryInput = z.infer<typeof updateItineraryInput>
 
@@ -267,6 +273,75 @@ export const createShareLinkInput = z.object({
 export const revokeShareLinkInput = z.object({ share_link_id: uuid })
 export const listShareLinksInput = z.object({ itinerary_id: uuid })
 
+// ── Trip v2: reservations / packing / item status & assignees ──
+export const bookingType = z.enum(['flight', 'lodging', 'transport', 'ticket', 'car', 'other'])
+export const checklistKind = z.enum(['packing', 'todo'])
+export const itemStatus = z.enum(['idea', 'tentative', 'planned', 'done'])
+const isoDateTime = z.string().trim().min(1).max(40)
+const assigneeList = z.array(z.string().trim().min(1).max(40)).max(20)
+
+const bookingFields = {
+  type: bookingType.default('other'),
+  title: z.string().trim().min(1, 'Title is required').max(300),
+  start_at: isoDateTime.optional(),
+  end_at: isoDateTime.optional(),
+  from_label: z.string().trim().max(200).optional(),
+  to_label: z.string().trim().max(200).optional(),
+  location: z.string().trim().max(300).optional(),
+  confirmation: z.string().trim().max(200).optional(),
+  cost: z.number().min(0).max(1e12).optional(),
+  currency: currency.optional(),
+  url: placeUrl.optional(),
+  notes: z.string().max(5_000).optional(),
+  sort_order: z.number().int().optional(),
+}
+export const createBookingInput = z.object({ itinerary_id: uuid, ...bookingFields })
+export type CreateBookingInput = z.infer<typeof createBookingInput>
+export const updateBookingInput = z.object({
+  booking_id: uuid,
+  type: bookingType.optional(),
+  title: z.string().trim().min(1).max(300).optional(),
+  start_at: isoDateTime.optional(),
+  end_at: isoDateTime.optional(),
+  from_label: z.string().trim().max(200).optional(),
+  to_label: z.string().trim().max(200).optional(),
+  location: z.string().trim().max(300).optional(),
+  confirmation: z.string().trim().max(200).optional(),
+  cost: z.number().min(0).max(1e12).optional(),
+  currency: currency.optional(),
+  url: placeUrl.optional(),
+  notes: z.string().max(5_000).optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateBookingInput = z.infer<typeof updateBookingInput>
+export const deleteBookingInput = z.object({ booking_id: uuid })
+export const createBookingsBulkInput = z.object({ itinerary_id: uuid, bookings: z.array(z.object(bookingFields)).min(1).max(100) })
+
+const checklistFields = {
+  kind: checklistKind.default('todo'),
+  text: z.string().trim().min(1, 'Required').max(1_000),
+  category: z.string().trim().max(60).optional(),
+  assignee: z.string().trim().max(80).optional(),
+  sort_order: z.number().int().optional(),
+}
+export const createChecklistInput = z.object({ itinerary_id: uuid, ...checklistFields })
+export type CreateChecklistInput = z.infer<typeof createChecklistInput>
+export const updateChecklistInput = z.object({
+  item_id: uuid,
+  text: z.string().trim().min(1).max(1_000).optional(),
+  category: z.string().trim().max(60).optional(),
+  done: z.boolean().optional(),
+  assignee: z.string().trim().max(80).optional(),
+  kind: checklistKind.optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateChecklistInput = z.infer<typeof updateChecklistInput>
+export const deleteChecklistInput = z.object({ item_id: uuid })
+export const createChecklistBulkInput = z.object({ itinerary_id: uuid, items: z.array(z.object(checklistFields)).min(1).max(200) })
+
+export const setItemStatusInput = z.object({ item_id: uuid, status: itemStatus })
+export const setItemAssigneesInput = z.object({ item_id: uuid, assignees: assigneeList })
+
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
  * emits inside a ```mnema fenced block for the in-app Quick Import. Cards link
@@ -331,6 +406,18 @@ export const toolDescriptions = {
   set_item_location: 'Set or clear an activity’s map coordinates (pass null to clear).',
   set_item_day: 'Move an activity to another day, or to Unscheduled (day_id = null).',
   reorder_items: 'Set the order of activities within a day by passing the item ids in the desired order.',
+  update_itinerary_meta: 'Set a trip’s travelers and/or total budget.',
+  create_booking:
+    'Add a reservation to a trip — flight, lodging, transport, ticket, car, or document. Returns the new id.',
+  update_booking: 'Update a reservation’s fields.',
+  delete_booking: 'Delete a reservation.',
+  create_bookings_bulk: 'Add many reservations to a trip in one call.',
+  create_checklist_item: 'Add a packing item or to-do to a trip.',
+  update_checklist_item: 'Update a packing/to-do item (text, category, assignee, or done state).',
+  delete_checklist_item: 'Delete a packing/to-do item.',
+  create_checklist_bulk: 'Add many packing/to-do items to a trip in one call.',
+  set_item_status: 'Set an activity’s status: idea, tentative, planned, or done.',
+  set_item_assignees: 'Set which travelers an activity is for (a subset of the trip’s travelers).',
   list_share_links: 'List a trip’s public share links.',
   create_share_link:
     'Create a public read-only share link for a trip. Optionally hide costs. Returns a token; the link is /s/<token>.',
