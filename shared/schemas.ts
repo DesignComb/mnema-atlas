@@ -78,6 +78,38 @@ export const linkNotesInput = z.object({
 })
 export type LinkNotesInput = z.infer<typeof linkNotesInput>
 
+// ── Notes / cards / decks: edit + delete + organise (AI management tools) ──
+const tagList = z.array(z.string().trim().min(1).max(40)).max(12)
+
+export const listNotesToolInput = z.object({
+  deck_id: uuid.optional(),
+  limit: z.number().int().min(1).max(200).default(50),
+})
+export const listCardsToolInput = z.object({
+  deck_id: uuid.optional(),
+  tag: z.string().trim().min(1).optional(),
+  limit: z.number().int().min(1).max(200).default(50),
+})
+export const updateCardInput = z.object({
+  card_id: uuid,
+  front: flashcardFace.optional(),
+  back: flashcardFace.optional(),
+  deck_id: uuid.optional(),
+  note_id: uuid.optional(),
+})
+export const deleteCardInput = z.object({ card_id: uuid })
+export const deleteNoteInput = z.object({ note_id: uuid })
+export const deleteDeckInput = z.object({ deck_id: uuid })
+export const updateDeckInput = z.object({
+  deck_id: uuid,
+  name: z.string().trim().min(1).max(120).optional(),
+  description: z.string().max(2_000).optional(),
+})
+export const setNoteDeckInput = z.object({ note_id: uuid, deck_id: uuid.nullable() })
+export const setNoteTagsInput = z.object({ note_id: uuid, tags: tagList })
+export const setCardTagsInput = z.object({ card_id: uuid, tags: tagList })
+export const unlinkNotesInput = z.object({ note_id_a: uuid, note_id_b: uuid })
+
 // ── Travel itineraries ────────────────────────────────────────────
 export const itineraryCategory = z.enum(['food', 'transport', 'sight', 'lodging', 'other'])
 export type ItineraryCategory = z.infer<typeof itineraryCategory>
@@ -261,6 +293,17 @@ export const toolDescriptions = {
   create_flashcard: 'Create one spaced-repetition flashcard (front/back). Schedulable immediately.',
   create_flashcards_bulk: 'Create many flashcards in one call.',
   link_notes: 'Create a typed link between two notes (feeds the knowledge graph).',
+  list_notes: 'List the user’s notes (optionally filtered by deck). Returns ids + titles.',
+  list_cards: 'List the user’s flashcards (optionally by deck or tag). Returns ids + front/back.',
+  update_card: 'Edit an existing flashcard’s front/back, or move it to another deck/note.',
+  delete_card: 'Delete a flashcard.',
+  delete_note: 'Delete a note (its flashcards are kept, just unlinked from the note).',
+  update_deck: 'Rename a deck or change its description.',
+  delete_deck: 'Delete a deck (its notes & cards are kept, just unfiled).',
+  set_note_deck: 'Move a note into a deck, or out of all decks (deck_id = null).',
+  set_note_tags: 'Replace a note’s whole tag set (drives the graph colours/clusters).',
+  set_card_tags: 'Replace a flashcard’s whole tag set (enables study-by-tag).',
+  unlink_notes: 'Remove the link between two notes.',
   // Travel itineraries
   list_itineraries: 'List the user’s travel trips (itineraries).',
   get_itinerary: 'Fetch one trip as a tree: days, activities, and per-currency cost totals.',

@@ -10,21 +10,32 @@ import {
   createNoteInput,
   createShareLinkInput,
   createTripBulkInput,
+  deleteCardInput,
   deleteDayInput,
+  deleteDeckInput,
   deleteItemInput,
   deleteItineraryInput,
+  deleteNoteInput,
   getItineraryInput,
   getNoteInput,
   linkNotesInput,
+  listCardsToolInput,
+  listNotesToolInput,
   listShareLinksInput,
   reorderDaysInput,
   reorderItemsInput,
   revokeShareLinkInput,
   searchNotesInput,
+  setCardTagsInput,
   setItemDayInput,
   setItemLocationInput,
+  setNoteDeckInput,
+  setNoteTagsInput,
   toolDescriptions,
+  unlinkNotesInput,
+  updateCardInput,
   updateDayInput,
+  updateDeckInput,
   updateItemInput,
   updateItineraryInput,
   updateNoteInput,
@@ -183,6 +194,165 @@ export const tools: ToolDef[] = [
         p_weight: a.weight ?? 1,
       })
       return { summary: `Linked notes (${a.link_type ?? 'reference'})`, data: link }
+    },
+  },
+
+  // ──────────────────── Notes / cards / decks management ────────────────────
+  {
+    name: 'list_notes',
+    description: toolDescriptions.list_notes,
+    schema: listNotesToolInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      let q = serviceClient(ctx.env)
+        .from('notes')
+        .select('id, title, deck_id, updated_at')
+        .eq('user_id', ctx.userId)
+        .order('updated_at', { ascending: false })
+        .limit((a.limit as number) ?? 50)
+      if (a.deck_id) q = q.eq('deck_id', a.deck_id as string)
+      const { data, error } = await q
+      if (error) throw new Error(error.message)
+      const rows = (data ?? []) as unknown[]
+      return { summary: `${rows.length} note(s)`, data: rows }
+    },
+  },
+  {
+    name: 'list_cards',
+    description: toolDescriptions.list_cards,
+    schema: listCardsToolInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      let q = serviceClient(ctx.env)
+        .from('cards')
+        .select('id, front, back, deck_id, note_id, tags, state, due')
+        .eq('user_id', ctx.userId)
+        .order('created_at', { ascending: false })
+        .limit((a.limit as number) ?? 50)
+      if (a.deck_id) q = q.eq('deck_id', a.deck_id as string)
+      if (a.tag) q = q.contains('tags', [a.tag as string])
+      const { data, error } = await q
+      if (error) throw new Error(error.message)
+      const rows = (data ?? []) as unknown[]
+      return { summary: `${rows.length} card(s)`, data: rows }
+    },
+  },
+  {
+    name: 'update_card',
+    description: toolDescriptions.update_card,
+    schema: updateCardInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const card = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'update_card', {
+        p_card_id: a.card_id,
+        p_front: a.front ?? null,
+        p_back: a.back ?? null,
+        p_deck_id: a.deck_id ?? null,
+        p_note_id: a.note_id ?? null,
+      })
+      return { summary: `Updated flashcard (${card.id})`, data: card }
+    },
+  },
+  {
+    name: 'delete_card',
+    description: toolDescriptions.delete_card,
+    schema: deleteCardInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_card', { p_card_id: a.card_id })
+      return { summary: 'Flashcard deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'delete_note',
+    description: toolDescriptions.delete_note,
+    schema: deleteNoteInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_note', { p_note_id: a.note_id })
+      return { summary: 'Note deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'update_deck',
+    description: toolDescriptions.update_deck,
+    schema: updateDeckInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const deck = await callRpc<{ name: string }>(ctx.env, ctx.userId, 'update_deck', {
+        p_deck_id: a.deck_id,
+        p_name: a.name ?? null,
+        p_description: a.description ?? null,
+      })
+      return { summary: `Updated deck “${deck.name}”`, data: deck }
+    },
+  },
+  {
+    name: 'delete_deck',
+    description: toolDescriptions.delete_deck,
+    schema: deleteDeckInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_deck', { p_deck_id: a.deck_id })
+      return { summary: 'Deck deleted (notes & cards kept)', data: { ok: true } }
+    },
+  },
+  {
+    name: 'set_note_deck',
+    description: toolDescriptions.set_note_deck,
+    schema: setNoteDeckInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const note = await callRpc(ctx.env, ctx.userId, 'set_note_deck', {
+        p_note_id: a.note_id,
+        p_deck_id: a.deck_id ?? null,
+      })
+      return { summary: 'Note moved', data: note }
+    },
+  },
+  {
+    name: 'set_note_tags',
+    description: toolDescriptions.set_note_tags,
+    schema: setNoteTagsInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const note = await callRpc(ctx.env, ctx.userId, 'set_note_tags', {
+        p_note_id: a.note_id,
+        p_tags: a.tags,
+      })
+      return { summary: 'Note tags updated', data: note }
+    },
+  },
+  {
+    name: 'set_card_tags',
+    description: toolDescriptions.set_card_tags,
+    schema: setCardTagsInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const card = await callRpc(ctx.env, ctx.userId, 'set_card_tags', {
+        p_card_id: a.card_id,
+        p_tags: a.tags,
+      })
+      return { summary: 'Card tags updated', data: card }
+    },
+  },
+  {
+    name: 'unlink_notes',
+    description: toolDescriptions.unlink_notes,
+    schema: unlinkNotesInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'unlink_notes', { p_a: a.note_id_a, p_b: a.note_id_b })
+      return { summary: 'Notes unlinked', data: { ok: true } }
     },
   },
 
