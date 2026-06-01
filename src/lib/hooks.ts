@@ -4,9 +4,17 @@ import { toast } from 'sonner'
 import * as api from './api'
 import { seedSampleDeck } from './sampleDeck'
 import type {
+  CreateDayInput,
   CreateDeckInput,
   CreateFlashcardInput,
+  CreateItemInput,
+  CreateItemsBulkInput,
+  CreateItineraryInput,
   CreateNoteInput,
+  CreateTripBulkInput,
+  UpdateDayInput,
+  UpdateItemInput,
+  UpdateItineraryInput,
   UpdateNoteInput,
 } from '@shared/schemas'
 
@@ -18,6 +26,8 @@ export const qk = {
   cardsByNote: (noteId: string) => ['cards-by-note', noteId] as const,
   due: (deckId?: string, tag?: string) => ['due', deckId ?? 'all', tag ?? 'all'] as const,
   graph: ['graph'] as const,
+  itineraries: ['itineraries'] as const,
+  itinerary: (id: string) => ['itinerary', id] as const,
 }
 
 export function useDecks() {
@@ -207,6 +217,106 @@ export function useUnlinkNotes() {
   return useMutation({
     mutationFn: (v: { a: string; b: string }) => api.unlinkNotes(v.a, v.b),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.graph }),
+  })
+}
+
+// ── Itineraries (travel trips) ────────────────────────────────────
+export function useItineraries() {
+  return useQuery({ queryKey: qk.itineraries, queryFn: api.listItineraries })
+}
+export function useItinerary(id: string) {
+  return useQuery({ queryKey: qk.itinerary(id), queryFn: () => api.getItinerary(id), enabled: !!id })
+}
+
+/** Day/item edits touch one trip's tree; refetch any open tree + the list. */
+function bumpTrips(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['itinerary'] })
+  qc.invalidateQueries({ queryKey: ['itineraries'] })
+}
+
+export function useCreateItinerary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateItineraryInput) => api.createItinerary(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.itineraries }),
+  })
+}
+export function useUpdateItinerary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: UpdateItineraryInput) => api.updateItinerary(input),
+    onSuccess: (row) => {
+      qc.invalidateQueries({ queryKey: qk.itineraries })
+      qc.invalidateQueries({ queryKey: qk.itinerary(row.id) })
+    },
+  })
+}
+export function useDeleteItinerary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteItinerary(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.itineraries }),
+  })
+}
+
+export function useCreateDay() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateDayInput) => api.createDay(input), onSuccess: () => bumpTrips(qc) })
+}
+export function useUpdateDay() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateDayInput) => api.updateDay(input), onSuccess: () => bumpTrips(qc) })
+}
+export function useDeleteDay() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteDay(id), onSuccess: () => bumpTrips(qc) })
+}
+export function useReorderDays() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { itineraryId: string; dayIds: string[] }) => api.reorderDays(v.itineraryId, v.dayIds),
+    onSuccess: () => bumpTrips(qc),
+  })
+}
+
+export function useCreateItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateItemInput) => api.createItem(input), onSuccess: () => bumpTrips(qc) })
+}
+export function useUpdateItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateItemInput) => api.updateItem(input), onSuccess: () => bumpTrips(qc) })
+}
+export function useDeleteItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteItem(id), onSuccess: () => bumpTrips(qc) })
+}
+export function useSetItemDay() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { itemId: string; dayId: string | null }) => api.setItemDay(v.itemId, v.dayId),
+    onSuccess: () => bumpTrips(qc),
+  })
+}
+export function useReorderItems() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { dayId: string | null; itemIds: string[] }) => api.reorderItems(v.dayId, v.itemIds),
+    onSuccess: () => bumpTrips(qc),
+  })
+}
+export function useCreateItemsBulk() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateItemsBulkInput) => api.createItemsBulk(input),
+    onSuccess: () => bumpTrips(qc),
+  })
+}
+export function useCreateTripBulk() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateTripBulkInput) => api.createTripBulk(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.itineraries }),
   })
 }
 

@@ -1,10 +1,28 @@
 import { supabase } from './supabase'
-import type { ApiKeyRow, CardRow, DeckRow, Json, NoteRow, NoteLinkRow } from './database.types'
 import type {
+  ApiKeyRow,
+  CardRow,
+  DeckRow,
+  ItineraryDayRow,
+  ItineraryItemRow,
+  ItineraryRow,
+  Json,
+  NoteRow,
+  NoteLinkRow,
+} from './database.types'
+import type {
+  CreateDayInput,
   CreateDeckInput,
   CreateFlashcardInput,
+  CreateItemInput,
+  CreateItemsBulkInput,
+  CreateItineraryInput,
   CreateNoteInput,
+  CreateTripBulkInput,
   LinkNotesInput,
+  UpdateDayInput,
+  UpdateItemInput,
+  UpdateItineraryInput,
   UpdateNoteInput,
 } from '@shared/schemas'
 
@@ -280,6 +298,243 @@ export async function deleteNote(noteId: string): Promise<void> {
 export async function deleteDeck(deckId: string): Promise<void> {
   const res = await supabase.rpc('delete_deck', { p_user_id: null, p_deck_id: deckId })
   if (res.error) throw new Error(res.error.message)
+}
+
+// ── Itineraries (travel trips) ────────────────────────────────────
+/** The whole-trip tree returned by get_itinerary (one round-trip, like getGraph). */
+export interface ItineraryItem {
+  id: string
+  day_id: string | null
+  title: string
+  place: string | null
+  lat: number | null
+  lng: number | null
+  category: string
+  start_time: string | null
+  end_time: string | null
+  end_day_offset: number
+  transport_mode: string | null
+  transport_detail: string | null
+  cost: number | null
+  currency: string | null
+  booking_url: string | null
+  booking_ref: string | null
+  notes: string | null
+  sort_order: number
+}
+export interface ItineraryDay {
+  id: string
+  day_date: string | null
+  label: string | null
+  sort_order: number
+  items: ItineraryItem[]
+}
+export interface ItineraryTree {
+  id: string
+  title: string
+  destination: string | null
+  start_date: string | null
+  end_date: string | null
+  timezone: string | null
+  default_currency: string
+  cover_url: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  days: ItineraryDay[]
+  unscheduled: ItineraryItem[]
+  cost_by_currency: Record<string, number>
+}
+
+export async function listItineraries(): Promise<ItineraryRow[]> {
+  return unwrap(
+    await supabase
+      .from('itineraries')
+      .select('*')
+      .order('start_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false }),
+  )
+}
+
+export async function getItinerary(id: string): Promise<ItineraryTree> {
+  return unwrap(await supabase.rpc('get_itinerary', { p_user_id: null, p_id: id })) as unknown as ItineraryTree
+}
+
+export async function createItinerary(input: CreateItineraryInput): Promise<ItineraryRow> {
+  return unwrap(
+    await supabase.rpc('create_itinerary', {
+      p_user_id: null,
+      p_title: input.title,
+      p_destination: input.destination ?? undefined,
+      p_start_date: input.start_date ?? undefined,
+      p_end_date: input.end_date ?? undefined,
+      p_timezone: input.timezone ?? undefined,
+      p_default_currency: input.default_currency ?? undefined,
+      p_cover_url: input.cover_url ?? undefined,
+      p_notes: input.notes ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+
+export async function updateItinerary(input: UpdateItineraryInput): Promise<ItineraryRow> {
+  return unwrap(
+    await supabase.rpc('update_itinerary', {
+      p_user_id: null,
+      p_itinerary_id: input.itinerary_id,
+      p_title: input.title ?? undefined,
+      p_destination: input.destination ?? undefined,
+      p_start_date: input.start_date ?? undefined,
+      p_end_date: input.end_date ?? undefined,
+      p_timezone: input.timezone ?? undefined,
+      p_default_currency: input.default_currency ?? undefined,
+      p_cover_url: input.cover_url ?? undefined,
+      p_notes: input.notes ?? undefined,
+    }),
+  )
+}
+
+export async function deleteItinerary(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_itinerary', { p_user_id: null, p_itinerary_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function createDay(input: CreateDayInput): Promise<ItineraryDayRow> {
+  return unwrap(
+    await supabase.rpc('create_day', {
+      p_user_id: null,
+      p_itinerary_id: input.itinerary_id,
+      p_day_date: input.day_date ?? undefined,
+      p_label: input.label ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+
+export async function updateDay(input: UpdateDayInput): Promise<ItineraryDayRow> {
+  return unwrap(
+    await supabase.rpc('update_day', {
+      p_user_id: null,
+      p_day_id: input.day_id,
+      p_day_date: input.day_date ?? undefined,
+      p_label: input.label ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+
+export async function deleteDay(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_day', { p_user_id: null, p_day_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function reorderDays(itineraryId: string, dayIds: string[]): Promise<void> {
+  const res = await supabase.rpc('reorder_days', {
+    p_user_id: null,
+    p_itinerary_id: itineraryId,
+    p_day_ids: dayIds as unknown as Json,
+  })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function createItem(input: CreateItemInput): Promise<ItineraryItemRow> {
+  return unwrap(
+    await supabase.rpc('create_item', {
+      p_user_id: null,
+      p_title: input.title,
+      p_day_id: input.day_id ?? undefined,
+      p_itinerary_id: input.itinerary_id ?? undefined,
+      p_place: input.place ?? undefined,
+      p_lat: input.lat ?? undefined,
+      p_lng: input.lng ?? undefined,
+      p_category: input.category ?? undefined,
+      p_start_time: input.start_time ?? undefined,
+      p_end_time: input.end_time ?? undefined,
+      p_end_day_offset: input.end_day_offset ?? undefined,
+      p_transport_mode: input.transport_mode ?? undefined,
+      p_transport_detail: input.transport_detail ?? undefined,
+      p_cost: input.cost ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_booking_url: input.booking_url ?? undefined,
+      p_booking_ref: input.booking_ref ?? undefined,
+      p_notes: input.notes ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+
+export async function updateItem(input: UpdateItemInput): Promise<ItineraryItemRow> {
+  return unwrap(
+    await supabase.rpc('update_item', {
+      p_user_id: null,
+      p_item_id: input.item_id,
+      p_title: input.title ?? undefined,
+      p_place: input.place ?? undefined,
+      p_lat: input.lat ?? undefined,
+      p_lng: input.lng ?? undefined,
+      p_category: input.category ?? undefined,
+      p_start_time: input.start_time ?? undefined,
+      p_end_time: input.end_time ?? undefined,
+      p_end_day_offset: input.end_day_offset ?? undefined,
+      p_transport_mode: input.transport_mode ?? undefined,
+      p_transport_detail: input.transport_detail ?? undefined,
+      p_cost: input.cost ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_booking_url: input.booking_url ?? undefined,
+      p_booking_ref: input.booking_ref ?? undefined,
+      p_notes: input.notes ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_expected_updated_at: input.expected_updated_at ?? undefined,
+    }),
+  )
+}
+
+export async function deleteItem(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_item', { p_user_id: null, p_item_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+/** Move an item to another day, or to the unscheduled bucket (dayId = null). */
+export async function setItemDay(itemId: string, dayId: string | null): Promise<ItineraryItemRow> {
+  return unwrap(
+    await supabase.rpc('set_item_day', {
+      p_user_id: null,
+      p_item_id: itemId,
+      p_day_id: dayId as unknown as string,
+    }),
+  )
+}
+
+export async function reorderItems(dayId: string | null, itemIds: string[]): Promise<void> {
+  const res = await supabase.rpc('reorder_items', {
+    p_user_id: null,
+    p_day_id: dayId as unknown as string,
+    p_item_ids: itemIds as unknown as Json,
+  })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function createItemsBulk(input: CreateItemsBulkInput): Promise<ItineraryItemRow[]> {
+  return unwrap(
+    await supabase.rpc('create_items_bulk', {
+      p_user_id: null,
+      p_day_id: input.day_id,
+      p_items: input.items as unknown as Json,
+    }),
+  )
+}
+
+/** Author a whole trip in one call; returns the full tree with generated ids. */
+export async function createTripBulk(input: CreateTripBulkInput): Promise<ItineraryTree> {
+  return unwrap(
+    await supabase.rpc('create_trip_bulk', {
+      p_user_id: null,
+      p_trip: input as unknown as Json,
+      p_created_via: 'ui',
+    }),
+  ) as unknown as ItineraryTree
 }
 
 export interface CreatedApiKey {

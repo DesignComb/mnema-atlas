@@ -7,6 +7,7 @@ import {
   Home,
   Layers,
   LogOut,
+  Map as MapIcon,
   Moon,
   Plug,
   Plus,
@@ -34,6 +35,7 @@ const NAV = [
   { to: '/', label: 'Today', zh: '今天', icon: Home, exact: true },
   { to: '/notes', label: 'Notes', zh: '筆記', icon: FileText, exact: false },
   { to: '/cards', label: 'Flashcards', zh: '閃卡', icon: Layers, exact: false },
+  { to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false },
   { to: '/graph', label: 'Graph', zh: '圖譜', icon: Share2, exact: false },
   { to: '/study', label: 'Study', zh: '複習', icon: GraduationCap, exact: false },
 ] as const

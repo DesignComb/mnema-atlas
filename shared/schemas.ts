@@ -78,6 +78,135 @@ export const linkNotesInput = z.object({
 })
 export type LinkNotesInput = z.infer<typeof linkNotesInput>
 
+// ── Travel itineraries ────────────────────────────────────────────
+export const itineraryCategory = z.enum(['food', 'transport', 'sight', 'lodging', 'other'])
+export type ItineraryCategory = z.infer<typeof itineraryCategory>
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+const clockTime = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Use HH:MM')
+const currency = z.string().trim().min(1).max(8)
+const placeUrl = z.string().trim().url().max(2_000)
+
+export const createItineraryInput = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(300),
+  destination: z.string().trim().max(300).optional(),
+  start_date: isoDate.optional(),
+  end_date: isoDate.optional(),
+  timezone: z.string().trim().max(64).optional(),
+  default_currency: currency.optional(),
+  cover_url: placeUrl.optional(),
+  notes: z.string().max(20_000).optional(),
+})
+export type CreateItineraryInput = z.infer<typeof createItineraryInput>
+
+export const updateItineraryInput = z.object({
+  itinerary_id: uuid,
+  title: z.string().trim().min(1).max(300).optional(),
+  destination: z.string().trim().max(300).optional(),
+  start_date: isoDate.optional(),
+  end_date: isoDate.optional(),
+  timezone: z.string().trim().max(64).optional(),
+  default_currency: currency.optional(),
+  cover_url: placeUrl.optional(),
+  notes: z.string().max(20_000).optional(),
+})
+export type UpdateItineraryInput = z.infer<typeof updateItineraryInput>
+
+export const createDayInput = z.object({
+  itinerary_id: uuid,
+  day_date: isoDate.optional(),
+  label: z.string().trim().max(200).optional(),
+  sort_order: z.number().int().optional(),
+})
+export type CreateDayInput = z.infer<typeof createDayInput>
+
+export const updateDayInput = z.object({
+  day_id: uuid,
+  day_date: isoDate.optional(),
+  label: z.string().trim().max(200).optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateDayInput = z.infer<typeof updateDayInput>
+
+// Shared activity fields, reused by create/bulk/whole-trip schemas.
+const itemFields = {
+  title: z.string().trim().min(1, 'Title is required').max(300),
+  place: z.string().trim().max(300).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  category: itineraryCategory.default('other'),
+  start_time: clockTime.optional(),
+  end_time: clockTime.optional(),
+  end_day_offset: z.number().int().min(0).max(30).optional(),
+  transport_mode: z.string().trim().max(60).optional(),
+  transport_detail: z.string().trim().max(500).optional(),
+  cost: z.number().min(0).max(1e12).optional(),
+  currency: currency.optional(),
+  booking_url: placeUrl.optional(),
+  booking_ref: z.string().trim().max(200).optional(),
+  notes: z.string().max(5_000).optional(),
+  sort_order: z.number().int().optional(),
+}
+
+export const createItemInput = z
+  .object({ day_id: uuid.optional(), itinerary_id: uuid.optional(), ...itemFields })
+  .refine((v) => Boolean(v.day_id || v.itinerary_id), { message: 'day_id or itinerary_id is required' })
+export type CreateItemInput = z.infer<typeof createItemInput>
+
+export const updateItemInput = z.object({
+  item_id: uuid,
+  title: z.string().trim().min(1).max(300).optional(),
+  place: z.string().trim().max(300).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  category: itineraryCategory.optional(),
+  start_time: clockTime.optional(),
+  end_time: clockTime.optional(),
+  end_day_offset: z.number().int().min(0).max(30).optional(),
+  transport_mode: z.string().trim().max(60).optional(),
+  transport_detail: z.string().trim().max(500).optional(),
+  cost: z.number().min(0).max(1e12).optional(),
+  currency: currency.optional(),
+  booking_url: placeUrl.optional(),
+  booking_ref: z.string().trim().max(200).optional(),
+  notes: z.string().max(5_000).optional(),
+  sort_order: z.number().int().optional(),
+  expected_updated_at: z.string().optional(),
+})
+export type UpdateItemInput = z.infer<typeof updateItemInput>
+
+export const createItemsBulkInput = z.object({
+  day_id: uuid,
+  items: z.array(z.object(itemFields)).min(1).max(200),
+})
+export type CreateItemsBulkInput = z.infer<typeof createItemsBulkInput>
+
+/**
+ * Whole-trip authoring (nested) — the AI's one-call path (→ create_trip_bulk's
+ * jsonb param). Plain shapes (no refine) so it serialises straight to JSON.
+ */
+export const createTripBulkInput = z.object({
+  title: z.string().trim().min(1).max(300),
+  destination: z.string().trim().max(300).optional(),
+  start_date: isoDate.optional(),
+  end_date: isoDate.optional(),
+  timezone: z.string().trim().max(64).optional(),
+  default_currency: currency.optional(),
+  notes: z.string().max(20_000).optional(),
+  days: z
+    .array(
+      z.object({
+        day_date: isoDate.optional(),
+        label: z.string().trim().max(200).optional(),
+        sort_order: z.number().int().optional(),
+        items: z.array(z.object(itemFields)).max(200).default([]),
+      }),
+    )
+    .max(60)
+    .default([]),
+})
+export type CreateTripBulkInput = z.infer<typeof createTripBulkInput>
+
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
  * emits inside a ```mnema fenced block for the in-app Quick Import. Cards link

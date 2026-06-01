@@ -45,6 +45,16 @@ const homeRoute = createRoute({ getParentRoute: () => appRoute, path: '/', compo
 const notesRoute = createRoute({ getParentRoute: () => appRoute, path: 'notes', component: NotesScreen })
 const deckRoute = createRoute({ getParentRoute: () => appRoute, path: 'decks/$deckId', component: DeckScreen })
 const cardsRoute = createRoute({ getParentRoute: () => appRoute, path: 'cards', component: CardsScreen })
+const tripsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'trips',
+  component: lazyRouteComponent(() => import('@/routes/trips'), 'TripsScreen'),
+})
+const tripRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'trips/$tripId',
+  component: lazyRouteComponent(() => import('@/routes/trip'), 'TripScreen'),
+})
 const noteRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'notes/$noteId',
@@ -101,6 +111,8 @@ const routeTree = rootRoute.addChildren([
     noteRoute,
     deckRoute,
     cardsRoute,
+    tripsRoute,
+    tripRoute,
     studyRoute,
     studyDeckRoute,
     graphRoute,
