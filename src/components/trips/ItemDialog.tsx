@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -17,8 +18,6 @@ import {
 } from '@/components/ui/dialog'
 
 const UNSCHEDULED = 'unscheduled'
-const selectClass =
-  'flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40'
 
 function dayOptionLabel(day: ItineraryDay, index: number, t: (en: string, zh: string) => string): string {
   return day.label || day.day_date || t(`Day ${index + 1}`, `第 ${index + 1} 天`)
@@ -163,9 +162,8 @@ export function ItemDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="item-cat">{t('Category', '分類')}</Label>
-              <select
+              <Select
                 id="item-cat"
-                className={selectClass}
                 value={category}
                 onChange={(e) => setCategory(e.target.value as Category)}
               >
@@ -174,27 +172,26 @@ export function ItemDialog({
                     {t(CATEGORY_META[c].en, CATEGORY_META[c].zh)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="item-day">{t('Day', '日期')}</Label>
-              <select id="item-day" className={selectClass} value={dayId} onChange={(e) => setDayId(e.target.value)}>
+              <Select id="item-day" value={dayId} onChange={(e) => setDayId(e.target.value)}>
                 <option value={UNSCHEDULED}>{t('Unscheduled', '未排程')}</option>
                 {days.map((d, i) => (
                   <option key={d.id} value={d.id}>
                     {dayOptionLabel(d, i, t)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="item-status">{t('Status', '狀態')}</Label>
-              <select
+              <Select
                 id="item-status"
-                className={selectClass}
                 value={status}
                 onChange={(e) => setStatusV(e.target.value as ItineraryItem['status'])}
               >
@@ -203,7 +200,7 @@ export function ItemDialog({
                     {t(s.en, s.zh)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             {travelers.length ? (
               <div className="flex flex-col gap-1.5">

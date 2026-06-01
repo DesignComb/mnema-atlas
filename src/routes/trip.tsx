@@ -7,12 +7,15 @@ import {
   ChevronLeft,
   ChevronUp,
   ExternalLink,
+  Luggage,
   MapPin,
   Pencil,
   Plus,
   Share2,
+  Ticket,
   Trash2,
   Users,
+  Wallet,
   Map as MapIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -223,23 +226,23 @@ export function TripScreen() {
             </div>
           ) : null}
 
-          {/* Section tabs */}
-          <div className="flex gap-1 rounded-lg bg-muted/60 p-0.5 text-[13px]">
+          {/* Section nav (underline) */}
+          <div className="flex items-center gap-0.5 overflow-x-auto border-b border-border">
             {(
               [
-                ['itinerary', 'Itinerary', '行程'],
-                ['bookings', 'Reservations', '訂位'],
-                ['budget', 'Budget', '預算'],
-                ['packing', 'Packing', '打包'],
+                ['itinerary', 'Itinerary', '行程', CalendarRange],
+                ['bookings', 'Reservations', '訂位', Ticket],
+                ['budget', 'Budget', '預算', Wallet],
+                ['packing', 'Packing', '打包', Luggage],
               ] as const
-            ).map(([k, en, zh]) => (
+            ).map(([k, en, zh, Icon]) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => setTab(k)}
-                className={`flex-1 rounded-md px-2 py-1.5 font-medium transition ${tab === k ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[13px] font-medium transition ${tab === k ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
               >
-                {t(en, zh)}
+                <Icon className="size-4" /> {t(en, zh)}
               </button>
             ))}
           </div>

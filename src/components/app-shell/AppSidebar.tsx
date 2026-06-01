@@ -1,6 +1,8 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   BookOpenCheck,
+  Check,
+  ChevronsUpDown,
   FileText,
   GraduationCap,
   HelpCircle,
@@ -67,34 +69,39 @@ export function AppSidebar({
 
   return (
     <aside className={cn('h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar', className)}>
-      {/* Brand */}
-      <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
-          <BookOpenCheck className="size-4" />
-        </div>
-        <span className="font-serif text-[17px] font-semibold tracking-tight text-foreground">Mnema Atlas</span>
-      </div>
-
-      {/* Space switcher: Study ↔ Travel */}
-      <div className="mx-3 mb-2 grid grid-cols-2 gap-1 rounded-lg bg-sidebar-accent/60 p-0.5">
-        <Link
-          to="/"
-          className={cn(
-            'flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium transition',
-            space === 'study' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          <BookOpenCheck className="size-3.5" /> {t('Study', '讀書')}
-        </Link>
-        <Link
-          to="/trips"
-          className={cn(
-            'flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium transition',
-            space === 'travel' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          <MapIcon className="size-3.5" /> {t('Travel', '旅遊')}
-        </Link>
+      {/* Brand + space switcher (dropdown) */}
+      <div className="px-3 pt-3 pb-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition hover:bg-sidebar-accent">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
+                {space === 'travel' ? <MapIcon className="size-4" /> : <BookOpenCheck className="size-4" />}
+              </span>
+              <span className="min-w-0 flex-1 truncate font-serif text-[16px] font-semibold tracking-tight text-foreground">
+                {space === 'travel' ? 'Mnema Travel' : 'Mnema Atlas'}
+              </span>
+              <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[14.5rem]">
+            <DropdownMenuItem asChild>
+              <Link to="/">
+                <BookOpenCheck className="text-brand" />
+                <span className="flex-1">Mnema Atlas</span>
+                <span className="text-[11px] text-muted-foreground">{t('Study', '讀書')}</span>
+                {space === 'study' ? <Check className="ml-1 size-4 text-brand" /> : null}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/trips">
+                <MapIcon className="text-brand" />
+                <span className="flex-1">Mnema Travel</span>
+                <span className="text-[11px] text-muted-foreground">{t('Travel', '旅遊')}</span>
+                {space === 'travel' ? <Check className="ml-1 size-4 text-brand" /> : null}
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Search / Cmd-K */}

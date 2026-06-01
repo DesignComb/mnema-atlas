@@ -5,6 +5,7 @@ import { useAddMember, useMembers, useRemoveMember } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -12,9 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-
-const selectClass =
-  'h-9 rounded-md border border-input bg-card px-2 text-sm shadow-xs focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40'
 
 export function MembersDialog({
   open,
@@ -75,10 +73,14 @@ export function MembersDialog({
               placeholder={t('email@example.com', 'email@example.com')}
               className="flex-1"
             />
-            <select className={selectClass} value={role} onChange={(e) => setRole(e.target.value as 'viewer' | 'editor')}>
+            <Select
+              className="w-28"
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'viewer' | 'editor')}
+            >
               <option value="editor">{t('Editor', '編輯者')}</option>
               <option value="viewer">{t('Viewer', '檢視者')}</option>
-            </select>
+            </Select>
             <Button type="submit" variant="brand" size="sm" disabled={addMember.isPending || !email.trim()}>
               <UserPlus className="size-4" />
             </Button>

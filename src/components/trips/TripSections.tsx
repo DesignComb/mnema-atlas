@@ -28,12 +28,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 type BookingType = TripBooking['type']
-
-const selectClass =
-  'flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40'
 
 const BTYPE: Record<BookingType, { icon: typeof Plane; en: string; zh: string }> = {
   flight: { icon: Plane, en: 'Flight', zh: '機票' },
@@ -227,13 +225,13 @@ function BookingDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="bk-type">{t('Type', '類型')}</Label>
-              <select id="bk-type" className={selectClass} value={type} onChange={(e) => setType(e.target.value as BookingType)}>
+              <Select id="bk-type" value={type} onChange={(e) => setType(e.target.value as BookingType)}>
                 {BTYPES.map((v) => (
                   <option key={v} value={v}>
                     {t(BTYPE[v].en, BTYPE[v].zh)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="bk-title">{t('Title', '標題')}</Label>
