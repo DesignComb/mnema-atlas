@@ -12,6 +12,7 @@ import {
   Plus,
   Share2,
   Trash2,
+  Users,
   Map as MapIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -20,6 +21,7 @@ import {
   useDeleteItem,
   useDeleteItinerary,
   useItinerary,
+  useItineraryRealtime,
   useReorderDays,
   useReorderItems,
 } from '@/lib/hooks'
@@ -29,6 +31,7 @@ import { TripDialog } from '@/components/trips/TripDialog'
 import { DayDialog } from '@/components/trips/DayDialog'
 import { ItemDialog } from '@/components/trips/ItemDialog'
 import { ShareDialog } from '@/components/trips/ShareDialog'
+import { MembersDialog } from '@/components/trips/MembersDialog'
 import { Button } from '@/components/ui/button'
 import { CATEGORY_META, categoryOf, fmtCost, fmtDateRange, fmtTimeRange, mapsUrl, safeHttps } from '@/lib/itinerary'
 import { useT } from '@/lib/i18n'
@@ -43,9 +46,11 @@ export function TripScreen() {
   const reorderItems = useReorderItems()
   const navigate = useNavigate()
   const t = useT()
+  useItineraryRealtime(tripId)
 
   const [tripDialog, setTripDialog] = useState(false)
   const [shareDialog, setShareDialog] = useState(false)
+  const [membersDialog, setMembersDialog] = useState(false)
   const [dayDialog, setDayDialog] = useState<{ open: boolean; day?: ItineraryDay }>({ open: false })
   const [itemDialog, setItemDialog] = useState<{ open: boolean; item?: ItineraryItem; dayId?: string | null }>({
     open: false,
@@ -138,6 +143,8 @@ export function TripScreen() {
   const dates = fmtDateRange(trip.start_date, trip.end_date)
   const subtitle = [trip.destination, dates].filter(Boolean).join(' · ')
   const costEntries = Object.entries(trip.cost_by_currency ?? {})
+  const isOwner = trip.my_role === 'owner'
+  const canEdit = isOwner || trip.my_role === 'editor'
 
   return (
     <>
@@ -147,37 +154,59 @@ export function TripScreen() {
         icon={<MapIcon className="size-4" />}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => setDayDialog({ open: true })}>
-              <CalendarPlus className="size-4" /> <span className="hidden sm:inline">{t('Day', '日期')}</span>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShareDialog(true)}>
-              <Share2 className="size-4" /> <span className="hidden sm:inline">{t('Share', '分享')}</span>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setTripDialog(true)} title={t('Edit trip', '編輯行程')}>
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={removeTrip}
-              onBlur={() => setConfirmDel(false)}
-              className={confirmDel ? 'text-destructive' : 'text-muted-foreground'}
-              title={t('Delete trip', '刪除行程')}
-            >
-              <Trash2 className="size-4" />
-              {confirmDel ? t('Delete?', '確定刪除？') : null}
-            </Button>
+            {canEdit ? (
+              <Button variant="outline" size="sm" onClick={() => setDayDialog({ open: true })}>
+                <CalendarPlus className="size-4" /> <span className="hidden sm:inline">{t('Day', '日期')}</span>
+              </Button>
+            ) : null}
+            {isOwner ? (
+              <Button variant="outline" size="sm" onClick={() => setShareDialog(true)}>
+                <Share2 className="size-4" /> <span className="hidden sm:inline">{t('Share', '分享')}</span>
+              </Button>
+            ) : null}
+            {isOwner ? (
+              <Button variant="ghost" size="sm" onClick={() => setMembersDialog(true)} title={t('Collaborators', '協作者')}>
+                <Users className="size-4" />
+              </Button>
+            ) : null}
+            {canEdit ? (
+              <Button variant="ghost" size="sm" onClick={() => setTripDialog(true)} title={t('Edit trip', '編輯行程')}>
+                <Pencil className="size-4" />
+              </Button>
+            ) : null}
+            {isOwner ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={removeTrip}
+                onBlur={() => setConfirmDel(false)}
+                className={confirmDel ? 'text-destructive' : 'text-muted-foreground'}
+                title={t('Delete trip', '刪除行程')}
+              >
+                <Trash2 className="size-4" />
+                {confirmDel ? t('Delete?', '確定刪除？') : null}
+              </Button>
+            ) : null}
           </>
         }
       />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-4 px-4 py-4 sm:px-6 sm:py-6">
-          <Link
-            to="/trips"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground transition hover:text-foreground"
-          >
-            <ChevronLeft className="size-3.5" /> {t('All trips', '所有行程')}
-          </Link>
+          <div className="flex items-center justify-between gap-2">
+            <Link
+              to="/trips"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground transition hover:text-foreground"
+            >
+              <ChevronLeft className="size-3.5" /> {t('All trips', '所有行程')}
+            </Link>
+            {!isOwner ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-[11px] text-muted-foreground">
+                {trip.my_role === 'editor'
+                  ? t('Shared · can edit', '共享 · 可編輯')
+                  : t('Shared · view only', '共享 · 唯讀')}
+              </span>
+            ) : null}
+          </div>
 
           {/* Cost rollup */}
           {costEntries.length ? (
@@ -200,6 +229,7 @@ export function TripScreen() {
               day={day}
               dayIndex={dayIndex}
               dayCount={trip.days.length}
+              canEdit={canEdit}
               t={t}
               onAddItem={() => setItemDialog({ open: true, dayId: day.id })}
               onEditDay={() => setDayDialog({ open: true, day })}
@@ -216,9 +246,11 @@ export function TripScreen() {
             <section className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-sm font-semibold text-muted-foreground">{t('Unscheduled', '未排程')}</h3>
-                <Button variant="ghost" size="sm" onClick={() => setItemDialog({ open: true, dayId: null })}>
-                  <Plus className="size-4" /> {t('Idea', '想去')}
-                </Button>
+                {canEdit ? (
+                  <Button variant="ghost" size="sm" onClick={() => setItemDialog({ open: true, dayId: null })}>
+                    <Plus className="size-4" /> {t('Idea', '想去')}
+                  </Button>
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 {trip.unscheduled.map((item, index) => (
@@ -227,6 +259,7 @@ export function TripScreen() {
                     item={item}
                     index={index}
                     count={trip.unscheduled.length}
+                    canEdit={canEdit}
                     t={t}
                     onEdit={() => setItemDialog({ open: true, item, dayId: null })}
                     onDelete={() => removeItem(item)}
@@ -241,24 +274,29 @@ export function TripScreen() {
           {trip.days.length === 0 && trip.unscheduled.length === 0 ? (
             <EmptyState
               icon={<CalendarRange className="size-6" />}
-              title={t('Start planning', '開始規劃')}
-              description={t('Add your first day, then fill it with activities.', '先新增第一天，再加入活動。')}
+              title={canEdit ? t('Start planning', '開始規劃') : t('Nothing planned yet', '還沒有任何規劃')}
+              description={
+                canEdit ? t('Add your first day, then fill it with activities.', '先新增第一天，再加入活動。') : undefined
+              }
               action={
-                <Button variant="brand" size="sm" onClick={() => setDayDialog({ open: true })}>
-                  <CalendarPlus className="size-4" /> {t('Add day', '新增日期')}
-                </Button>
+                canEdit ? (
+                  <Button variant="brand" size="sm" onClick={() => setDayDialog({ open: true })}>
+                    <CalendarPlus className="size-4" /> {t('Add day', '新增日期')}
+                  </Button>
+                ) : undefined
               }
             />
-          ) : (
+          ) : canEdit ? (
             <Button variant="outline" size="sm" className="w-full" onClick={() => setDayDialog({ open: true })}>
               <CalendarPlus className="size-4" /> {t('Add day', '新增日期')}
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 
       <TripDialog open={tripDialog} onOpenChange={setTripDialog} trip={tripRow(trip)} />
       <ShareDialog open={shareDialog} onOpenChange={setShareDialog} itineraryId={trip.id} />
+      <MembersDialog open={membersDialog} onOpenChange={setMembersDialog} itineraryId={trip.id} />
       <DayDialog
         open={dayDialog.open}
         onOpenChange={(v) => setDayDialog((s) => ({ ...s, open: v }))}
@@ -299,6 +337,7 @@ function DaySection({
   day,
   dayIndex,
   dayCount,
+  canEdit,
   t,
   onAddItem,
   onEditDay,
@@ -311,6 +350,7 @@ function DaySection({
   day: ItineraryDay
   dayIndex: number
   dayCount: number
+  canEdit: boolean
   t: Tr
   onAddItem: () => void
   onEditDay: () => void
@@ -332,20 +372,22 @@ function DaySection({
           <p className="truncate text-sm font-semibold text-foreground">{heading}</p>
           {sub ? <p className="truncate text-[11px] text-muted-foreground">{sub}</p> : null}
         </div>
-        <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
-          <IconBtn label={t('Move up', '上移')} disabled={dayIndex === 0} onClick={() => onMoveDay(-1)}>
-            <ChevronUp className="size-3.5" />
-          </IconBtn>
-          <IconBtn label={t('Move down', '下移')} disabled={dayIndex === dayCount - 1} onClick={() => onMoveDay(1)}>
-            <ChevronDown className="size-3.5" />
-          </IconBtn>
-          <IconBtn label={t('Edit day', '編輯日期')} onClick={onEditDay}>
-            <Pencil className="size-3.5" />
-          </IconBtn>
-          <IconBtn label={t('Remove day', '移除日期')} onClick={onDeleteDay}>
-            <Trash2 className="size-3.5" />
-          </IconBtn>
-        </div>
+        {canEdit ? (
+          <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
+            <IconBtn label={t('Move up', '上移')} disabled={dayIndex === 0} onClick={() => onMoveDay(-1)}>
+              <ChevronUp className="size-3.5" />
+            </IconBtn>
+            <IconBtn label={t('Move down', '下移')} disabled={dayIndex === dayCount - 1} onClick={() => onMoveDay(1)}>
+              <ChevronDown className="size-3.5" />
+            </IconBtn>
+            <IconBtn label={t('Edit day', '編輯日期')} onClick={onEditDay}>
+              <Pencil className="size-3.5" />
+            </IconBtn>
+            <IconBtn label={t('Remove day', '移除日期')} onClick={onDeleteDay}>
+              <Trash2 className="size-3.5" />
+            </IconBtn>
+          </div>
+        ) : null}
       </div>
       <div className="space-y-1.5 p-2 sm:p-2.5">
         {day.items.length ? (
@@ -355,6 +397,7 @@ function DaySection({
               item={item}
               index={index}
               count={day.items.length}
+              canEdit={canEdit}
               t={t}
               onEdit={() => onEditItem(item)}
               onDelete={() => onDeleteItem(item)}
@@ -366,9 +409,11 @@ function DaySection({
             {t('No activities yet.', '還沒有活動。')}
           </p>
         )}
-        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={onAddItem}>
-          <Plus className="size-4" /> {t('Add activity', '新增活動')}
-        </Button>
+        {canEdit ? (
+          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={onAddItem}>
+            <Plus className="size-4" /> {t('Add activity', '新增活動')}
+          </Button>
+        ) : null}
       </div>
     </section>
   )
@@ -378,6 +423,7 @@ function ItemRow({
   item,
   index,
   count,
+  canEdit,
   t,
   onEdit,
   onDelete,
@@ -386,6 +432,7 @@ function ItemRow({
   item: ItineraryItem
   index: number
   count: number
+  canEdit: boolean
   t: Tr
   onEdit: () => void
   onDelete: () => void
@@ -442,20 +489,22 @@ function ItemRow({
         </div>
         {item.notes ? <p className="mt-0.5 whitespace-pre-wrap text-[12.5px] text-muted-foreground">{item.notes}</p> : null}
       </div>
-      <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
-        <IconBtn label={t('Move up', '上移')} disabled={index === 0} onClick={() => onMove(-1)}>
-          <ChevronUp className="size-3.5" />
-        </IconBtn>
-        <IconBtn label={t('Move down', '下移')} disabled={index === count - 1} onClick={() => onMove(1)}>
-          <ChevronDown className="size-3.5" />
-        </IconBtn>
-        <IconBtn label={t('Edit', '編輯')} onClick={onEdit}>
-          <Pencil className="size-3.5" />
-        </IconBtn>
-        <IconBtn label={t('Delete', '刪除')} onClick={onDelete}>
-          <Trash2 className="size-3.5" />
-        </IconBtn>
-      </div>
+      {canEdit ? (
+        <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
+          <IconBtn label={t('Move up', '上移')} disabled={index === 0} onClick={() => onMove(-1)}>
+            <ChevronUp className="size-3.5" />
+          </IconBtn>
+          <IconBtn label={t('Move down', '下移')} disabled={index === count - 1} onClick={() => onMove(1)}>
+            <ChevronDown className="size-3.5" />
+          </IconBtn>
+          <IconBtn label={t('Edit', '編輯')} onClick={onEdit}>
+            <Pencil className="size-3.5" />
+          </IconBtn>
+          <IconBtn label={t('Delete', '刪除')} onClick={onDelete}>
+            <Trash2 className="size-3.5" />
+          </IconBtn>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import * as api from './api'
+import { supabase } from './supabase'
 import { seedSampleDeck } from './sampleDeck'
 import type {
   CreateDayInput,
@@ -29,6 +31,7 @@ export const qk = {
   itineraries: ['itineraries'] as const,
   itinerary: (id: string) => ['itinerary', id] as const,
   shareLinks: (itineraryId: string) => ['share-links', itineraryId] as const,
+  members: (itineraryId: string) => ['members', itineraryId] as const,
 }
 
 export function useDecks() {
@@ -342,6 +345,55 @@ export function useRevokeShareLink() {
     mutationFn: (v: { id: string; itineraryId: string }) => api.revokeShareLink(v.id),
     onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: qk.shareLinks(v.itineraryId) }),
   })
+}
+
+export function useMembers(itineraryId: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.members(itineraryId),
+    queryFn: () => api.listMembers(itineraryId),
+    enabled: !!itineraryId && enabled,
+  })
+}
+export function useAddMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { itineraryId: string; email: string; role: 'viewer' | 'editor' }) =>
+      api.addMember(v.itineraryId, v.email, v.role),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: qk.members(v.itineraryId) }),
+  })
+}
+export function useRemoveMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { itineraryId: string; memberUserId: string }) =>
+      api.removeMember(v.itineraryId, v.memberUserId),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: qk.members(v.itineraryId) }),
+  })
+}
+
+/** Live-refresh an open trip when a collaborator edits it (best-effort realtime). */
+export function useItineraryRealtime(itineraryId: string) {
+  const qc = useQueryClient()
+  useEffect(() => {
+    if (!itineraryId) return
+    const refetch = () => qc.invalidateQueries({ queryKey: qk.itinerary(itineraryId) })
+    const channel = supabase
+      .channel(`itinerary-${itineraryId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'itinerary_items', filter: `itinerary_id=eq.${itineraryId}` },
+        refetch,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'itinerary_days', filter: `itinerary_id=eq.${itineraryId}` },
+        refetch,
+      )
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [itineraryId, qc])
 }
 
 /** Create a blank note and open it (deduped from deck/notes/home). */

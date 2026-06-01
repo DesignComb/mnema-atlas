@@ -3,6 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { CalendarRange, MapPin, Plus, Sparkles, Map as MapIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateTripBulk, useItineraries } from '@/lib/hooks'
+import { useAuth } from '@/lib/auth'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { TripDialog } from '@/components/trips/TripDialog'
 import { Button } from '@/components/ui/button'
@@ -36,6 +37,7 @@ const SAMPLE_TRIP: CreateTripBulkInput = {
 
 export function TripsScreen() {
   const { data: trips, isLoading } = useItineraries()
+  const { user } = useAuth()
   const createSample = useCreateTripBulk()
   const navigate = useNavigate()
   const t = useT()
@@ -120,6 +122,11 @@ export function TripsScreen() {
                       ) : null}
                     </p>
                   </div>
+                  {user && trip.owner_id !== user.id ? (
+                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                      {t('Shared', '共享')}
+                    </span>
+                  ) : null}
                 </Link>
               )
             })

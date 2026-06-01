@@ -363,6 +363,38 @@ export type Database = {
           },
         ]
       }
+      itinerary_members: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          itinerary_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          itinerary_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          itinerary_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itinerary_members_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       note_links: {
         Row: {
           created_at: string
@@ -578,6 +610,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_member: {
+        Args: {
+          p_email: string
+          p_itinerary_id: string
+          p_role: string
+          p_user_id: string | null
+        }
+        Returns: {
+          added_by: string | null
+          created_at: string
+          itinerary_id: string
+          role: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "itinerary_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_api_key: {
         Args: { p_name: string; p_scopes?: string[]; p_user_id: string | null }
         Returns: {
@@ -956,6 +1009,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      list_members: {
+        Args: { p_itinerary_id: string; p_user_id: string | null }
+        Returns: {
+          display_name: string
+          role: string
+          user_id: string
+        }[]
+      }
       list_share_links: {
         Args: { p_itinerary_id: string; p_user_id: string | null }
         Returns: {
@@ -1011,6 +1072,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      remove_member: {
+        Args: {
+          p_itinerary_id: string
+          p_member_user_id: string
+          p_user_id: string | null
+        }
+        Returns: boolean
       }
       reorder_days: {
         Args: { p_day_ids: Json; p_itinerary_id: string; p_user_id: string | null }
@@ -1548,3 +1617,4 @@ export type ItineraryRow = PublicTables['itineraries']['Row']
 export type ItineraryDayRow = PublicTables['itinerary_days']['Row']
 export type ItineraryItemRow = PublicTables['itinerary_items']['Row']
 export type ShareLinkRow = PublicTables['share_links']['Row']
+export type ItineraryMemberRow = PublicTables['itinerary_members']['Row']

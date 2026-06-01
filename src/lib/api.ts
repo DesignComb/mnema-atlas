@@ -332,6 +332,8 @@ export interface ItineraryDay {
 }
 export interface ItineraryTree {
   id: string
+  owner_id: string
+  my_role: 'owner' | 'editor' | 'viewer'
   title: string
   destination: string | null
   start_date: string | null
@@ -581,6 +583,42 @@ export async function revokeShareLink(id: string): Promise<void> {
 /** Public, anon-callable read of a shared trip by token (null if missing/expired). */
 export async function getSharedItinerary(token: string): Promise<SharedTrip | null> {
   return unwrap(await supabase.rpc('get_shared_itinerary', { p_token: token })) as unknown as SharedTrip | null
+}
+
+// ── Trip collaborators ────────────────────────────────────────────
+export interface TripMember {
+  user_id: string
+  display_name: string | null
+  role: string
+}
+
+export async function listMembers(itineraryId: string): Promise<TripMember[]> {
+  return unwrap(
+    await supabase.rpc('list_members', { p_user_id: null, p_itinerary_id: itineraryId }),
+  ) as unknown as TripMember[]
+}
+
+export async function addMember(
+  itineraryId: string,
+  email: string,
+  role: 'viewer' | 'editor',
+): Promise<void> {
+  const res = await supabase.rpc('add_member', {
+    p_user_id: null,
+    p_itinerary_id: itineraryId,
+    p_email: email,
+    p_role: role,
+  })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function removeMember(itineraryId: string, memberUserId: string): Promise<void> {
+  const res = await supabase.rpc('remove_member', {
+    p_user_id: null,
+    p_itinerary_id: itineraryId,
+    p_member_user_id: memberUserId,
+  })
+  if (res.error) throw new Error(res.error.message)
 }
 
 export interface CreatedApiKey {
