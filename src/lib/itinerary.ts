@@ -1,10 +1,10 @@
 import type { LucideIcon } from 'lucide-react'
-import { Bed, Camera, MapPin, TrainFront, Utensils } from 'lucide-react'
+import { Bed, Camera, MapPin, ShoppingBag, Ticket, TrainFront, Utensils } from 'lucide-react'
 
 /** Category presentation — icon, bilingual label, accent dot, and chip classes. */
-export type Category = 'food' | 'transport' | 'sight' | 'lodging' | 'other'
+export type Category = 'food' | 'transport' | 'sight' | 'lodging' | 'activity' | 'shopping' | 'other'
 
-export const CATEGORIES: Category[] = ['sight', 'food', 'transport', 'lodging', 'other']
+export const CATEGORIES: Category[] = ['sight', 'food', 'activity', 'transport', 'lodging', 'shopping', 'other']
 
 export const CATEGORY_META: Record<
   Category,
@@ -37,6 +37,20 @@ export const CATEGORY_META: Record<
     zh: '住宿',
     dot: 'bg-violet-500',
     chip: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300',
+  },
+  activity: {
+    icon: Ticket,
+    en: 'Activity',
+    zh: '活動',
+    dot: 'bg-rose-500',
+    chip: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300',
+  },
+  shopping: {
+    icon: ShoppingBag,
+    en: 'Shopping',
+    zh: '購物',
+    dot: 'bg-orange-500',
+    chip: 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-300',
   },
   other: {
     icon: MapPin,

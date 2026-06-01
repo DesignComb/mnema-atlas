@@ -78,6 +78,9 @@ export const tools: ToolDef[] = [
         p_deck_id: a.deck_id ?? null,
         p_created_via: ctx.via,
       })
+      if (Array.isArray(a.tags) && a.tags.length) {
+        await callRpc(ctx.env, ctx.userId, 'set_note_tags', { p_note_id: note.id, p_tags: a.tags })
+      }
       return { summary: `Created note “${note.title}” (${note.id})`, data: note }
     },
   },
@@ -94,6 +97,9 @@ export const tools: ToolDef[] = [
         p_body: a.body ?? null,
         p_deck_id: a.deck_id ?? null,
       })
+      if (a.tags !== undefined) {
+        await callRpc(ctx.env, ctx.userId, 'set_note_tags', { p_note_id: a.note_id, p_tags: a.tags ?? [] })
+      }
       return { summary: `Updated note “${note.title}”`, data: note }
     },
   },
@@ -164,6 +170,9 @@ export const tools: ToolDef[] = [
         p_deck_id: a.deck_id ?? null,
         p_created_via: ctx.via,
       })
+      if (Array.isArray(a.tags) && a.tags.length) {
+        await callRpc(ctx.env, ctx.userId, 'set_card_tags', { p_card_id: card.id, p_tags: a.tags })
+      }
       return { summary: `Created flashcard (${card.id}) — due now`, data: card }
     },
   },
@@ -173,11 +182,19 @@ export const tools: ToolDef[] = [
     schema: createFlashcardsBulkInput,
     readOnly: false,
     run: async (ctx, a) => {
-      const cards = await callRpc<unknown[]>(ctx.env, ctx.userId, 'create_flashcards_bulk', {
+      const cards = await callRpc<Array<{ id: string }>>(ctx.env, ctx.userId, 'create_flashcards_bulk', {
         p_cards: a.cards,
         p_deck_id: a.deck_id ?? null,
         p_created_via: ctx.via,
       })
+      // Apply per-card tags (bulk RPC returns rows in input order).
+      const inputs = (a.cards as Array<{ tags?: string[] }>) ?? []
+      for (let i = 0; i < cards.length; i++) {
+        const tags = inputs[i]?.tags
+        if (Array.isArray(tags) && tags.length) {
+          await callRpc(ctx.env, ctx.userId, 'set_card_tags', { p_card_id: cards[i].id, p_tags: tags })
+        }
+      }
       return { summary: `Created ${cards.length} flashcards`, data: cards }
     },
   },
@@ -251,6 +268,9 @@ export const tools: ToolDef[] = [
         p_deck_id: a.deck_id ?? null,
         p_note_id: a.note_id ?? null,
       })
+      if (a.tags !== undefined) {
+        await callRpc(ctx.env, ctx.userId, 'set_card_tags', { p_card_id: a.card_id, p_tags: a.tags ?? [] })
+      }
       return { summary: `Updated flashcard (${card.id})`, data: card }
     },
   },

@@ -13,11 +13,14 @@ export type LinkType = z.infer<typeof linkType>
 
 const uuid = z.string().uuid()
 const title = z.string().trim().min(1, 'Title is required').max(300)
+/** Structured tag set — settable inline on create/update AND via set_*_tags. */
+const tagArray = z.array(z.string().trim().min(1).max(40)).max(12)
 
 export const createNoteInput = z.object({
   title,
   body: z.string().max(100_000).default(''),
   deck_id: uuid.optional(),
+  tags: tagArray.optional(),
 })
 export type CreateNoteInput = z.infer<typeof createNoteInput>
 
@@ -26,6 +29,7 @@ export const updateNoteInput = z.object({
   title: title.optional(),
   body: z.string().max(100_000).optional(),
   deck_id: uuid.optional(),
+  tags: tagArray.optional(),
 })
 export type UpdateNoteInput = z.infer<typeof updateNoteInput>
 
@@ -51,6 +55,7 @@ export const createFlashcardInput = z.object({
   back: flashcardFace,
   note_id: uuid.optional(),
   deck_id: uuid.optional(),
+  tags: tagArray.optional(),
 })
 export type CreateFlashcardInput = z.infer<typeof createFlashcardInput>
 
@@ -62,6 +67,7 @@ export const createFlashcardsBulkInput = z.object({
         back: flashcardFace,
         note_id: uuid.optional(),
         deck_id: uuid.optional(),
+        tags: tagArray.optional(),
       }),
     )
     .min(1)
@@ -96,6 +102,7 @@ export const updateCardInput = z.object({
   back: flashcardFace.optional(),
   deck_id: uuid.optional(),
   note_id: uuid.optional(),
+  tags: tagArray.optional(),
 })
 export const deleteCardInput = z.object({ card_id: uuid })
 export const deleteNoteInput = z.object({ note_id: uuid })
@@ -111,7 +118,7 @@ export const setCardTagsInput = z.object({ card_id: uuid, tags: tagList })
 export const unlinkNotesInput = z.object({ note_id_a: uuid, note_id_b: uuid })
 
 // ── Travel itineraries ────────────────────────────────────────────
-export const itineraryCategory = z.enum(['food', 'transport', 'sight', 'lodging', 'other'])
+export const itineraryCategory = z.enum(['food', 'transport', 'sight', 'lodging', 'activity', 'shopping', 'other'])
 export type ItineraryCategory = z.infer<typeof itineraryCategory>
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
@@ -284,18 +291,18 @@ export type ImportPayload = z.infer<typeof importPayload>
 
 /** Human-readable descriptions reused as MCP tool descriptions. */
 export const toolDescriptions = {
-  create_note: 'Create a study note (markdown body). Returns the new note id.',
-  update_note: 'Update an existing note’s title and/or body.',
+  create_note: 'Create a study note (markdown body). Optionally set tags inline. Returns the new note id.',
+  update_note: 'Update an existing note’s title, body, deck, and/or tags (only the fields you pass change).',
   get_note: 'Fetch one note by id.',
   search_notes: 'Full-text search the user’s notes by keyword.',
   create_deck: 'Create a deck (folder) to organise notes and flashcards.',
   list_decks: 'List the user’s decks.',
-  create_flashcard: 'Create one spaced-repetition flashcard (front/back). Schedulable immediately.',
-  create_flashcards_bulk: 'Create many flashcards in one call.',
+  create_flashcard: 'Create one spaced-repetition flashcard (front/back, optional tags). Schedulable immediately.',
+  create_flashcards_bulk: 'Create many flashcards in one call (each may carry its own tags).',
   link_notes: 'Create a typed link between two notes (feeds the knowledge graph).',
   list_notes: 'List the user’s notes (optionally filtered by deck). Returns ids + titles.',
   list_cards: 'List the user’s flashcards (optionally by deck or tag). Returns ids + front/back.',
-  update_card: 'Edit an existing flashcard’s front/back, or move it to another deck/note.',
+  update_card: 'Edit an existing flashcard’s front/back, tags, or move it to another deck/note.',
   delete_card: 'Delete a flashcard.',
   delete_note: 'Delete a note (its flashcards are kept, just unlinked from the note).',
   update_deck: 'Rename a deck or change its description.',
