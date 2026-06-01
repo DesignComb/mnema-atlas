@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { authenticate } from './auth'
 import { handleMcpRequest } from './mcp'
 import { rest } from './rest'
+import { rateLimit } from './ratelimit'
 import { buildOpenApiSpec } from './openapi'
 import { buildLlmsTxt } from './llms'
 import { discoveryIndex } from './discovery'
@@ -15,6 +16,25 @@ app.use(
   '*',
   cors({ origin: '*', allowHeaders: ['Authorization', 'Content-Type'], allowMethods: ['GET', 'POST', 'OPTIONS'] }),
 )
+
+// Structured access log (one JSON line per request) for observability.
+app.use('*', async (c, next) => {
+  const start = Date.now()
+  await next()
+  console.log(
+    JSON.stringify({
+      t: 'req',
+      method: c.req.method,
+      path: new URL(c.req.url).pathname,
+      status: c.res.status,
+      ms: Date.now() - start,
+      keyed: Boolean(c.req.header('authorization')),
+    }),
+  )
+})
+
+// Best-effort rate limiting (per-key for authed, per-IP for keyless).
+app.use('*', rateLimit)
 
 const reqOrigin = (url: string) => new URL(url).origin
 

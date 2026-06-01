@@ -1089,6 +1089,10 @@ export type Database = {
         Args: { p_day_id: string; p_item_ids: Json; p_user_id: string | null }
         Returns: boolean
       }
+      revoke_api_key: {
+        Args: { p_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       revoke_share_link: {
         Args: { p_id: string; p_user_id: string | null }
         Returns: boolean

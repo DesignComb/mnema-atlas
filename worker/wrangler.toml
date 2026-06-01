@@ -18,6 +18,21 @@ routes = [
 # SUPABASE_URL         = https://YOUR-PROJECT.supabase.co
 # SUPABASE_SECRET_KEY  = sb_secret_...   (service/secret key — bypasses RLS)
 
+# ── Rate limiting (Workers Rate Limiting API) ────────────────────────
+# Per-API-key for authed traffic; per-IP for keyless discovery. period ∈ {10,60}.
+# Generous so a human + their AI agent never hit it; only floods/abuse do.
+[[unsafe.bindings]]
+name = "RL_KEY"
+type = "ratelimit"
+namespace_id = "2001"
+simple = { limit = 600, period = 60 }
+
+[[unsafe.bindings]]
+name = "RL_IP"
+type = "ratelimit"
+namespace_id = "2002"
+simple = { limit = 120, period = 60 }
+
 # ── OAuth (Phase 3b — claude.ai connector) ───────────────────────────
 # To accept the claude.ai web/desktop connector (OAuth 2.1 only), bind a KV
 # namespace for the OAuth provider and wrap index.ts with

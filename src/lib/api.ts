@@ -649,6 +649,8 @@ export async function listApiKeys(): Promise<ApiKeySummary[]> {
 }
 
 export async function revokeApiKey(id: string): Promise<void> {
-  const res = await supabase.from('api_keys').update({ revoked_at: new Date().toISOString() }).eq('id', id)
+  // Goes through the RPC now — direct UPDATE on api_keys is no longer permitted
+  // (the shared write path is enforced; see migration 0011).
+  const res = await supabase.rpc('revoke_api_key', { p_user_id: null, p_id: id })
   if (res.error) throw new Error(res.error.message)
 }
