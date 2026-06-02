@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import {
+  ArrowUpRight,
   CalendarPlus,
   CalendarRange,
   ChevronDown,
   ChevronLeft,
   ChevronUp,
   Columns3,
-  ExternalLink,
   List,
   Luggage,
-  MapPin,
+  MoreHorizontal,
   Pencil,
   Plus,
   Share2,
@@ -40,6 +40,13 @@ import { ShareDialog } from '@/components/trips/ShareDialog'
 import { MembersDialog } from '@/components/trips/MembersDialog'
 import { BookingsTab, BudgetTab, PackingTab } from '@/components/trips/TripSections'
 import { ItineraryBoard, ItineraryTable } from '@/components/trips/ItineraryViews'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type TripTab = 'itinerary' | 'bookings' | 'budget' | 'packing'
 type ItinView = 'timeline' | 'table' | 'board'
@@ -462,31 +469,54 @@ function DaySection({
 }) {
   const heading = day.label || day.day_date || t(`Day ${dayIndex + 1}`, `第 ${dayIndex + 1} 天`)
   const sub = day.label && day.day_date ? day.day_date : null
+  const costByCur: Record<string, number> = {}
+  day.items.forEach((i) => {
+    if (i.cost != null) costByCur[i.currency || '?'] = (costByCur[i.currency || '?'] ?? 0) + Number(i.cost)
+  })
+  const costStr = Object.entries(costByCur)
+    .map(([c, v]) => fmtCost(v, c === '?' ? null : c))
+    .join(' · ')
+  const rollup = `${day.items.length} ${t('stops', '站')}${costStr ? ' · ' + costStr : ''}`
   return (
     <section className="rounded-xl border border-border bg-card shadow-soft">
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2.5 sm:px-4">
+      <div className="flex items-center gap-2.5 border-b border-border px-3 py-2.5 sm:px-4">
         <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-muted text-[11px] font-semibold text-brand">
           {dayIndex + 1}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{heading}</p>
+          <p className="truncate font-serif text-base font-semibold text-foreground">{heading}</p>
           {sub ? <p className="truncate text-[11px] text-muted-foreground">{sub}</p> : null}
         </div>
+        {day.items.length ? (
+          <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{rollup}</span>
+        ) : null}
         {canEdit ? (
-          <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
-            <IconBtn label={t('Move up', '上移')} disabled={dayIndex === 0} onClick={() => onMoveDay(-1)}>
-              <ChevronUp className="size-3.5" />
-            </IconBtn>
-            <IconBtn label={t('Move down', '下移')} disabled={dayIndex === dayCount - 1} onClick={() => onMoveDay(1)}>
-              <ChevronDown className="size-3.5" />
-            </IconBtn>
-            <IconBtn label={t('Edit day', '編輯日期')} onClick={onEditDay}>
-              <Pencil className="size-3.5" />
-            </IconBtn>
-            <IconBtn label={t('Remove day', '移除日期')} onClick={onDeleteDay}>
-              <Trash2 className="size-3.5" />
-            </IconBtn>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={t('More', '更多')}
+              className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 transition hover:bg-accent hover:text-foreground data-[state=open]:bg-accent"
+            >
+              <MoreHorizontal className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onAddItem}>
+                <Plus /> {t('Add activity', '新增活動')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={onEditDay}>
+                <Pencil /> {t('Edit day', '編輯日期')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onMoveDay(-1)} disabled={dayIndex === 0}>
+                <ChevronUp /> {t('Move up', '上移')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onMoveDay(1)} disabled={dayIndex === dayCount - 1}>
+                <ChevronDown /> {t('Move down', '下移')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onDeleteDay} className="text-destructive focus:text-destructive">
+                <Trash2 /> {t('Remove day', '移除日期')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
       <div className="space-y-1.5 p-2 sm:p-2.5">
@@ -539,8 +569,8 @@ function ItemRow({
   onMove: (dir: -1 | 1) => void
 }) {
   const cat = CATEGORY_META[categoryOf(item.category)]
-  const Icon = cat.icon
   const st = STATUS_META[statusOf(item.status)]
+  const status = statusOf(item.status)
   const time = fmtTimeRange(item.start_time, item.end_time, item.end_day_offset)
   const maps = mapsUrl(item.place, item.lat, item.lng)
   const booking = safeHttps(item.booking_url)
@@ -548,103 +578,110 @@ function ItemRow({
   const hasMeta = Boolean(item.place || cost || item.transport_detail || item.assignees?.length || booking)
 
   return (
-    <div className="group flex items-start gap-3 rounded-lg border border-transparent px-2 py-2 transition hover:border-border hover:bg-background">
-      <span className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border ${cat.chip}`}>
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        {/* Primary: time + title (the dominant line) */}
-        <div className="flex items-baseline gap-2">
-          {time ? (
-            <span className="shrink-0 font-mono text-[12px] tabular-nums text-muted-foreground">{time}</span>
-          ) : null}
-          <span className="min-w-0 text-[14px] font-medium leading-snug text-foreground">{item.title}</span>
-          {item.status !== 'planned' ? (
-            <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium ${st.chip}`}>
-              {t(st.en, st.zh)}
-            </span>
-          ) : null}
-        </div>
-        {/* Secondary: quiet metadata on one wrapped line */}
-        {hasMeta ? (
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
-            {maps ? (
-              <a href={maps} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 transition hover:text-brand">
-                <MapPin className="size-3" /> {item.place || t('Map', '地圖')}
-              </a>
-            ) : item.place ? (
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="size-3" /> {item.place}
-              </span>
-            ) : null}
-            {cost ? (
-              <span className="inline-flex items-center gap-1">
-                <Wallet className="size-3" /> {cost}
-              </span>
-            ) : null}
-            {item.transport_detail ? <span>{item.transport_detail}</span> : null}
-            {item.assignees?.length ? (
-              <span className="inline-flex items-center gap-1">
-                <Users className="size-3" /> {item.assignees.join(' · ')}
-              </span>
-            ) : null}
-            {booking ? (
-              <a href={booking} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 transition hover:text-brand">
-                <ExternalLink className="size-3" /> {t('Booking', '訂購')}
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-        {item.notes ? (
-          <p
-            title={item.notes}
-            className="mt-1 line-clamp-2 whitespace-pre-wrap text-[12px] leading-relaxed text-muted-foreground/80"
-          >
-            {item.notes}
-          </p>
+    <div
+      className="group relative rounded-lg border border-transparent py-2.5 pl-4 pr-2 transition hover:border-border hover:bg-background"
+      onClick={canEdit ? onEdit : undefined}
+      role={canEdit ? 'button' : undefined}
+    >
+      {/* Category rail — the only category signifier */}
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full ${cat.dot}`}
+      />
+
+      {/* Tier 1 · time */}
+      <div className="font-mono text-[12px] font-semibold tabular-nums text-muted-foreground">{time || '—'}</div>
+
+      {/* Tier 2 · title (dominant) + bare status word */}
+      <div className="mt-0.5 flex items-baseline justify-between gap-3 pr-7">
+        <h4 className="min-w-0 flex-1 text-[15px] font-semibold leading-snug text-foreground sm:text-base">
+          {item.title}
+        </h4>
+        {status !== 'planned' ? (
+          <span className={`shrink-0 text-[11px] font-medium ${st.text}`}>{t(st.en, st.zh)}</span>
         ) : null}
       </div>
+
+      {/* Tier 3 · meta (category word leads; no per-field icons) */}
+      {hasMeta ? (
+        <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-muted-foreground">
+          <span className={`text-[10px] font-semibold uppercase tracking-wide ${cat.text}`}>{t(cat.en, cat.zh)}</span>
+          {item.place ? (
+            maps ? (
+              <a
+                href={maps}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex max-w-[65%] items-center gap-0.5 truncate font-medium text-foreground/80 transition hover:text-brand"
+              >
+                {item.place}
+                <ArrowUpRight className="size-3 shrink-0 opacity-60" />
+              </a>
+            ) : (
+              <span className="max-w-[65%] truncate font-medium text-foreground/80">{item.place}</span>
+            )
+          ) : null}
+          {item.transport_detail ? <span>{item.transport_detail}</span> : null}
+          {cost ? <span className="font-mono font-medium tabular-nums text-foreground/80">{cost}</span> : null}
+          {item.assignees?.length ? <span>{item.assignees.join(' · ')}</span> : null}
+          {booking ? (
+            <a
+              href={booking}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-0.5 transition hover:text-brand"
+            >
+              {t('Booking', '訂購')}
+              <ArrowUpRight className="size-3 opacity-60" />
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Tier 4 · notes (dimmest, clamped) */}
+      {item.notes ? (
+        <p
+          title={item.notes}
+          className="mt-1.5 line-clamp-2 whitespace-pre-wrap text-[11.5px] leading-relaxed text-muted-foreground/70"
+        >
+          {item.notes}
+        </p>
+      ) : null}
+
+      {/* Actions · single overflow menu, calm at rest */}
       {canEdit ? (
-        <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
-          <IconBtn label={t('Move up', '上移')} disabled={index === 0} onClick={() => onMove(-1)}>
-            <ChevronUp className="size-3.5" />
-          </IconBtn>
-          <IconBtn label={t('Move down', '下移')} disabled={index === count - 1} onClick={() => onMove(1)}>
-            <ChevronDown className="size-3.5" />
-          </IconBtn>
-          <IconBtn label={t('Edit', '編輯')} onClick={onEdit}>
-            <Pencil className="size-3.5" />
-          </IconBtn>
-          <IconBtn label={t('Delete', '刪除')} onClick={onDelete}>
-            <Trash2 className="size-3.5" />
-          </IconBtn>
+        <div
+          className="absolute right-1 top-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={t('More', '更多')}
+              className="flex size-7 items-center justify-center rounded-md text-muted-foreground/70 transition hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:opacity-100"
+            >
+              <MoreHorizontal className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onEdit}>
+                <Pencil /> {t('Edit', '編輯')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onMove(-1)} disabled={index === 0}>
+                <ChevronUp /> {t('Move up', '上移')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onMove(1)} disabled={index === count - 1}>
+                <ChevronDown /> {t('Move down', '下移')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+                <Trash2 /> {t('Delete', '刪除')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ) : null}
     </div>
   )
 }
 
-function IconBtn({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string
-  disabled?: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="rounded p-1 transition hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
-    >
-      {children}
-    </button>
-  )
-}
