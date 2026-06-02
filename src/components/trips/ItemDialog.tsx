@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
+import { PeopleInput } from '@/components/trips/PeopleInput'
 import {
   Dialog,
   DialogContent,
@@ -204,47 +205,29 @@ export function ItemDialog({
                 ))}
               </Select>
             </div>
-            {travelers.length ? (
-              <div className="flex flex-col gap-1.5">
-                <Label>{t('For', '給誰')}</Label>
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                  {travelers.map((name) => {
-                    const on = assignees.includes(name)
-                    return (
-                      <button
-                        type="button"
-                        key={name}
-                        onClick={() =>
-                          setAssigneesV(on ? assignees.filter((a) => a !== name) : [...assignees, name])
-                        }
-                        className={`rounded-full border px-2.5 py-1 text-[12px] transition ${on ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'}`}
-                      >
-                        {name}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : null}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="item-place">{t('Place', '地點')}</Label>
+              <Input
+                id="item-place"
+                value={place}
+                onChange={(e) => setPlace(e.target.value)}
+                placeholder={t('Name or address', '名稱或地址')}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="item-place">{t('Place (optional)', '地點（選填）')}</Label>
-            <Input
-              id="item-place"
-              value={place}
-              onChange={(e) => setPlace(e.target.value)}
-              placeholder={t('Name or address — used for the maps link', '名稱或地址——用於地圖連結')}
-            />
+            <Label>{t("Who's going", '誰參加')}</Label>
+            <PeopleInput people={assignees} onChange={setAssigneesV} suggestions={travelers} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="item-start">{t('Start (optional)', '開始（選填）')}</Label>
+              <Label htmlFor="item-start">{t('Start time', '開始時間')}</Label>
               <Input id="item-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="item-end">{t('End (optional)', '結束（選填）')}</Label>
+              <Label htmlFor="item-end">{t('End time', '結束時間')}</Label>
               <Input id="item-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
             </div>
           </div>
@@ -254,7 +237,7 @@ export function ItemDialog({
           </p>
           <div className="grid grid-cols-[1fr_5rem] gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="item-cost">{t('Cost (optional)', '花費（選填）')}</Label>
+              <Label htmlFor="item-cost">{t('Cost', '花費')}</Label>
               <Input
                 id="item-cost"
                 inputMode="decimal"
@@ -293,7 +276,7 @@ export function ItemDialog({
           ) : null}
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="item-url">{t('Booking link (optional)', '訂房／訂票連結（選填）')}</Label>
+            <Label htmlFor="item-url">{t('Booking link', '訂房／訂票連結')}</Label>
             <Input
               id="item-url"
               value={bookingUrl}
@@ -303,7 +286,7 @@ export function ItemDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="item-notes">{t('Notes (optional)', '備註（選填）')}</Label>
+            <Label htmlFor="item-notes">{t('Notes', '備註')}</Label>
             <Textarea id="item-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 

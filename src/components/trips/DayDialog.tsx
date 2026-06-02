@@ -70,11 +70,11 @@ export function DayDialog({
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="day-date">{t('Date (optional)', '日期（選填）')}</Label>
+            <Label htmlFor="day-date">{t('Date', '日期')}</Label>
             <Input id="day-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="day-label">{t('Label (optional)', '標籤（選填）')}</Label>
+            <Label htmlFor="day-label">{t('Label', '標籤')}</Label>
             <Input
               id="day-label"
               value={label}

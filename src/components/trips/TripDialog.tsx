@@ -113,7 +113,7 @@ export function TripDialog({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="trip-dest">{t('Destination (optional)', '目的地（選填）')}</Label>
+            <Label htmlFor="trip-dest">{t('Destination', '目的地')}</Label>
             <Input
               id="trip-dest"
               value={destination}
@@ -133,7 +133,7 @@ export function TripDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="trip-tz">{t('Time zone (optional)', '時區（選填）')}</Label>
+              <Label htmlFor="trip-tz">{t('Time zone', '時區')}</Label>
               <Input
                 id="trip-tz"
                 value={timezone}
@@ -173,7 +173,7 @@ export function TripDialog({
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="trip-notes">{t('Notes (optional)', '備註（選填）')}</Label>
+            <Label htmlFor="trip-notes">{t('Notes', '備註')}</Label>
             <Textarea
               id="trip-notes"
               value={notes}
