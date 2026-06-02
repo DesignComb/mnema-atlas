@@ -65,6 +65,39 @@ export function categoryOf(c: string | null | undefined): Category {
   return CATEGORIES.includes(c as Category) ? (c as Category) : 'other'
 }
 
+/** Activity status presentation (shared by timeline / table / board views). */
+export type ItemStatus = 'idea' | 'tentative' | 'planned' | 'done'
+export const STATUS_ORDER: ItemStatus[] = ['idea', 'tentative', 'planned', 'done']
+export const STATUS_META: Record<ItemStatus, { en: string; zh: string; dot: string; chip: string }> = {
+  idea: {
+    en: 'Idea',
+    zh: '想法',
+    dot: 'bg-slate-400',
+    chip: 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300',
+  },
+  tentative: {
+    en: 'Tentative',
+    zh: '待確認',
+    dot: 'bg-amber-500',
+    chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300',
+  },
+  planned: {
+    en: 'Planned',
+    zh: '已排',
+    dot: 'bg-sky-500',
+    chip: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300',
+  },
+  done: {
+    en: 'Done',
+    zh: '完成',
+    dot: 'bg-emerald-500',
+    chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300',
+  },
+}
+export function statusOf(s: string | null | undefined): ItemStatus {
+  return STATUS_ORDER.includes(s as ItemStatus) ? (s as ItemStatus) : 'planned'
+}
+
 /** 'HH:MM:SS' / 'HH:MM' → 'HH:MM'. */
 export function fmtTime(t: string | null): string {
   return t ? t.slice(0, 5) : ''

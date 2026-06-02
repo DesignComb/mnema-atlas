@@ -6,12 +6,15 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronUp,
+  Columns3,
   ExternalLink,
+  List,
   Luggage,
   MapPin,
   Pencil,
   Plus,
   Share2,
+  Table2,
   Ticket,
   Trash2,
   Users,
@@ -36,10 +39,22 @@ import { ItemDialog } from '@/components/trips/ItemDialog'
 import { ShareDialog } from '@/components/trips/ShareDialog'
 import { MembersDialog } from '@/components/trips/MembersDialog'
 import { BookingsTab, BudgetTab, PackingTab } from '@/components/trips/TripSections'
+import { ItineraryBoard, ItineraryTable } from '@/components/trips/ItineraryViews'
 
 type TripTab = 'itinerary' | 'bookings' | 'budget' | 'packing'
+type ItinView = 'timeline' | 'table' | 'board'
 import { Button } from '@/components/ui/button'
-import { CATEGORY_META, categoryOf, fmtCost, fmtDateRange, fmtTimeRange, mapsUrl, safeHttps } from '@/lib/itinerary'
+import {
+  CATEGORY_META,
+  STATUS_META,
+  categoryOf,
+  fmtCost,
+  fmtDateRange,
+  fmtTimeRange,
+  mapsUrl,
+  safeHttps,
+  statusOf,
+} from '@/lib/itinerary'
 import { useT } from '@/lib/i18n'
 
 export function TripScreen() {
@@ -55,6 +70,7 @@ export function TripScreen() {
   useItineraryRealtime(tripId)
 
   const [tab, setTab] = useState<TripTab>('itinerary')
+  const [view, setView] = useState<ItinView>('timeline')
   const [tripDialog, setTripDialog] = useState(false)
   const [shareDialog, setShareDialog] = useState(false)
   const [membersDialog, setMembersDialog] = useState(false)
@@ -111,6 +127,8 @@ export function TripScreen() {
       toast.error(err instanceof Error ? err.message : t('Failed to delete activity', '刪除活動失敗'))
     }
   }
+
+  const openItem = (item: ItineraryItem) => setItemDialog({ open: true, item, dayId: item.day_id })
 
   if (isLoading) {
     return (
@@ -267,6 +285,32 @@ export function TripScreen() {
             </div>
           ) : null}
 
+          {/* View switcher (Notion-style: timeline / table / board) */}
+          <div className="flex justify-end">
+            <div className="inline-flex gap-0.5 rounded-lg border border-border p-0.5">
+              {(
+                [
+                  ['timeline', List, 'Timeline', '時間軸'],
+                  ['table', Table2, 'Table', '表格'],
+                  ['board', Columns3, 'Board', '看板'],
+                ] as const
+              ).map(([v, Icon, en, zh]) => (
+                <button
+                  key={v}
+                  type="button"
+                  title={t(en, zh)}
+                  aria-label={t(en, zh)}
+                  onClick={() => setView(v)}
+                  className={`rounded-md p-1.5 transition ${view === v ? 'bg-brand-muted text-brand' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <Icon className="size-4" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {view === 'timeline' ? (
+            <>
           {/* Days */}
           {trip.days.map((day, dayIndex) => (
             <DaySection
@@ -336,6 +380,12 @@ export function TripScreen() {
               <CalendarPlus className="size-4" /> {t('Add day', '新增日期')}
             </Button>
           ) : null}
+            </>
+          ) : view === 'table' ? (
+            <ItineraryTable trip={trip} canEdit={canEdit} onEdit={openItem} />
+          ) : (
+            <ItineraryBoard trip={trip} canEdit={canEdit} onEdit={openItem} />
+          )}
             </>
           ) : null}
         </div>
@@ -490,70 +540,69 @@ function ItemRow({
 }) {
   const cat = CATEGORY_META[categoryOf(item.category)]
   const Icon = cat.icon
+  const st = STATUS_META[statusOf(item.status)]
   const time = fmtTimeRange(item.start_time, item.end_time, item.end_day_offset)
   const maps = mapsUrl(item.place, item.lat, item.lng)
   const booking = safeHttps(item.booking_url)
   const cost = fmtCost(item.cost, item.currency)
+  const hasMeta = Boolean(item.place || cost || item.transport_detail || item.assignees?.length || booking)
 
   return (
-    <div className="group flex items-start gap-2.5 rounded-lg border border-transparent px-2 py-2 transition hover:border-border hover:bg-background">
-      <span className={`mt-1 flex size-6 shrink-0 items-center justify-center rounded-md border ${cat.chip}`}>
-        <Icon className="size-3.5" />
+    <div className="group flex items-start gap-3 rounded-lg border border-transparent px-2 py-2 transition hover:border-border hover:bg-background">
+      <span className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border ${cat.chip}`}>
+        <Icon className="size-4" />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          {time ? <span className="font-mono text-[12px] tabular-nums text-muted-foreground">{time}</span> : null}
-          <span className="text-sm font-medium text-foreground">{item.title}</span>
-          {cost ? (
-            <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">{cost}</span>
+        {/* Primary: time + title (the dominant line) */}
+        <div className="flex items-baseline gap-2">
+          {time ? (
+            <span className="shrink-0 font-mono text-[12px] tabular-nums text-muted-foreground">{time}</span>
           ) : null}
-          {item.status === 'done' ? (
-            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              {t('Done', '完成')}
+          <span className="min-w-0 text-[14px] font-medium leading-snug text-foreground">{item.title}</span>
+          {item.status !== 'planned' ? (
+            <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium ${st.chip}`}>
+              {t(st.en, st.zh)}
             </span>
-          ) : item.status === 'tentative' ? (
-            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-              {t('Tentative', '待確認')}
-            </span>
-          ) : item.status === 'idea' ? (
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
-              {t('Idea', '想法')}
-            </span>
-          ) : null}
-          {item.assignees?.length ? (
-            <span className="text-[11px] text-muted-foreground">· {item.assignees.join(' · ')}</span>
           ) : null}
         </div>
-        {item.transport_detail ? (
-          <p className="text-[12px] text-muted-foreground">{item.transport_detail}</p>
+        {/* Secondary: quiet metadata on one wrapped line */}
+        {hasMeta ? (
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+            {maps ? (
+              <a href={maps} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 transition hover:text-brand">
+                <MapPin className="size-3" /> {item.place || t('Map', '地圖')}
+              </a>
+            ) : item.place ? (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="size-3" /> {item.place}
+              </span>
+            ) : null}
+            {cost ? (
+              <span className="inline-flex items-center gap-1">
+                <Wallet className="size-3" /> {cost}
+              </span>
+            ) : null}
+            {item.transport_detail ? <span>{item.transport_detail}</span> : null}
+            {item.assignees?.length ? (
+              <span className="inline-flex items-center gap-1">
+                <Users className="size-3" /> {item.assignees.join(' · ')}
+              </span>
+            ) : null}
+            {booking ? (
+              <a href={booking} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 transition hover:text-brand">
+                <ExternalLink className="size-3" /> {t('Booking', '訂購')}
+              </a>
+            ) : null}
+          </div>
         ) : null}
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px]">
-          {maps ? (
-            <a
-              href={maps}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-muted-foreground transition hover:text-brand"
-            >
-              <MapPin className="size-3" /> {item.place || t('Map', '地圖')}
-            </a>
-          ) : item.place ? (
-            <span className="inline-flex items-center gap-1 text-muted-foreground">
-              <MapPin className="size-3" /> {item.place}
-            </span>
-          ) : null}
-          {booking ? (
-            <a
-              href={booking}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-muted-foreground transition hover:text-brand"
-            >
-              <ExternalLink className="size-3" /> {t('Booking', '訂購')}
-            </a>
-          ) : null}
-        </div>
-        {item.notes ? <p className="mt-0.5 whitespace-pre-wrap text-[12.5px] text-muted-foreground">{item.notes}</p> : null}
+        {item.notes ? (
+          <p
+            title={item.notes}
+            className="mt-1 line-clamp-2 whitespace-pre-wrap text-[12px] leading-relaxed text-muted-foreground/80"
+          >
+            {item.notes}
+          </p>
+        ) : null}
       </div>
       {canEdit ? (
         <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
