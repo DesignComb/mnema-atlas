@@ -120,7 +120,7 @@ export function IntegrationsScreen() {
     <>
       <PageHeader
         title={t('Connect an AI', '連接 AI')}
-        subtitle={t('Let an assistant add notes & flashcards for you', '讓 AI 助理為你新增筆記與字卡')}
+        subtitle={t('Bring your own AI — it can add notes, trips & tasks for you', '帶你自己的 AI 來 —— 幫你新增筆記、行程與任務')}
         icon={<Plug className="size-4" />}
       />
       <div className="flex-1 overflow-y-auto">
@@ -128,7 +128,7 @@ export function IntegrationsScreen() {
           <div className="flex items-start gap-2.5 rounded-xl border border-border bg-card p-4 text-[13px] leading-relaxed text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand" />
             <span>
-              {t('An AI you connect can ', '你連接的 AI ')}<strong className="text-foreground">{t('only add', '只能新增')}</strong>{t(" notes & flashcards to your library — by default it can never edit, delete, or see anyone else's. Revoke a key anytime below.", '筆記與字卡到你的資料庫 — 預設情況下，它無法編輯、刪除，也看不到其他人的內容。你可以隨時在下方撤銷金鑰。')}
+              {t('An AI you connect can ', '你連接的 AI ')}<strong className="text-foreground">{t('only add', '只能新增')}</strong>{t(" content across your spaces — notes, trips, tasks — and figures out where from what you ask. By default it can never edit, complete, delete, or see anyone else's. Revoke a key anytime below.", '內容到你的各個區塊 —— 筆記、行程、任務 —— 並依你說的內容判斷該放哪裡。預設情況下，它無法編輯、完成、刪除，也看不到其他人的內容。你可以隨時在下方撤銷金鑰。')}
             </span>
           </div>
 

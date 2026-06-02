@@ -7,7 +7,31 @@ import { tools } from './tools'
 export function discoveryIndex(origin: string) {
   return {
     name: 'mnema-atlas',
-    description: 'Add study notes and spaced-repetition flashcards to a Mnema Atlas library, as an AI tool.',
+    description:
+      'A personal notes + assistant workspace that the user drives with THEIR OWN AI. ' +
+      'Mnema does not host, bundle, or call any AI itself — you (an external assistant) connect via MCP or REST and act as a TOOL. ' +
+      'The workspace is organized into spaces; choose tools by context (notes/cards → Study; trips → Travel; tasks/habits/reminders → Tasks). ' +
+      'More spaces may be added over time, so route by what the user is asking for, not a fixed list.',
+    spaces: [
+      {
+        key: 'study',
+        name: 'Study (Mnema Atlas)',
+        about: 'Markdown notes, decks, spaced-repetition flashcards (FSRS), and a knowledge graph.',
+        tools: 'create_note, update_note, search_notes, create_deck, create_flashcard, create_flashcards_bulk, link_notes, list_notes, list_cards, …',
+      },
+      {
+        key: 'travel',
+        name: 'Travel (Mnema Voyage)',
+        about: 'Multi-day trips: days, activities, reservations, packing/to-do checklists. Shareable read-only.',
+        tools: 'create_itinerary, create_trip_bulk, create_day, create_item, create_booking, create_checklist_item, set_item_status, …',
+      },
+      {
+        key: 'tasks',
+        name: 'Tasks (Mnema Tempo)',
+        about: 'To-dos & lists, habits with streaks, a calendar with time-blocking, RRULE recurrence, and reminders.',
+        tools: 'create_task, create_tasks_bulk, create_task_list, complete_task, set_recurrence, schedule_task, check_in, add_reminder, list_tasks, …',
+      },
+    ],
     endpoints: {
       mcp: `${origin}/mcp`,
       rest: `${origin}/rest`,

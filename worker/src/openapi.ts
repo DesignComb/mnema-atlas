@@ -52,12 +52,15 @@ export function buildOpenApiSpec(origin: string) {
   return {
     openapi: '3.1.0',
     info: {
-      title: 'Mnema Atlas',
+      title: 'Mnema',
       version: '0.1.0',
       description:
-        'Add study notes and spaced-repetition flashcards to a Mnema Atlas library, as an AI tool. ' +
+        'A personal notes + assistant workspace the user drives with THEIR OWN AI (Mnema hosts no AI itself). ' +
+        'Act as a tool. The workspace has several spaces — pick tools by context: Study (Atlas: notes, decks, ' +
+        'flashcards, graph), Travel (Voyage: trips, days, activities, reservations, packing), and Tasks (Tempo: ' +
+        'to-dos, lists, habits, calendar, recurrence, reminders). More spaces may be added over time. ' +
         'Authenticate with a Bearer API key minted in the app (Settings → API keys). ' +
-        'Add-only keys may only create + read; full keys may also edit. Every write is scoped to the key owner.',
+        'Add-only keys may only create + read; full keys may also edit/complete/delete. Every write is scoped to the key owner.',
     },
     servers: [{ url: origin }],
     security: [{ bearerApiKey: [] }],

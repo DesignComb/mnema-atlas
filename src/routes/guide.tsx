@@ -1,6 +1,16 @@
 import { type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { BookOpenCheck, FileText, GraduationCap, Layers, Share2, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  BookOpenCheck,
+  FileText,
+  GraduationCap,
+  Layers,
+  ListTodo,
+  Map as MapIcon,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { useT } from '@/lib/i18n'
 import { modKey } from '@/lib/utils'
@@ -17,8 +27,36 @@ export function GuideScreen() {
             <h2 className="font-serif text-xl text-foreground">{t('The idea', '核心概念')}</h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
               {t(
-                'Capture study notes, turn them into flashcards, and review a few each day — spaced repetition makes them stick. You can even let an AI fill your library for you.',
-                '記下學習筆記，把它們變成字卡，每天複習幾張 — 間隔重複能讓記憶更牢固。你甚至可以讓 AI 幫你充實資料庫。',
+                'Mnema is a personal notes + assistant workspace you run with your own AI. It hosts no AI itself — you connect the assistant you already use (ChatGPT, Claude, Cursor…) and it fills and organizes everything for you. Your stuff lives in a few focused spaces.',
+                'Mnema 是一個由你自己的 AI 驅動的個人筆記 + 助理工作區。它本身不內建任何 AI —— 你連接你已經在用的助理(ChatGPT、Claude、Cursor…),由它幫你充實與整理。你的內容分成幾個專注的區塊。',
+              )}
+            </p>
+          </section>
+
+          {/* Spaces */}
+          <section className="space-y-3">
+            <h2 className="font-serif text-xl text-foreground">{t('Three spaces', '三大區塊')}</h2>
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              <Step
+                icon={<BookOpenCheck />}
+                title={t('Study · Atlas', '讀書 · Atlas')}
+                body={t('Notes, flashcards (spaced repetition), and a knowledge graph.', '筆記、字卡(間隔重複)與知識圖譜。')}
+              />
+              <Step
+                icon={<MapIcon />}
+                title={t('Travel · Voyage', '旅遊 · Voyage')}
+                body={t('Multi-day trips: days, activities, reservations, packing — shareable.', '多天行程:日期、活動、訂位、打包 —— 可分享。')}
+              />
+              <Step
+                icon={<ListTodo />}
+                title={t('Tasks · Tempo', '任務 · Tempo')}
+                body={t('To-dos & lists, habits, a calendar, recurrence, and reminders.', '待辦與清單、習慣、行事曆、重複與提醒。')}
+              />
+            </div>
+            <p className="text-[13px] text-muted-foreground">
+              {t(
+                'Switch spaces from the name at the top-left. More may arrive over time — and your connected AI can work in any of them.',
+                '從左上角的名稱切換區塊。未來可能還會加入更多 —— 而你連接的 AI 在每個區塊都能幫你做事。',
               )}
             </p>
           </section>
@@ -38,12 +76,12 @@ export function GuideScreen() {
           <section className="space-y-3 rounded-2xl border border-border bg-card p-5 shadow-soft">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-brand" />
-              <h2 className="font-serif text-xl text-foreground">{t('Let an AI fill your library', '讓 AI 充實你的資料庫')}</h2>
+              <h2 className="font-serif text-xl text-foreground">{t('Let your AI do the work', '讓你的 AI 幫你做事')}</h2>
             </div>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
               {t(
-                'Already chatting with ChatGPT, Claude, or another AI? Connect it once and it can drop notes & flashcards straight into Mnema. The full setup — create a key, pick your assistant, see what it can do — lives on',
-                '已經在用 ChatGPT、Claude 或其他 AI 聊天了嗎？只要連接一次，它就能直接把筆記與字卡放進 Mnema。完整設定 — 建立金鑰、挑選你的助理、了解它能做什麼 — 都在',
+                'Already chatting with ChatGPT, Claude, or another AI? Connect it once and it can create notes, draft whole trips, and add tasks or reminders straight into Mnema — it figures out which space from what you ask. The full setup — create a key, pick your assistant, see what it can do — lives on',
+                '已經在用 ChatGPT、Claude 或其他 AI 聊天了嗎？只要連接一次，它就能直接幫你建立筆記、草擬整趟行程、新增任務或提醒到 Mnema —— 它會依你說的內容判斷該放進哪個區塊。完整設定 — 建立金鑰、挑選你的助理、了解它能做什麼 — 都在',
               )}{' '}
               <Link to="/settings/integrations" className="font-medium text-brand hover:underline">{t('Connect an AI', '連接 AI')}</Link>.
             </p>
@@ -65,8 +103,8 @@ export function GuideScreen() {
                 {t('Yes. Keys are', '安全。金鑰預設為')}{' '}
                 <strong className="text-foreground">{t('add-only', '僅可新增')}</strong>{' '}
                 {t(
-                  "by default — an AI can only add to your library, never change or delete it, and never see anyone else's. Revoke a key anytime in",
-                  '— AI 只能為你的資料庫新增內容，無法修改或刪除，也看不到其他人的資料。你隨時可以在',
+                  "by default — an AI can only add to your spaces, never change, complete, or delete anything, and never see anyone else's. Revoke a key anytime in",
+                  '— AI 只能為你的各個區塊新增內容，無法修改、完成或刪除任何東西,也看不到其他人的資料。你隨時可以在',
                 )}{' '}
                 <Link to="/settings/integrations" className="text-brand hover:underline">{t('Connect an AI', '連接 AI')}</Link>
                 {t('.', ' 撤銷金鑰。')}
