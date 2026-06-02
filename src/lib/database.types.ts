@@ -514,6 +514,39 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen_at: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_seen_at?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen_at?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       review_logs: {
         Row: {
           card_id: string
@@ -613,6 +646,238 @@ export type Database = {
             columns: ["itinerary_id"]
             isOneToOne: false
             referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_checkins: {
+        Row: {
+          checkin_date: string
+          created_at: string
+          id: string
+          note: string | null
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          checkin_date: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          checkin_date?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_checkins_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_lists: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_via: string
+          icon: string | null
+          id: string
+          is_archived: boolean
+          kind: string
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_via?: string
+          icon?: string | null
+          id?: string
+          is_archived?: boolean
+          kind?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_via?: string
+          icon?: string | null
+          id?: string
+          is_archived?: boolean
+          kind?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_reminders: {
+        Row: {
+          created_at: string
+          created_via: string
+          id: string
+          method: string
+          offset_min: number | null
+          remind_at: string
+          sent_at: string | null
+          status: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_via?: string
+          id?: string
+          method?: string
+          offset_min?: number | null
+          remind_at: string
+          sent_at?: string | null
+          status?: string
+          task_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_via?: string
+          id?: string
+          method?: string
+          offset_min?: number | null
+          remind_at?: string
+          sent_at?: string | null
+          status?: string
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_reminders_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_via?: string
+          current_streak?: number
+          description?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          duration_min?: number | null
+          id?: string
+          kind?: string
+          labels?: string[]
+          list_id?: string | null
+          longest_streak?: number
+          next_occurrence?: string | null
+          parent_task_id?: string | null
+          priority?: number
+          recurrence_after_completion?: boolean
+          recurrence_anchor?: string | null
+          recurrence_rule?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          sort_order?: number
+          status?: string
+          title: string
+          tz?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_via?: string
+          current_streak?: number
+          description?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          duration_min?: number | null
+          id?: string
+          kind?: string
+          labels?: string[]
+          list_id?: string | null
+          longest_streak?: number
+          next_occurrence?: string | null
+          parent_task_id?: string | null
+          priority?: number
+          recurrence_after_completion?: boolean
+          recurrence_anchor?: string | null
+          recurrence_rule?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          sort_order?: number
+          status?: string
+          title?: string
+          tz?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "task_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -772,6 +1037,120 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "itinerary_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      add_reminder: {
+        Args: {
+          p_created_via?: string
+          p_offset_min?: number
+          p_remind_at: string
+          p_task_id: string
+          p_user_id: string | null
+        }
+        Returns: {
+          created_at: string
+          created_via: string
+          id: string
+          method: string
+          offset_min: number | null
+          remind_at: string
+          sent_at: string | null
+          status: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "task_reminders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      check_in: {
+        Args: {
+          p_checkin_date?: string
+          p_note?: string
+          p_task_id: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_task: {
+        Args: {
+          p_completed_at?: string
+          p_next_occurrence?: string
+          p_task_id: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1227,6 +1606,133 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_task: {
+        Args: {
+          p_created_via?: string
+          p_description?: string
+          p_due_date?: string
+          p_due_time?: string
+          p_duration_min?: number
+          p_kind?: string
+          p_labels?: string[]
+          p_list_id?: string
+          p_next_occurrence?: string
+          p_parent_task_id?: string
+          p_priority?: number
+          p_recurrence_after_completion?: boolean
+          p_recurrence_anchor?: string
+          p_recurrence_rule?: string
+          p_scheduled_date?: string
+          p_scheduled_time?: string
+          p_sort_order?: number
+          p_title: string
+          p_tz?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_task_list: {
+        Args: {
+          p_color?: string
+          p_created_via?: string
+          p_icon?: string
+          p_kind?: string
+          p_name: string
+          p_sort_order?: number
+          p_user_id: string | null
+        }
+        Returns: {
+          color: string | null
+          created_at: string
+          created_via: string
+          icon: string | null
+          id: string
+          is_archived: boolean
+          kind: string
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "task_lists"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_tasks_bulk: {
+        Args: { p_tasks: Json; p_user_id: string | null }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_trip_bulk: {
         Args: { p_created_via?: string; p_trip: Json; p_user_id: string | null }
         Returns: Json
@@ -1263,12 +1769,37 @@ export type Database = {
         Args: { p_note_id: string; p_user_id: string | null }
         Returns: boolean
       }
+      delete_push_subscription: {
+        Args: { p_endpoint: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      delete_task: {
+        Args: { p_task_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      delete_task_list: {
+        Args: { p_list_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      due_reminders_for_cron: { Args: never; Returns: Json }
       get_graph: { Args: { p_user_id: string | null }; Returns: Json }
+      get_habit: {
+        Args: { p_task_id: string; p_user_id: string | null }
+        Returns: Json
+      }
       get_itinerary: {
         Args: { p_id: string; p_user_id: string | null }
         Returns: Json
       }
       get_shared_itinerary: { Args: { p_token: string }; Returns: Json }
+      get_streak: {
+        Args: { p_task_id: string; p_user_id: string | null }
+        Returns: Json
+      }
+      get_task: {
+        Args: { p_task_id: string; p_user_id: string | null }
+        Returns: Json
+      }
       itinerary_item_json: {
         Args: { i: Database["public"]["Tables"]["itinerary_items"]["Row"] }
         Returns: Json
@@ -1332,6 +1863,105 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      list_tasks: {
+        Args: {
+          p_due_before?: string
+          p_include_subtasks?: boolean
+          p_kind?: string
+          p_label?: string
+          p_limit?: number
+          p_list_id?: string
+          p_scheduled_on?: string
+          p_status?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      mark_reminder_delivered: {
+        Args: { p_reminder_id: string }
+        Returns: boolean
+      }
+      move_task: {
+        Args: {
+          p_list_id?: string
+          p_parent_task_id?: string
+          p_task_id: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      prune_push_subscription: {
+        Args: { p_endpoint: string }
+        Returns: boolean
+      }
       record_review: {
         Args: {
           p_card: Json
@@ -1376,12 +2006,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      remove_reminder: {
+        Args: { p_reminder_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       reorder_days: {
         Args: { p_day_ids: Json; p_itinerary_id: string; p_user_id: string | null }
         Returns: boolean
       }
       reorder_items: {
         Args: { p_day_id: string; p_item_ids: Json; p_user_id: string | null }
+        Returns: boolean
+      }
+      reorder_task_lists: {
+        Args: { p_list_ids: string[]; p_user_id: string | null }
+        Returns: boolean
+      }
+      reorder_tasks: {
+        Args: { p_list_id: string; p_task_ids: string[]; p_user_id: string | null }
         Returns: boolean
       }
       revoke_api_key: {
@@ -1391,6 +2033,77 @@ export type Database = {
       revoke_share_link: {
         Args: { p_id: string; p_user_id: string | null }
         Returns: boolean
+      }
+      save_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen_at: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "push_subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      schedule_task: {
+        Args: {
+          p_due_date?: string
+          p_due_time?: string
+          p_duration_min?: number
+          p_scheduled_date?: string
+          p_scheduled_time?: string
+          p_task_id: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_notes: {
         Args: { p_limit?: number; p_query: string; p_user_id: string | null }
@@ -1408,6 +2121,44 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "notes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      search_tasks: {
+        Args: { p_limit?: number; p_query: string; p_user_id: string | null }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
           isOneToOne: false
           isSetofReturn: true
         }
@@ -1632,6 +2383,178 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "notes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_recurrence: {
+        Args: {
+          p_next_occurrence?: string
+          p_recurrence_after_completion?: boolean
+          p_recurrence_anchor?: string
+          p_recurrence_rule: string
+          p_task_id: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      snooze_task: {
+        Args: {
+          p_task_id: string
+          p_until: string
+          p_until_time?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      suggest_recurring_tasks: {
+        Args: {
+          p_lookback_days?: number
+          p_min_count?: number
+          p_user_id: string | null
+        }
+        Returns: Json
+      }
+      uncheck_in: {
+        Args: { p_checkin_date?: string; p_task_id: string; p_user_id: string | null }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      uncomplete_task: {
+        Args: { p_task_id: string; p_user_id: string | null }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1929,6 +2852,87 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_task: {
+        Args: {
+          p_description?: string
+          p_due_date?: string
+          p_due_time?: string
+          p_labels?: string[]
+          p_list_id?: string
+          p_priority?: number
+          p_sort_order?: number
+          p_status?: string
+          p_task_id: string
+          p_title?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_task_list: {
+        Args: {
+          p_color?: string
+          p_icon?: string
+          p_is_archived?: boolean
+          p_kind?: string
+          p_list_id: string
+          p_name?: string
+          p_sort_order?: number
+          p_user_id: string | null
+        }
+        Returns: {
+          color: string | null
+          created_at: string
+          created_via: string
+          icon: string | null
+          id: string
+          is_archived: boolean
+          kind: string
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "task_lists"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       verify_api_key: {
         Args: { p_key_hash: string }
         Returns: {
@@ -2069,7 +3073,7 @@ export const Constants = {
   },
 } as const
 
-// ── Convenience row aliases (stable names used across the app) ──────────────
+// -- Convenience row aliases (stable names used across the app) --
 type PublicTables = Database['public']['Tables']
 export type DeckRow = PublicTables['decks']['Row']
 export type NoteRow = PublicTables['notes']['Row']
@@ -2083,3 +3087,9 @@ export type ShareLinkRow = PublicTables['share_links']['Row']
 export type ItineraryMemberRow = PublicTables['itinerary_members']['Row']
 export type TripBookingRow = PublicTables['trip_bookings']['Row']
 export type TripChecklistRow = PublicTables['trip_checklist']['Row']
+// Tempo (todos / habits / reminders)
+export type TaskListRow = PublicTables['task_lists']['Row']
+export type TaskRow = PublicTables['tasks']['Row']
+export type TaskCheckinRow = PublicTables['task_checkins']['Row']
+export type TaskReminderRow = PublicTables['task_reminders']['Row']
+export type PushSubscriptionRow = PublicTables['push_subscriptions']['Row']
