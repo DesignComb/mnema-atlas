@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   CalendarPlus,
   CalendarRange,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronUp,
@@ -14,6 +15,7 @@ import {
   Pencil,
   Plus,
   Share2,
+  SlidersHorizontal,
   Table2,
   Ticket,
   Trash2,
@@ -52,8 +54,12 @@ type TripTab = 'itinerary' | 'bookings' | 'budget' | 'packing'
 type ItinView = 'timeline' | 'table' | 'board'
 import { Button } from '@/components/ui/button'
 import {
+  CATEGORIES,
   CATEGORY_META,
   STATUS_META,
+  STATUS_ORDER,
+  type Category,
+  type ItemStatus,
   categoryOf,
   fmtCost,
   fmtDateRange,
@@ -80,6 +86,8 @@ export function TripScreen() {
   const tab: TripTab = search.tab ?? 'itinerary'
   const setTab = (next: TripTab) => navigate({ to: '/trips/$tripId', params: { tripId }, search: { tab: next } })
   const [view, setView] = useState<ItinView>('timeline')
+  const [hiddenCats, setHiddenCats] = useState<Set<Category>>(new Set())
+  const [hiddenStatuses, setHiddenStatuses] = useState<Set<ItemStatus>>(new Set())
   const [tripDialog, setTripDialog] = useState(false)
   const [shareDialog, setShareDialog] = useState(false)
   const [membersDialog, setMembersDialog] = useState(false)
@@ -179,6 +187,20 @@ export function TripScreen() {
   const costEntries = Object.entries(trip.cost_by_currency ?? {})
   const isOwner = trip.my_role === 'owner'
   const canEdit = isOwner || trip.my_role === 'editor'
+
+  // Filter: hide selected categories / statuses across all itinerary views.
+  const matchItem = (i: ItineraryItem) =>
+    !hiddenCats.has(categoryOf(i.category)) && !hiddenStatuses.has(statusOf(i.status))
+  const filterActive = hiddenCats.size > 0 || hiddenStatuses.size > 0
+  const allItems = [...trip.days.flatMap((d) => d.items), ...trip.unscheduled]
+  const catsPresent = CATEGORIES.filter((c) => allItems.some((i) => categoryOf(i.category) === c))
+  const fTrip = filterActive
+    ? {
+        ...trip,
+        days: trip.days.map((d) => ({ ...d, items: d.items.filter(matchItem) })),
+        unscheduled: trip.unscheduled.filter(matchItem),
+      }
+    : trip
 
   return (
     <>
@@ -294,8 +316,16 @@ export function TripScreen() {
             </div>
           ) : null}
 
-          {/* View switcher (Notion-style: timeline / table / board) */}
-          <div className="flex justify-end">
+          {/* Filter + view switcher (Notion-style: timeline / table / board) */}
+          <div className="flex items-center justify-end gap-2">
+            <ItineraryFilter
+              cats={catsPresent}
+              hiddenCats={hiddenCats}
+              setHiddenCats={setHiddenCats}
+              hiddenStatuses={hiddenStatuses}
+              setHiddenStatuses={setHiddenStatuses}
+              t={t}
+            />
             <div className="inline-flex gap-0.5 rounded-lg border border-border p-0.5">
               {(
                 [
@@ -328,6 +358,7 @@ export function TripScreen() {
               dayIndex={dayIndex}
               dayCount={trip.days.length}
               canEdit={canEdit}
+              match={matchItem}
               t={t}
               onAddItem={() => setItemDialog({ open: true, dayId: day.id })}
               onEditDay={() => setDayDialog({ open: true, day })}
@@ -351,19 +382,21 @@ export function TripScreen() {
                 ) : null}
               </div>
               <div className="space-y-1.5">
-                {trip.unscheduled.map((item, index) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    index={index}
-                    count={trip.unscheduled.length}
-                    canEdit={canEdit}
-                    t={t}
-                    onEdit={() => setItemDialog({ open: true, item, dayId: null })}
-                    onDelete={() => removeItem(item)}
-                    onMove={(dir) => moveItem(trip.unscheduled, null, index, dir)}
-                  />
-                ))}
+                {trip.unscheduled.map((item, index) =>
+                  matchItem(item) ? (
+                    <ItemRow
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      count={trip.unscheduled.length}
+                      canEdit={canEdit}
+                      t={t}
+                      onEdit={() => setItemDialog({ open: true, item, dayId: null })}
+                      onDelete={() => removeItem(item)}
+                      onMove={(dir) => moveItem(trip.unscheduled, null, index, dir)}
+                    />
+                  ) : null,
+                )}
               </div>
             </section>
           ) : null}
@@ -391,9 +424,9 @@ export function TripScreen() {
           ) : null}
             </>
           ) : view === 'table' ? (
-            <ItineraryTable trip={trip} canEdit={canEdit} onEdit={openItem} />
+            <ItineraryTable trip={fTrip} canEdit={canEdit} onEdit={openItem} />
           ) : (
-            <ItineraryBoard trip={trip} canEdit={canEdit} onEdit={openItem} />
+            <ItineraryBoard trip={fTrip} canEdit={canEdit} onEdit={openItem} />
           )}
             </>
           ) : null}
@@ -442,11 +475,109 @@ function tripRow(trip: ReturnType<typeof useItinerary>['data'] & {}) {
 
 type Tr = (en: string, zh: string) => string
 
+function ItineraryFilter({
+  cats,
+  hiddenCats,
+  setHiddenCats,
+  hiddenStatuses,
+  setHiddenStatuses,
+  t,
+}: {
+  cats: Category[]
+  hiddenCats: Set<Category>
+  setHiddenCats: (s: Set<Category>) => void
+  hiddenStatuses: Set<ItemStatus>
+  setHiddenStatuses: (s: Set<ItemStatus>) => void
+  t: Tr
+}) {
+  const active = hiddenCats.size > 0 || hiddenStatuses.size > 0
+  const toggleCat = (c: Category) => {
+    const n = new Set(hiddenCats)
+    if (n.has(c)) n.delete(c)
+    else n.add(c)
+    setHiddenCats(n)
+  }
+  const toggleStatus = (s: ItemStatus) => {
+    const n = new Set(hiddenStatuses)
+    if (n.has(s)) n.delete(s)
+    else n.add(s)
+    setHiddenStatuses(n)
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={t('Filter', '篩選')}
+        className={`relative flex size-8 items-center justify-center rounded-lg border border-border transition hover:bg-accent ${active ? 'text-brand' : 'text-muted-foreground'}`}
+      >
+        <SlidersHorizontal className="size-4" />
+        {active ? <span className="absolute right-1 top-1 size-1.5 rounded-full bg-brand" /> : null}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <div className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+          {t('Category', '分類')}
+        </div>
+        {cats.map((c) => {
+          const meta = CATEGORY_META[c]
+          const on = !hiddenCats.has(c)
+          return (
+            <DropdownMenuItem
+              key={c}
+              onSelect={(e) => {
+                e.preventDefault()
+                toggleCat(c)
+              }}
+            >
+              <span className={`size-2 rounded-full ${meta.dot}`} />
+              <span className="flex-1">{t(meta.en, meta.zh)}</span>
+              {on ? <Check className="size-4 text-brand" /> : null}
+            </DropdownMenuItem>
+          )
+        })}
+        <DropdownMenuSeparator />
+        <div className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+          {t('Status', '狀態')}
+        </div>
+        {STATUS_ORDER.map((s) => {
+          const meta = STATUS_META[s]
+          const on = !hiddenStatuses.has(s)
+          return (
+            <DropdownMenuItem
+              key={s}
+              onSelect={(e) => {
+                e.preventDefault()
+                toggleStatus(s)
+              }}
+            >
+              <span className={`size-2 rounded-full ${meta.dot}`} />
+              <span className="flex-1">{t(meta.en, meta.zh)}</span>
+              {on ? <Check className="size-4 text-brand" /> : null}
+            </DropdownMenuItem>
+          )
+        })}
+        {active ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => {
+                setHiddenCats(new Set())
+                setHiddenStatuses(new Set())
+              }}
+            >
+              {t('Show all', '顯示全部')}
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 function DaySection({
   day,
   dayIndex,
   dayCount,
   canEdit,
+  match,
   t,
   onAddItem,
   onEditDay,
@@ -460,6 +591,7 @@ function DaySection({
   dayIndex: number
   dayCount: number
   canEdit: boolean
+  match: (item: ItineraryItem) => boolean
   t: Tr
   onAddItem: () => void
   onEditDay: () => void
@@ -522,23 +654,30 @@ function DaySection({
         ) : null}
       </div>
       <div className="space-y-1.5 p-2 sm:p-2.5">
-        {day.items.length ? (
-          day.items.map((item, index) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              index={index}
-              count={day.items.length}
-              canEdit={canEdit}
-              t={t}
-              onEdit={() => onEditItem(item)}
-              onDelete={() => onDeleteItem(item)}
-              onMove={(dir) => onMoveItem(index, dir)}
-            />
-          ))
-        ) : (
+        {day.items.length === 0 ? (
           <p className="px-2 py-3 text-center text-[12.5px] text-muted-foreground/70">
             {t('No activities yet.', '還沒有活動。')}
+          </p>
+        ) : day.items.some(match) ? (
+          // Render only matching items, but keep the FULL index so reorder is correct.
+          day.items.map((item, index) =>
+            match(item) ? (
+              <ItemRow
+                key={item.id}
+                item={item}
+                index={index}
+                count={day.items.length}
+                canEdit={canEdit}
+                t={t}
+                onEdit={() => onEditItem(item)}
+                onDelete={() => onDeleteItem(item)}
+                onMove={(dir) => onMoveItem(index, dir)}
+              />
+            ) : null,
+          )
+        ) : (
+          <p className="px-2 py-3 text-center text-[12.5px] text-muted-foreground/60">
+            {t('Nothing matches the filter.', '沒有符合篩選的項目。')}
           </p>
         )}
         {canEdit ? (
@@ -580,7 +719,7 @@ function ItemRow({
 
   return (
     <div
-      className="group relative flex flex-col gap-1.5 rounded-lg border border-transparent py-2.5 pl-4 pr-2 transition hover:border-border hover:bg-background sm:flex-row sm:gap-4"
+      className="group relative flex gap-3 rounded-lg border border-transparent py-2.5 pl-4 pr-2 transition hover:border-border hover:bg-background sm:gap-4"
       onClick={canEdit ? onEdit : undefined}
       role={canEdit ? 'button' : undefined}
     >
@@ -590,8 +729,8 @@ function ItemRow({
         className={`pointer-events-none absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full ${cat.dot}`}
       />
 
-      {/* COLUMN 1 · time / place / people / labels */}
-      <div className="shrink-0 space-y-1 sm:w-44">
+      {/* COLUMN 1 · time / place / people / labels (same two-column logic on mobile) */}
+      <div className="w-[5.5rem] shrink-0 space-y-1 sm:w-44">
         <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">{time || '—'}</div>
         {item.place ? (
           maps ? (
