@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from '@tanstack/react-router'
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
   ArrowUpRight,
   CalendarPlus,
@@ -76,7 +76,9 @@ export function TripScreen() {
   const t = useT()
   useItineraryRealtime(tripId)
 
-  const [tab, setTab] = useState<TripTab>('itinerary')
+  const search = useSearch({ strict: false }) as { tab?: TripTab }
+  const tab: TripTab = search.tab ?? 'itinerary'
+  const setTab = (next: TripTab) => navigate({ to: '/trips/$tripId', params: { tripId }, search: { tab: next } })
   const [view, setView] = useState<ItinView>('timeline')
   const [tripDialog, setTripDialog] = useState(false)
   const [shareDialog, setShareDialog] = useState(false)
@@ -142,7 +144,7 @@ export function TripScreen() {
       <>
         <PageHeader title={t('Trip', '行程')} icon={<MapIcon className="size-4" />} />
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="mx-auto max-w-3xl space-y-3">
+          <div className="mx-auto max-w-5xl space-y-3">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-24 animate-pulse rounded-xl bg-card" />
             ))}
@@ -223,7 +225,7 @@ export function TripScreen() {
         }
       />
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-4 px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto max-w-5xl space-y-4 px-4 py-4 sm:px-6 sm:py-6">
           <div className="flex items-center justify-between gap-2">
             <Link
               to="/trips"
@@ -251,8 +253,8 @@ export function TripScreen() {
             </div>
           ) : null}
 
-          {/* Section nav (underline) */}
-          <div className="flex items-center gap-0.5 overflow-x-auto border-b border-border">
+          {/* Section nav (underline) — mobile only; desktop uses the sidebar */}
+          <div className="flex items-center gap-0.5 overflow-x-auto border-b border-border lg:hidden">
             {(
               [
                 ['itinerary', 'Itinerary', '行程', CalendarRange],
@@ -575,11 +577,10 @@ function ItemRow({
   const maps = mapsUrl(item.place, item.lat, item.lng)
   const booking = safeHttps(item.booking_url)
   const cost = fmtCost(item.cost, item.currency)
-  const hasMeta = Boolean(item.place || cost || item.transport_detail || item.assignees?.length || booking)
 
   return (
     <div
-      className="group relative rounded-lg border border-transparent py-2.5 pl-4 pr-2 transition hover:border-border hover:bg-background"
+      className="group relative flex flex-col gap-1.5 rounded-lg border border-transparent py-2.5 pl-4 pr-2 transition hover:border-border hover:bg-background sm:flex-row sm:gap-4"
       onClick={canEdit ? onEdit : undefined}
       role={canEdit ? 'button' : undefined}
     >
@@ -589,66 +590,64 @@ function ItemRow({
         className={`pointer-events-none absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full ${cat.dot}`}
       />
 
-      {/* Tier 1 · time */}
-      <div className="font-mono text-[12px] font-semibold tabular-nums text-muted-foreground">{time || '—'}</div>
-
-      {/* Tier 2 · title (dominant) + bare status word */}
-      <div className="mt-0.5 flex items-baseline justify-between gap-3 pr-7">
-        <h4 className="min-w-0 flex-1 text-[15px] font-semibold leading-snug text-foreground sm:text-base">
-          {item.title}
-        </h4>
-        {status !== 'planned' ? (
-          <span className={`shrink-0 text-[11px] font-medium ${st.text}`}>{t(st.en, st.zh)}</span>
-        ) : null}
-      </div>
-
-      {/* Tier 3 · meta (category word leads; no per-field icons) */}
-      {hasMeta ? (
-        <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-muted-foreground">
-          <span className={`text-[10px] font-semibold uppercase tracking-wide ${cat.text}`}>{t(cat.en, cat.zh)}</span>
-          {item.place ? (
-            maps ? (
-              <a
-                href={maps}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex max-w-[65%] items-center gap-0.5 truncate font-medium text-foreground/80 transition hover:text-brand"
-              >
-                {item.place}
-                <ArrowUpRight className="size-3 shrink-0 opacity-60" />
-              </a>
-            ) : (
-              <span className="max-w-[65%] truncate font-medium text-foreground/80">{item.place}</span>
-            )
-          ) : null}
-          {item.transport_detail ? <span>{item.transport_detail}</span> : null}
-          {cost ? <span className="font-mono font-medium tabular-nums text-foreground/80">{cost}</span> : null}
-          {item.assignees?.length ? <span>{item.assignees.join(' · ')}</span> : null}
-          {booking ? (
+      {/* COLUMN 1 · time / place / people / labels */}
+      <div className="shrink-0 space-y-1 sm:w-44">
+        <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">{time || '—'}</div>
+        {item.place ? (
+          maps ? (
             <a
-              href={booking}
+              href={maps}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-0.5 transition hover:text-brand"
+              className="flex items-center gap-0.5 text-[12px] text-muted-foreground transition hover:text-brand"
             >
-              {t('Booking', '訂購')}
-              <ArrowUpRight className="size-3 opacity-60" />
+              <span className="truncate">{item.place}</span>
+              <ArrowUpRight className="size-3 shrink-0 opacity-60" />
             </a>
+          ) : (
+            <div className="truncate text-[12px] text-muted-foreground">{item.place}</div>
+          )
+        ) : null}
+        {item.assignees?.length ? (
+          <div className="truncate text-[12px] text-muted-foreground">{item.assignees.join(' · ')}</div>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
+          <span className={`text-[10px] font-semibold uppercase tracking-wide ${cat.text}`}>{t(cat.en, cat.zh)}</span>
+          {status !== 'planned' ? (
+            <span className={`text-[11px] font-medium ${st.text}`}>{t(st.en, st.zh)}</span>
           ) : null}
+          {cost ? <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{cost}</span> : null}
         </div>
-      ) : null}
+      </div>
 
-      {/* Tier 4 · notes (dimmest, clamped) */}
-      {item.notes ? (
-        <p
-          title={item.notes}
-          className="mt-1.5 line-clamp-2 whitespace-pre-wrap text-[11.5px] leading-relaxed text-muted-foreground/70"
-        >
-          {item.notes}
-        </p>
-      ) : null}
+      {/* COLUMN 2 · title (dominant) + description */}
+      <div className="min-w-0 flex-1 pr-7">
+        <h4 className="text-[16px] font-semibold leading-snug text-foreground sm:text-[18px]">{item.title}</h4>
+        {item.transport_detail ? (
+          <p className="mt-0.5 text-[12.5px] text-muted-foreground">{item.transport_detail}</p>
+        ) : null}
+        {item.notes ? (
+          <p
+            title={item.notes}
+            className="mt-1 line-clamp-3 whitespace-pre-wrap text-[12.5px] leading-relaxed text-muted-foreground/80"
+          >
+            {item.notes}
+          </p>
+        ) : null}
+        {booking ? (
+          <a
+            href={booking}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1 inline-flex items-center gap-0.5 text-[12px] text-muted-foreground transition hover:text-brand"
+          >
+            {t('Booking', '訂購')}
+            <ArrowUpRight className="size-3 opacity-60" />
+          </a>
+        ) : null}
+      </div>
 
       {/* Actions · single overflow menu, calm at rest */}
       {canEdit ? (

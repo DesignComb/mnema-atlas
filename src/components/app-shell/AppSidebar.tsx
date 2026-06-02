@@ -1,6 +1,8 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
+  ArrowLeft,
   BookOpenCheck,
+  CalendarRange,
   Check,
   ChevronsUpDown,
   FileText,
@@ -9,6 +11,7 @@ import {
   Home,
   Layers,
   LogOut,
+  Luggage,
   Map as MapIcon,
   Moon,
   Plug,
@@ -17,6 +20,8 @@ import {
   Share2,
   Sparkles,
   Sun,
+  Ticket,
+  Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
@@ -41,6 +46,12 @@ const NAV_STUDY = [
   { to: '/study', label: 'Study', zh: '複習', icon: GraduationCap, exact: false },
 ] as const
 const NAV_TRAVEL = [{ to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false }] as const
+const TRIP_SECTIONS = [
+  { key: 'itinerary', en: 'Itinerary', zh: '行程', icon: CalendarRange },
+  { key: 'bookings', en: 'Reservations', zh: '訂位', icon: Ticket },
+  { key: 'budget', en: 'Budget', zh: '預算', icon: Wallet },
+  { key: 'packing', en: 'Packing', zh: '打包', icon: Luggage },
+] as const
 
 export function AppSidebar({
   onOpenCommand,
@@ -64,6 +75,10 @@ export function AppSidebar({
   // Top-level space: Study vs Travel. Travel routes (/trips, /s) flip the rail.
   const space: 'study' | 'travel' = pathname.startsWith('/trips') ? 'travel' : 'study'
   const nav = space === 'travel' ? NAV_TRAVEL : NAV_STUDY
+  // On a trip detail page the rail shows that trip's sections instead of the Trips link.
+  const tripMatch = pathname.match(/^\/trips\/([0-9a-fA-F-]{36})$/)
+  const tripId = tripMatch ? tripMatch[1] : null
+  const tripTab = useRouterState({ select: (s) => (s.location.search as { tab?: string }).tab ?? 'itinerary' })
 
   const initials = (user?.email ?? '?').slice(0, 2).toUpperCase()
 
@@ -120,24 +135,55 @@ export function AppSidebar({
 
       {/* Primary nav */}
       <nav className="flex flex-col gap-0.5 px-3 py-1">
-        {nav.map((item) => {
-          const active = item.exact ? pathname === item.to : pathname.startsWith(item.to)
-          return (
+        {tripId ? (
+          <>
             <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13.5px] font-medium transition-colors',
-                active
-                  ? 'bg-brand-muted text-brand'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
-              )}
+              to="/trips"
+              className="mb-0.5 flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
             >
-              <item.icon className="size-4" />
-              {t(item.label, item.zh)}
+              <ArrowLeft className="size-3.5" /> {t('All trips', '所有行程')}
             </Link>
-          )
-        })}
+            {TRIP_SECTIONS.map((s) => {
+              const active = tripTab === s.key
+              return (
+                <Link
+                  key={s.key}
+                  to="/trips/$tripId"
+                  params={{ tripId }}
+                  search={{ tab: s.key }}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13.5px] font-medium transition-colors',
+                    active
+                      ? 'bg-brand-muted text-brand'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+                  )}
+                >
+                  <s.icon className="size-4" />
+                  {t(s.en, s.zh)}
+                </Link>
+              )
+            })}
+          </>
+        ) : (
+          nav.map((item) => {
+            const active = item.exact ? pathname === item.to : pathname.startsWith(item.to)
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13.5px] font-medium transition-colors',
+                  active
+                    ? 'bg-brand-muted text-brand'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+                )}
+              >
+                <item.icon className="size-4" />
+                {t(item.label, item.zh)}
+              </Link>
+            )
+          })
+        )}
       </nav>
 
       {space === 'study' ? (

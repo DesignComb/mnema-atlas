@@ -148,17 +148,19 @@ export function ItemDialog({
           <DialogTitle>{editing ? t('Edit activity', '編輯活動') : t('Add activity', '新增活動')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-3.5">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="item-title">{t('Title', '標題')}</Label>
-            <Input
-              id="item-title"
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('e.g. Kiyomizu-dera', '例如：清水寺')}
-            />
-          </div>
+          {/* Title as a prominent heading — the dialog's clear top of hierarchy */}
+          <input
+            id="item-title"
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={t('Activity title', '活動標題')}
+            className="w-full border-b border-border bg-transparent pb-2 text-lg font-semibold text-foreground placeholder:font-normal placeholder:text-muted-foreground/50 focus-visible:border-brand focus-visible:outline-none"
+          />
 
+          <p className="-mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            {t('When & where', '時間與地點')}
+          </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="item-cat">{t('Category', '分類')}</Label>
@@ -247,6 +249,9 @@ export function ItemDialog({
             </div>
           </div>
 
+          <p className="-mb-1 mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            {t('Details', '細節')}
+          </p>
           <div className="grid grid-cols-[1fr_5rem] gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="item-cost">{t('Cost (optional)', '花費（選填）')}</Label>
