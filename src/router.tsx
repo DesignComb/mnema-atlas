@@ -75,12 +75,13 @@ const tempoRoute = createRoute({
   // ?view=… selects the Tempo view; ?list=… focuses a single list.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { view?: 'today' | 'upcoming' | 'all' | 'calendar' | 'habits'; list?: string } => {
+  ): { view?: 'today' | 'upcoming' | 'all' | 'calendar' | 'habits'; list?: string; new?: 'list' } => {
     const view = search.view
     const ok = view === 'today' || view === 'upcoming' || view === 'all' || view === 'calendar' || view === 'habits'
     return {
       view: ok ? (view as 'today' | 'upcoming' | 'all' | 'calendar' | 'habits') : undefined,
       list: typeof search.list === 'string' && search.list ? search.list : undefined,
+      new: search.new === 'list' ? 'list' : undefined,
     }
   },
   component: lazyRouteComponent(() => import('@/routes/tempo'), 'TempoScreen'),

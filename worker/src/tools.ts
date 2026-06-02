@@ -77,6 +77,7 @@ import {
   updateTaskListInput,
 } from '../../shared/schemas'
 import { callRpc, ownedSelect, serviceClient } from './db'
+import { computeOccurrence, todayISO } from './recurrence'
 import type { ToolContext } from './env'
 
 export interface ToolResult {
@@ -962,6 +963,13 @@ export const tools: ToolDef[] = [
     schema: createTaskInput,
     readOnly: false,
     run: async (ctx, a) => {
+      const rule = (a.recurrence_rule as string | undefined) ?? null
+      let nextOcc = (a.next_occurrence as string | undefined) ?? null
+      if (rule && !nextOcc) {
+        const anchor =
+          (a.recurrence_anchor as string) || (a.scheduled_date as string) || (a.due_date as string) || todayISO()
+        nextOcc = computeOccurrence(rule, anchor, true)
+      }
       const task = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'create_task', {
         p_title: a.title,
         p_list_id: a.list_id ?? null,
@@ -975,10 +983,10 @@ export const tools: ToolDef[] = [
         p_due_time: a.due_time ?? null,
         p_duration_min: a.duration_min ?? null,
         p_kind: a.kind ?? 'task',
-        p_recurrence_rule: a.recurrence_rule ?? null,
+        p_recurrence_rule: rule,
         p_recurrence_after_completion: a.recurrence_after_completion ?? false,
         p_recurrence_anchor: a.recurrence_anchor ?? null,
-        p_next_occurrence: a.next_occurrence ?? null,
+        p_next_occurrence: nextOcc,
         p_tz: a.tz ?? null,
         p_sort_order: a.sort_order ?? 0,
         p_created_via: ctx.via,
@@ -1025,6 +1033,30 @@ export const tools: ToolDef[] = [
     readOnly: false,
     requiresScope: 'edit',
     run: async (ctx, a) => {
+      // Compute the precise next occurrence (full RRULE) unless the caller supplied one.
+      let nextOcc = (a.next_occurrence as string | undefined) ?? null
+      if (!nextOcc) {
+        const { data } = await serviceClient(ctx.env)
+          .from('tasks')
+          .select('recurrence_rule, recurrence_after_completion, next_occurrence, due_date, scheduled_date, kind')
+          .eq('user_id', ctx.userId)
+          .eq('id', a.task_id as string)
+          .maybeSingle()
+        const tk = data as {
+          recurrence_rule: string | null
+          recurrence_after_completion: boolean
+          next_occurrence: string | null
+          due_date: string | null
+          scheduled_date: string | null
+          kind: string
+        } | null
+        if (tk?.recurrence_rule && tk.kind !== 'habit') {
+          const base = tk.recurrence_after_completion
+            ? todayISO()
+            : tk.next_occurrence || tk.due_date || tk.scheduled_date || todayISO()
+          nextOcc = computeOccurrence(tk.recurrence_rule, base, false)
+        }
+      }
       const task = await callRpc<{ id: string; status: string; next_occurrence: string | null }>(
         ctx.env,
         ctx.userId,
@@ -1032,7 +1064,7 @@ export const tools: ToolDef[] = [
         {
           p_task_id: a.task_id,
           p_completed_at: a.completed_at ?? undefined,
-          p_next_occurrence: a.next_occurrence ?? undefined,
+          p_next_occurrence: nextOcc ?? undefined,
         },
       )
       return { summary: task.next_occurrence ? `Completed; next on ${task.next_occurrence}` : 'Task completed', data: task }
@@ -1093,12 +1125,17 @@ export const tools: ToolDef[] = [
     readOnly: false,
     requiresScope: 'edit',
     run: async (ctx, a) => {
+      let nextOcc = (a.next_occurrence as string | undefined) ?? null
+      if (!nextOcc) {
+        const anchor = (a.recurrence_anchor as string) || todayISO()
+        nextOcc = computeOccurrence(a.recurrence_rule as string, anchor, true)
+      }
       const task = await callRpc(ctx.env, ctx.userId, 'set_recurrence', {
         p_task_id: a.task_id,
         p_recurrence_rule: a.recurrence_rule,
         p_recurrence_after_completion: a.recurrence_after_completion ?? false,
         p_recurrence_anchor: a.recurrence_anchor ?? null,
-        p_next_occurrence: a.next_occurrence ?? null,
+        p_next_occurrence: nextOcc,
       })
       return { summary: 'Recurrence set', data: task }
     },

@@ -2,13 +2,18 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import {
   ArrowLeft,
   BookOpenCheck,
+  CalendarCheck,
+  CalendarClock,
+  CalendarDays,
   CalendarRange,
   Check,
   ChevronsUpDown,
   FileText,
+  Flame,
   GraduationCap,
   HelpCircle,
   Home,
+  Inbox,
   Layers,
   ListTodo,
   LogOut,
@@ -27,7 +32,7 @@ import {
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
-import { useDecks } from '@/lib/hooks'
+import { useDecks, useTaskLists } from '@/lib/hooks'
 import { cn, modKey } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -48,6 +53,14 @@ const NAV_STUDY = [
 ] as const
 const NAV_TRAVEL = [{ to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false }] as const
 const NAV_TEMPO = [{ to: '/tempo', label: 'Tasks', zh: '任務', icon: ListTodo, exact: false }] as const
+// In the Tempo space the rail shows views (by ?view=) + the user's lists (by ?list=).
+const TEMPO_VIEWS = [
+  { key: 'today', en: 'Today', zh: '今天', icon: CalendarCheck },
+  { key: 'upcoming', en: 'Upcoming', zh: '即將', icon: CalendarClock },
+  { key: 'all', en: 'All tasks', zh: '所有任務', icon: ListTodo },
+  { key: 'habits', en: 'Habits', zh: '習慣', icon: Flame },
+  { key: 'calendar', en: 'Calendar', zh: '行事曆', icon: CalendarDays },
+] as const
 const TRIP_SECTIONS = [
   { key: 'itinerary', en: 'Itinerary', zh: '行程', icon: CalendarRange },
   { key: 'bookings', en: 'Reservations', zh: '訂位', icon: Ticket },
@@ -75,6 +88,7 @@ export function AppSidebar({
   const { theme, toggle } = useTheme()
   const { t, lang, setLang } = useI18n()
   const { data: decks } = useDecks()
+  const { data: taskLists } = useTaskLists()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   // Top-level space: Study / Travel / Tempo. The pathname flips the rail.
@@ -88,6 +102,9 @@ export function AppSidebar({
   const tripMatch = pathname.match(/^\/trips\/([0-9a-fA-F-]{36})$/)
   const tripId = tripMatch ? tripMatch[1] : null
   const tripTab = useRouterState({ select: (s) => (s.location.search as { tab?: string }).tab ?? 'itinerary' })
+  const tempoView = useRouterState({ select: (s) => (s.location.search as { view?: string }).view ?? 'all' })
+  const tempoList = useRouterState({ select: (s) => (s.location.search as { list?: string }).list ?? '' })
+  const tempoLists = (taskLists ?? []).filter((l) => !l.is_archived)
 
   const initials = (user?.email ?? '?').slice(0, 2).toUpperCase()
 
@@ -187,6 +204,26 @@ export function AppSidebar({
               )
             })}
           </>
+        ) : space === 'tempo' ? (
+          TEMPO_VIEWS.map((v) => {
+            const active = tempoView === v.key
+            return (
+              <Link
+                key={v.key}
+                to="/tempo"
+                search={(prev) => ({ ...prev, view: v.key === 'all' ? undefined : v.key })}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13.5px] font-medium transition-colors',
+                  active
+                    ? 'bg-brand-muted text-brand'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+                )}
+              >
+                <v.icon className="size-4" />
+                {t(v.en, v.zh)}
+              </Link>
+            )
+          })
         ) : (
           nav.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to)
@@ -251,6 +288,76 @@ export function AppSidebar({
               {t('No decks yet. Create one, or let a connected AI add content.', '還沒有牌組。建立一個,或讓連接的 AI 幫你新增。')}
             </p>
           )}
+        </div>
+      </ScrollArea>
+      </>
+      ) : space === 'tempo' ? (
+      <>
+      {/* Lists */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+          {t('Lists', '清單')}
+        </span>
+        <Link
+          to="/tempo"
+          search={(prev) => ({ ...prev, new: 'list' })}
+          className="rounded p-0.5 text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
+          title={t('New list', '新增清單')}
+        >
+          <Plus className="size-3.5" />
+        </Link>
+      </div>
+      <ScrollArea className="flex-1 px-3">
+        <div className="flex flex-col gap-0.5 pb-4">
+          <Link
+            to="/tempo"
+            search={(prev) => ({ ...prev, list: undefined })}
+            className={cn(
+              'flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
+              tempoList === ''
+                ? 'bg-sidebar-accent text-foreground'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+            )}
+          >
+            <ListTodo className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{t('All lists', '全部清單')}</span>
+          </Link>
+          <Link
+            to="/tempo"
+            search={(prev) => ({ ...prev, list: 'inbox' })}
+            className={cn(
+              'flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
+              tempoList === 'inbox'
+                ? 'bg-sidebar-accent text-foreground'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+            )}
+          >
+            <Inbox className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{t('Inbox', '收件匣')}</span>
+          </Link>
+          {tempoLists.map((list) => {
+            const active = tempoList === list.id
+            return (
+              <Link
+                key={list.id}
+                to="/tempo"
+                search={(prev) => ({ ...prev, list: list.id })}
+                className={cn(
+                  'group flex items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
+                  active
+                    ? 'bg-sidebar-accent text-foreground'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+                )}
+              >
+                {list.icon ? (
+                  <span className="shrink-0 text-[13px] leading-none">{list.icon}</span>
+                ) : (
+                  <span className="size-1.5 shrink-0 rounded-full bg-brand/50" />
+                )}
+                <span className="truncate">{list.name}</span>
+              </Link>
+            )
+          })}
         </div>
       </ScrollArea>
       </>

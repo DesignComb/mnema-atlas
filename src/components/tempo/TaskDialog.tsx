@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useCreateTask, useUpdateTask } from '@/lib/hooks'
+import { useCreateTask, useSetRecurrence, useUpdateTask } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import type { TaskListRow, TaskRow } from '@/lib/database.types'
+import { buildRRule, computeOccurrence, parseRRule, WEEKDAYS, type Freq } from '@/lib/recurrence'
 import { TagInput } from '@/components/editor/TagInput'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,14 @@ const PRIORITIES = [
   { v: 3, en: 'High', zh: '高' },
   { v: 4, en: 'Urgent', zh: '緊急' },
 ] as const
+
+const WD_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+const WD_ZH = ['一', '二', '三', '四', '五', '六', '日']
+
+function localToday(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 export function TaskDialog({
   open,
@@ -40,6 +49,7 @@ export function TaskDialog({
   const editing = Boolean(task)
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
+  const setRecurrence = useSetRecurrence()
 
   const [title, setTitle] = useState('')
   const [listId, setListId] = useState<string>(INBOX)
@@ -49,8 +59,12 @@ export function TaskDialog({
   const [dueTime, setDueTime] = useState('')
   const [labels, setLabels] = useState<string[]>([])
   const [notes, setNotes] = useState('')
+  // recurrence
+  const [repeat, setRepeat] = useState<Freq | 'none'>('none')
+  const [interval, setIntervalV] = useState(1)
+  const [byday, setByday] = useState<string[]>([])
+  const [afterCompletion, setAfterCompletion] = useState(false)
 
-  // Seed from the task being edited (or defaults) whenever the dialog opens.
   useEffect(() => {
     if (!open) return
     setTitle(task?.title ?? '')
@@ -61,14 +75,23 @@ export function TaskDialog({
     setDueTime(task?.due_time ? task.due_time.slice(0, 5) : '')
     setLabels(task?.labels ?? [])
     setNotes(task?.description ?? '')
+    const p = parseRRule(task?.recurrence_rule ?? null)
+    setRepeat(p.freq)
+    setIntervalV(p.interval)
+    setByday(p.byday)
+    setAfterCompletion(task?.recurrence_after_completion ?? false)
   }, [open, task, defaultListId])
 
-  const pending = createTask.isPending || updateTask.isPending
+  const pending = createTask.isPending || updateTask.isPending || setRecurrence.isPending
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
     const list_id = listId === INBOX ? undefined : listId
+    const rule = repeat === 'none' ? null : buildRRule(repeat, interval, byday)
+    const anchor = dueDate || localToday()
+    let next: string | undefined
+    if (rule) next = (await computeOccurrence(rule, anchor, true)) ?? undefined
     try {
       if (editing && task) {
         await updateTask.mutateAsync({
@@ -81,6 +104,16 @@ export function TaskDialog({
           due_date: dueDate || undefined,
           due_time: dueTime || undefined,
         })
+        // Apply recurrence changes (or clear it) via the dedicated RPC.
+        if (rule || task.recurrence_rule) {
+          await setRecurrence.mutateAsync({
+            task_id: task.id,
+            recurrence_rule: rule ?? '',
+            recurrence_after_completion: afterCompletion,
+            recurrence_anchor: rule ? anchor : undefined,
+            next_occurrence: rule ? next : undefined,
+          })
+        }
       } else {
         await createTask.mutateAsync({
           title: title.trim(),
@@ -91,6 +124,10 @@ export function TaskDialog({
           kind,
           due_date: dueDate || undefined,
           due_time: dueTime || undefined,
+          recurrence_rule: rule ?? undefined,
+          recurrence_after_completion: rule ? afterCompletion : undefined,
+          recurrence_anchor: rule ? anchor : undefined,
+          next_occurrence: rule ? next : undefined,
         })
       }
       onOpenChange(false)
@@ -101,7 +138,7 @@ export function TaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit task', '編輯任務') : t('New task', '新增任務')}</DialogTitle>
         </DialogHeader>
@@ -148,6 +185,63 @@ export function TaskDialog({
               <Label htmlFor="task-due-time">{t('Due time', '截止時間')}</Label>
               <Input id="task-due-time" type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} />
             </div>
+          </div>
+
+          {/* Recurrence */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="task-repeat">{t('Repeat', '重複')}</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                id="task-repeat"
+                value={repeat}
+                onChange={(e) => setRepeat(e.target.value as Freq | 'none')}
+                className="w-40"
+              >
+                <option value="none">{t('Does not repeat', '不重複')}</option>
+                <option value="DAILY">{t('Daily', '每天')}</option>
+                <option value="WEEKLY">{t('Weekly', '每週')}</option>
+                <option value="MONTHLY">{t('Monthly', '每月')}</option>
+                <option value="YEARLY">{t('Yearly', '每年')}</option>
+              </Select>
+              {repeat !== 'none' ? (
+                <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                  <span>{t('every', '每')}</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={interval}
+                    onChange={(e) => setIntervalV(Math.max(1, Number(e.target.value) || 1))}
+                    className="w-16"
+                  />
+                </div>
+              ) : null}
+            </div>
+            {repeat === 'WEEKLY' ? (
+              <div className="flex flex-wrap gap-1">
+                {WEEKDAYS.map((d, i) => {
+                  const on = byday.includes(d)
+                  return (
+                    <button
+                      type="button"
+                      key={d}
+                      onClick={() => setByday(on ? byday.filter((x) => x !== d) : [...byday, d])}
+                      className={`size-7 rounded-full border text-[11px] font-medium transition ${
+                        on ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
+                      }`}
+                    >
+                      {t(WD_EN[i], WD_ZH[i])}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+            {repeat !== 'none' ? (
+              <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                <input type="checkbox" checked={afterCompletion} onChange={(e) => setAfterCompletion(e.target.checked)} />
+                {t('Count next from when I complete it', '完成後才開始算下一次')}
+              </label>
+            ) : null}
           </div>
 
           {!editing ? (
