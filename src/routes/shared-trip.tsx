@@ -16,7 +16,7 @@ export function SharedTripScreen() {
   })
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
+    <div className="theme-voyage min-h-dvh bg-background text-foreground">
       <header className="flex items-center gap-2 border-b border-border px-4 py-3 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">

@@ -66,7 +66,12 @@ export function AppLayout() {
 
   return (
     <MobileNavContext.Provider value={{ openNav: () => setNavOpen(true) }}>
-      <div className="flex h-dvh overflow-hidden bg-background text-foreground">
+      <div
+        className={cn(
+          'flex h-dvh overflow-hidden bg-background text-foreground',
+          pathname.startsWith('/trips') && 'theme-voyage',
+        )}
+      >
         {/* Desktop: persistent sidebar (lg+). */}
         <AppSidebar className="hidden w-64 lg:flex" {...sidebarProps} />
 
@@ -89,12 +94,12 @@ export function AppLayout() {
             navOpen ? 'translate-x-0 shadow-pop' : '-translate-x-full',
           )}
         >
-          <AppSidebar className="flex w-full" {...sidebarProps} />
+          <AppSidebar className="flex w-full" inDrawer {...sidebarProps} />
           <button
             ref={closeNavRef}
             onClick={() => setNavOpen(false)}
             aria-label={t('Close menu', '關閉選單')}
-            className="absolute right-2.5 top-2.5 rounded-md p-2 text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
+            className="absolute right-3 top-3.5 z-10 rounded-md p-1.5 text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
           >
             <X className="size-4" />
           </button>

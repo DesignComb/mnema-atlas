@@ -58,6 +58,7 @@ export function AppSidebar({
   onNewDeck,
   onOpenImport,
   className,
+  inDrawer,
 }: {
   onOpenCommand: () => void
   onNewDeck: () => void
@@ -65,6 +66,8 @@ export function AppSidebar({
   /** Width + display are set by the caller so the same sidebar serves the
    *  persistent desktop rail and the mobile slide-in drawer. */
   className?: string
+  /** In the mobile drawer, reserve space so the brand switcher clears the X close button. */
+  inDrawer?: boolean
 }) {
   const { user, signOut } = useAuth()
   const { theme, toggle } = useTheme()
@@ -85,7 +88,7 @@ export function AppSidebar({
   return (
     <aside className={cn('h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar', className)}>
       {/* Brand + space switcher (dropdown) */}
-      <div className="px-3 pt-3 pb-2">
+      <div className={cn('px-3 pt-3 pb-2', inDrawer && 'pr-12')}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition hover:bg-sidebar-accent">
