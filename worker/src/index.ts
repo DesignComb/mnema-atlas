@@ -7,7 +7,7 @@ import { rateLimit } from './ratelimit'
 import { buildOpenApiSpec } from './openapi'
 import { buildLlmsTxt } from './llms'
 import { discoveryIndex } from './discovery'
-import { scheduled } from './scheduled'
+import { runReminderScan, scheduled } from './scheduled'
 import { serviceClient } from './db'
 import { buildPushPayload } from '@block65/webcrypto-web-push'
 import type { Env } from './env'
@@ -101,6 +101,17 @@ app.post('/_debug/testpush', async (c) => {
     }),
   )
   return c.json({ sent: subs.length, results })
+})
+
+// Reminder sweep, pinged every minute by a Supabase pg_cron job (guarded by a
+// shared secret). This stands in for a Cloudflare Cron Trigger, which needs a
+// workers.dev subdomain on the account.
+app.post('/_cron/run-reminders', async (c) => {
+  if (!c.env.CRON_SECRET || c.req.header('x-cron-secret') !== c.env.CRON_SECRET) {
+    return c.json({ error: 'forbidden' }, 403)
+  }
+  c.executionCtx.waitUntil(runReminderScan(c.env))
+  return c.json({ ok: true })
 })
 
 export default { fetch: app.fetch, scheduled }

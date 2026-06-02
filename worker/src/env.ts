@@ -20,6 +20,8 @@ export interface Env {
   VAPID_PRIVATE_KEY?: string
   /** VAPID subject (secret), e.g. mailto:you@example.com */
   VAPID_SUBJECT?: string
+  /** Shared secret for the pg_cron → /_cron/run-reminders ping (secret). */
+  CRON_SECRET?: string
 }
 
 export interface ToolContext {
