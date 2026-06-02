@@ -587,6 +587,39 @@ export function useRemoveReminder() {
   return useMutation({ mutationFn: (reminderId: string) => api.removeReminder(reminderId), onSuccess: () => bumpTasks(qc) })
 }
 
+// Reminders already surfaced this session (so the poll doesn't re-toast them).
+const shownReminders = new Set<string>()
+
+/** In-app reminder fallback: on load (and every 60s) toast any due reminders.
+ *  Covers users who blocked push or aren't on an installed PWA. */
+export function useDueReminders() {
+  useEffect(() => {
+    let cancelled = false
+    async function run() {
+      const nowIso = new Date().toISOString()
+      const { data } = await supabase
+        .from('task_reminders')
+        .select('id, remind_at, tasks(title)')
+        .eq('status', 'pending')
+        .lte('remind_at', nowIso)
+        .order('remind_at', { ascending: true })
+        .limit(10)
+      if (cancelled || !data) return
+      for (const r of data as unknown as Array<{ id: string; tasks: { title: string } | null }>) {
+        if (shownReminders.has(r.id)) continue
+        shownReminders.add(r.id)
+        toast(`⏰ ${r.tasks?.title ?? 'Reminder'}`)
+      }
+    }
+    void run()
+    const iv = setInterval(() => void run(), 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(iv)
+    }
+  }, [])
+}
+
 /** Create a blank note and open it (deduped from deck/notes/home). */
 export function useNewNote() {
   const navigate = useNavigate()

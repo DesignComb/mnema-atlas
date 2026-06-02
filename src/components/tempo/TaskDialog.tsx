@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useCreateTask, useSetRecurrence, useUpdateTask } from '@/lib/hooks'
+import { useAddReminder, useCreateTask, useSetRecurrence, useUpdateTask } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import type { TaskListRow, TaskRow } from '@/lib/database.types'
 import { buildRRule, computeOccurrence, parseRRule, WEEKDAYS, type Freq } from '@/lib/recurrence'
@@ -50,6 +50,7 @@ export function TaskDialog({
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const setRecurrence = useSetRecurrence()
+  const addReminder = useAddReminder()
 
   const [title, setTitle] = useState('')
   const [listId, setListId] = useState<string>(INBOX)
@@ -64,9 +65,11 @@ export function TaskDialog({
   const [interval, setIntervalV] = useState(1)
   const [byday, setByday] = useState<string[]>([])
   const [afterCompletion, setAfterCompletion] = useState(false)
+  const [reminderLocal, setReminderLocal] = useState('')
 
   useEffect(() => {
     if (!open) return
+    setReminderLocal('')
     setTitle(task?.title ?? '')
     setListId(task?.list_id ?? defaultListId ?? INBOX)
     setPriority(task?.priority ?? 0)
@@ -82,7 +85,7 @@ export function TaskDialog({
     setAfterCompletion(task?.recurrence_after_completion ?? false)
   }, [open, task, defaultListId])
 
-  const pending = createTask.isPending || updateTask.isPending || setRecurrence.isPending
+  const pending = createTask.isPending || updateTask.isPending || setRecurrence.isPending || addReminder.isPending
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -93,6 +96,7 @@ export function TaskDialog({
     let next: string | undefined
     if (rule) next = (await computeOccurrence(rule, anchor, true)) ?? undefined
     try {
+      let taskId = task?.id
       if (editing && task) {
         await updateTask.mutateAsync({
           task_id: task.id,
@@ -115,7 +119,7 @@ export function TaskDialog({
           })
         }
       } else {
-        await createTask.mutateAsync({
+        const created = await createTask.mutateAsync({
           title: title.trim(),
           list_id,
           description: notes || undefined,
@@ -129,6 +133,11 @@ export function TaskDialog({
           recurrence_anchor: rule ? anchor : undefined,
           next_occurrence: rule ? next : undefined,
         })
+        taskId = created.id
+      }
+      // A datetime here adds a reminder (absolute instant from local time).
+      if (reminderLocal && taskId) {
+        await addReminder.mutateAsync({ task_id: taskId, remind_at: new Date(reminderLocal).toISOString() })
       }
       onOpenChange(false)
     } catch (err) {
@@ -241,6 +250,22 @@ export function TaskDialog({
                 <input type="checkbox" checked={afterCompletion} onChange={(e) => setAfterCompletion(e.target.checked)} />
                 {t('Count next from when I complete it', '完成後才開始算下一次')}
               </label>
+            ) : null}
+          </div>
+
+          {/* Reminder */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="task-remind">{t('Reminder', '提醒')}</Label>
+            <Input
+              id="task-remind"
+              type="datetime-local"
+              value={reminderLocal}
+              onChange={(e) => setReminderLocal(e.target.value)}
+            />
+            {reminderLocal ? (
+              <p className="text-[11px] text-muted-foreground">
+                {t('Sends a push when due — enable reminders in Settings first.', '到時會推播 —— 請先在「設定」開啟提醒。')}
+              </p>
             ) : null}
           </div>
 

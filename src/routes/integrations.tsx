@@ -1,8 +1,9 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Copy, KeyRound, Plug, Plus, ShieldCheck, Trash2, TriangleAlert, Wrench } from 'lucide-react'
+import { Bell, Check, Copy, KeyRound, Plug, Plus, ShieldCheck, Trash2, TriangleAlert, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { createApiKey, listApiKeys, revokeApiKey, type CreatedApiKey } from '@/lib/api'
+import { disableReminders, enableReminders, hasPushSubscription, notificationPermission, pushSupported } from '@/lib/push'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,68 @@ const SETUP_TABS = [
   { id: 'curl', label: 'curl / REST' },
 ] as const
 type TabId = (typeof SETUP_TABS)[number]['id']
+
+function ReminderCard() {
+  const t = useT()
+  const [supported] = useState(() => pushSupported())
+  const [perm, setPerm] = useState(() => notificationPermission())
+  const [subscribed, setSubscribed] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    void hasPushSubscription().then(setSubscribed)
+  }, [])
+
+  async function toggle() {
+    setBusy(true)
+    try {
+      if (subscribed) {
+        await disableReminders()
+        setSubscribed(false)
+        toast.success(t('Reminders turned off', '已關閉提醒'))
+      } else {
+        await enableReminders()
+        setSubscribed(true)
+        setPerm(notificationPermission())
+        toast.success(t('Reminders enabled', '已開啟提醒'))
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('Could not change reminders', '無法變更提醒'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-soft">
+      <div className="flex items-center gap-2.5">
+        <span className="flex size-7 items-center justify-center rounded-lg bg-brand-muted text-brand">
+          <Bell className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[14px] font-semibold text-foreground">{t('Reminders', '提醒')}</h2>
+          <p className="text-[12.5px] text-muted-foreground">
+            {t('Get a push when a Tempo task is due — even when the app is closed.', '當 Tempo 任務到期時收到推播 —— 即使 App 關閉也會通知。')}
+          </p>
+        </div>
+        {supported ? (
+          <Button variant={subscribed ? 'outline' : 'brand'} size="sm" onClick={toggle} disabled={busy}>
+            {subscribed ? t('Turn off', '關閉') : t('Enable', '開啟')}
+          </Button>
+        ) : null}
+      </div>
+      {!supported ? (
+        <p className="text-[12px] text-muted-foreground">
+          {t('Push isn’t supported here. On iPhone, add Mnema to your Home Screen first.', '此裝置不支援推播。iPhone 請先把 Mnema 加到主畫面。')}
+        </p>
+      ) : perm === 'denied' ? (
+        <p className="text-[12px] text-destructive">
+          {t('Notifications are blocked in your browser settings — allow them to enable reminders.', '瀏覽器已封鎖通知 —— 請允許通知才能開啟提醒。')}
+        </p>
+      ) : null}
+    </section>
+  )
+}
 
 export function IntegrationsScreen() {
   const qc = useQueryClient()
@@ -68,6 +131,8 @@ export function IntegrationsScreen() {
               {t('An AI you connect can ', '你連接的 AI ')}<strong className="text-foreground">{t('only add', '只能新增')}</strong>{t(" notes & flashcards to your library — by default it can never edit, delete, or see anyone else's. Revoke a key anytime below.", '筆記與字卡到你的資料庫 — 預設情況下，它無法編輯、刪除，也看不到其他人的內容。你可以隨時在下方撤銷金鑰。')}
             </span>
           </div>
+
+          <ReminderCard />
 
           {/* 1 · Keys */}
           <section className="space-y-3">

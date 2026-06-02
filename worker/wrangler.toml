@@ -3,6 +3,16 @@ main = "src/index.ts"
 compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
 
+# ── Cron: scan for due Tempo reminders and send web-push (≤60s latency) ──
+[triggers]
+crons = ["* * * * *"]
+
+# ── Public config (safe to commit) ──
+# VAPID public key — the browser subscribes with it; the worker includes it when
+# signing pushes. The PRIVATE key + subject are secrets (see below).
+[vars]
+VAPID_PUBLIC_KEY = "BJOIOxAJypzGgGZ4v_GsrrRAT2-gGwreLMbhrju_DxZ_2ZmvEunXKHmYuOGUrFI4TVKzY2RLBboN-O0Iy7sbJ38"
+
 # ── Public custom domain ─────────────────────────────────────────────
 # dco.tw is on Cloudflare, so deploy auto-creates the DNS record + SSL cert.
 # This is the URL external AIs connect to:  https://mnema-ai.dco.tw/{mcp,rest}

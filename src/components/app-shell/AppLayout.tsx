@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
-import { useCreateNote } from '@/lib/hooks'
+import { useCreateNote, useDueReminders } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 import { MobileNavContext } from '@/lib/mobile-nav'
@@ -21,6 +21,7 @@ export function AppLayout() {
   const t = useT()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const closeNavRef = useRef<HTMLButtonElement>(null)
+  useDueReminders()
 
   // Close the mobile nav drawer whenever the route changes (e.g. tapping a deck).
   useEffect(() => {

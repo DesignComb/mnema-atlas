@@ -1,7 +1,7 @@
 // Minimal service worker — enough to make Mnema installable + offline-tolerant
 // for the app shell. It NEVER touches the API (different origin) or Supabase, so
 // data always comes fresh from the network.
-const CACHE = 'mnema-v1'
+const CACHE = 'mnema-v2'
 const SHELL = ['/', '/index.html', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
@@ -49,5 +49,42 @@ self.addEventListener('fetch', (e) => {
           return res
         }),
     ),
+  )
+})
+
+// ── Web Push (Mnema Tempo reminders) ──
+self.addEventListener('push', (e) => {
+  let data = {}
+  try {
+    data = e.data ? e.data.json() : {}
+  } catch {
+    data = {}
+  }
+  const title = data.title || 'Mnema Tempo'
+  e.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.tag,
+      renotify: Boolean(data.tag),
+      data: { url: data.url || '/tempo' },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const target = (e.notification.data && e.notification.data.url) || '/tempo'
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if ('focus' in c) {
+          c.navigate(target).catch(() => {})
+          return c.focus()
+        }
+      }
+      return self.clients.openWindow(target)
+    }),
   )
 })

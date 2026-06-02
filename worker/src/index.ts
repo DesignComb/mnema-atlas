@@ -7,6 +7,9 @@ import { rateLimit } from './ratelimit'
 import { buildOpenApiSpec } from './openapi'
 import { buildLlmsTxt } from './llms'
 import { discoveryIndex } from './discovery'
+import { scheduled } from './scheduled'
+import { serviceClient } from './db'
+import { buildPushPayload } from '@block65/webcrypto-web-push'
 import type { Env } from './env'
 
 const app = new Hono<{ Bindings: Env }>()
@@ -69,4 +72,35 @@ app.all('/mcp', async (c) => {
 
 app.route('/rest', rest)
 
-export default app
+// Debug: send a test push to the authenticated caller's own subscriptions.
+// Use this to verify VAPID/encryption before relying on the cron.
+app.post('/_debug/testpush', async (c) => {
+  const auth = await authenticate(c.env, c.req.raw)
+  if (!auth) return c.json({ error: 'unauthorized' }, 401)
+  const env = c.env
+  if (!env.VAPID_PRIVATE_KEY || !env.VAPID_SUBJECT || !env.VAPID_PUBLIC_KEY) {
+    return c.json({ error: 'push not configured (set VAPID_PRIVATE_KEY + VAPID_SUBJECT secrets)' }, 503)
+  }
+  const sb = serviceClient(env)
+  const { data } = await sb.from('push_subscriptions').select('endpoint, p256dh, auth').eq('user_id', auth.userId)
+  const subs = (data ?? []) as { endpoint: string; p256dh: string; auth: string }[]
+  const vapid = { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY }
+  const results = await Promise.all(
+    subs.map(async (s) => {
+      try {
+        const payload = await buildPushPayload(
+          { data: { title: 'Mnema Tempo', body: 'Test reminder ✓', url: '/tempo' } },
+          { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } },
+          vapid,
+        )
+        const res = await fetch(s.endpoint, payload)
+        return res.status
+      } catch (e) {
+        return e instanceof Error ? e.message : 'error'
+      }
+    }),
+  )
+  return c.json({ sent: subs.length, results })
+})
+
+export default { fetch: app.fetch, scheduled }

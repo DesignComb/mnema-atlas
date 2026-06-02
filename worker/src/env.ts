@@ -14,6 +14,12 @@ export interface Env {
   RL_KEY?: RateLimit
   /** Per-IP rate limiter (keyless discovery). */
   RL_IP?: RateLimit
+  /** VAPID public key (committed [vars]) — included when signing web-push. */
+  VAPID_PUBLIC_KEY?: string
+  /** VAPID private key (secret) — signs web-push. Push is disabled until set. */
+  VAPID_PRIVATE_KEY?: string
+  /** VAPID subject (secret), e.g. mailto:you@example.com */
+  VAPID_SUBJECT?: string
 }
 
 export interface ToolContext {
