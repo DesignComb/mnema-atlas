@@ -93,7 +93,7 @@ export function AppSidebar({
                 {space === 'travel' ? <MapIcon className="size-4" /> : <BookOpenCheck className="size-4" />}
               </span>
               <span className="min-w-0 flex-1 truncate font-serif text-[16px] font-semibold tracking-tight text-foreground">
-                {space === 'travel' ? 'Mnema Travel' : 'Mnema Atlas'}
+                {space === 'travel' ? 'Mnema Voyage' : 'Mnema Atlas'}
               </span>
               <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
             </button>
@@ -110,8 +110,8 @@ export function AppSidebar({
             <DropdownMenuItem asChild>
               <Link to="/trips">
                 <MapIcon className="text-brand" />
-                <span className="flex-1">Mnema Travel</span>
-                <span className="text-[11px] text-muted-foreground">{t('Travel', '旅遊')}</span>
+                <span className="flex-1">Mnema Voyage</span>
+                <span className="text-[11px] text-muted-foreground">{t('Voyage', '旅遊')}</span>
                 {space === 'travel' ? <Check className="ml-1 size-4 text-brand" /> : null}
               </Link>
             </DropdownMenuItem>
