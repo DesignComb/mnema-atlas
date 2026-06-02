@@ -40,6 +40,7 @@ import {
 import { TaskDialog } from '@/components/tempo/TaskDialog'
 import { ListDialog } from '@/components/tempo/ListDialog'
 import { HabitCard } from '@/components/tempo/HabitCard'
+import { CalendarView } from '@/components/tempo/CalendarView'
 
 type ViewKey = 'all' | 'today' | 'upcoming' | 'habits' | 'calendar'
 
@@ -219,14 +220,7 @@ export function TempoScreen() {
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
           {view === 'calendar' ? (
-            <EmptyState
-              icon={<CalendarDays className="size-6" />}
-              title={t('Calendar is coming', '行事曆即將推出')}
-              description={t(
-                'A month, week, and time-blocking view lands in the next update.',
-                '月曆、週曆與時間區塊檢視會在下次更新加入。',
-              )}
-            />
+            <CalendarView tasks={tasks ?? []} onEdit={(task) => setTaskDialog({ open: true, task })} />
           ) : (
             <>
               {/* Quick add */}
