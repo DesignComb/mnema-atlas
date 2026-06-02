@@ -12,8 +12,11 @@ routes = [
 ]
 
 # ── Cron: scan for due Tempo reminders and send web-push (≤60s latency) ──
-[triggers]
-crons = ["* * * * *"]
+# DISABLED until the account has a workers.dev subdomain (Cloudflare dashboard →
+# Workers & Pages → opens once to auto-create it). Registering a cron schedule
+# requires it (API error 10063). After creating it, uncomment to enable push.
+# [triggers]
+# crons = ["* * * * *"]
 
 # ── Public config (safe to commit) ──
 # VAPID public key — the browser subscribes with it; the worker includes it when
