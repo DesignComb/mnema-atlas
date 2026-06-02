@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useScheduleTask } from '@/lib/hooks'
+import { useHolidays } from '@/lib/holidays'
 import { useT } from '@/lib/i18n'
 import type { TaskRow } from '@/lib/database.types'
 import {
@@ -13,6 +14,7 @@ import {
   timeToMin,
   todayISO,
   weekDays,
+  weekday,
   yearOf,
 } from '@/lib/tempo-date'
 
@@ -22,20 +24,51 @@ const WD_ZH = ['一', '二', '三', '四', '五', '六', '日']
 const START_HOUR = 6
 const END_HOUR = 23
 const HOUR_PX = 44
+const EMPTY: Map<string, string> = new Map()
 
-/** A task's calendar date: scheduled wins, then due, then next recurrence. */
 function dateOf(task: TaskRow): string | null {
   return task.scheduled_date || task.due_date || task.next_occurrence || null
 }
+const isWeekend = (iso: string) => weekday(iso) === 0 || weekday(iso) === 6
+/** Sunday red, Saturday blue, holiday red — the common CJK calendar convention. */
+function numClass(iso: string, holiday: boolean): string {
+  if (holiday || weekday(iso) === 0) return 'text-red-500'
+  if (weekday(iso) === 6) return 'text-blue-500'
+  return 'text-foreground'
+}
 
 type Mode = 'month' | 'week' | 'agenda'
+type Tr = (en: string, zh: string) => string
 
 export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: TaskRow) => void }) {
   const t = useT()
   const schedule = useScheduleTask()
   const [mode, setMode] = useState<Mode>('month')
   const [cursor, setCursor] = useState(todayISO())
+  const [showHolidays, setShowHolidays] = useState(() => {
+    try {
+      return localStorage.getItem('mnema-show-holidays') !== '0'
+    } catch {
+      return true
+    }
+  })
   const today = todayISO()
+
+  const years = [yearOf(cursor), yearOf(cursor) + 1]
+  const { data: holidaysData } = useHolidays(years, 'TW', showHolidays)
+  const holidays = showHolidays ? holidaysData ?? EMPTY : EMPTY
+
+  function toggleHolidays() {
+    setShowHolidays((v) => {
+      const n = !v
+      try {
+        localStorage.setItem('mnema-show-holidays', n ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      return n
+    })
+  }
 
   const dated = tasks.filter((x) => dateOf(x))
   const byDate = new Map<string, TaskRow[]>()
@@ -47,8 +80,7 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
   }
 
   function shift(n: number) {
-    if (mode === 'week') setCursor(addDays(cursor, n * 7))
-    else setCursor(addDays(cursor, n * 30))
+    setCursor(addDays(cursor, n * (mode === 'week' ? 7 : 30)))
   }
 
   const title =
@@ -66,7 +98,7 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
           <button onClick={() => shift(-1)} className="rounded-md p-1 text-muted-foreground transition hover:bg-card hover:text-foreground">
             <ChevronLeft className="size-4" />
           </button>
-          <span className="min-w-32 text-center text-[14px] font-semibold">{title}</span>
+          <span className="min-w-28 text-center text-[14px] font-semibold sm:min-w-36">{title}</span>
           <button onClick={() => shift(1)} className="rounded-md p-1 text-muted-foreground transition hover:bg-card hover:text-foreground">
             <ChevronRight className="size-4" />
           </button>
@@ -77,27 +109,40 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
             {t('Today', '今天')}
           </button>
         </div>
-        <div className="flex items-center gap-1">
-          {(['month', 'week', 'agenda'] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`rounded-full px-2.5 py-1 text-[12.5px] font-medium transition ${
-                mode === m ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-card hover:text-foreground'
-              }`}
-            >
-              {t(m === 'month' ? 'Month' : m === 'week' ? 'Week' : 'Agenda', m === 'month' ? '月' : m === 'week' ? '週' : '議程')}
-            </button>
-          ))}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={toggleHolidays}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition ${
+              showHolidays ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400' : 'border-border text-muted-foreground hover:text-foreground'
+            }`}
+            title={t('Public holidays (Taiwan)', '國定假日(台灣)')}
+          >
+            <span className={`size-2 rounded-full ${showHolidays ? 'bg-red-500' : 'bg-muted-foreground/40'}`} />
+            {t('Holidays', '假日')}
+          </button>
+          <div className="flex items-center rounded-full bg-muted/60 p-0.5">
+            {(['month', 'week', 'agenda'] as Mode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`rounded-full px-2.5 py-1 text-[12.5px] font-medium transition ${
+                  mode === m ? 'bg-brand text-brand-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t(m === 'month' ? 'Month' : m === 'week' ? 'Week' : 'Agenda', m === 'month' ? '月' : m === 'week' ? '週' : '議程')}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {mode === 'month' ? (
-        <MonthGrid cursor={cursor} byDate={byDate} today={today} t={t} onEdit={onEdit} />
+        <MonthGrid cursor={cursor} byDate={byDate} holidays={holidays} today={today} t={t} onEdit={onEdit} />
       ) : mode === 'week' ? (
         <WeekGrid
           cursor={cursor}
           tasks={tasks}
+          holidays={holidays}
           today={today}
           t={t}
           onEdit={onEdit}
@@ -106,23 +151,23 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
           }
         />
       ) : (
-        <Agenda cursor={cursor} byDate={byDate} today={today} t={t} onEdit={onEdit} />
+        <Agenda cursor={cursor} byDate={byDate} holidays={holidays} today={today} t={t} onEdit={onEdit} />
       )}
     </div>
   )
 }
 
-type Tr = (en: string, zh: string) => string
-
 function MonthGrid({
   cursor,
   byDate,
+  holidays,
   today,
   t,
   onEdit,
 }: {
   cursor: string
   byDate: Map<string, TaskRow[]>
+  holidays: Map<string, string>
   today: string
   t: Tr
   onEdit: (t: TaskRow) => void
@@ -130,10 +175,15 @@ function MonthGrid({
   const days = monthGrid(yearOf(cursor), monthOf(cursor))
   const curMonth = monthOf(cursor)
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
-      <div className="grid grid-cols-7 border-b border-border bg-muted/40">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+      <div className="grid grid-cols-7">
         {WD_EN.map((d, i) => (
-          <div key={d} className="px-2 py-1.5 text-center text-[11px] font-medium text-muted-foreground">
+          <div
+            key={d}
+            className={`px-2 py-2 text-center text-[11px] font-semibold ${
+              i === 6 ? 'text-red-500' : i === 5 ? 'text-blue-500' : 'text-muted-foreground'
+            }`}
+          >
             {t(d, WD_ZH[i])}
           </div>
         ))}
@@ -143,15 +193,25 @@ function MonthGrid({
           const inMonth = monthOf(d) === curMonth
           const items = byDate.get(d) ?? []
           const isToday = d === today
+          const holiday = holidays.get(d)
           return (
             <div
               key={d}
-              className={`min-h-[5.5rem] border-b border-r border-border/60 p-1 ${inMonth ? '' : 'bg-muted/20'}`}
+              className={`min-h-[5.75rem] border-t border-r border-border/40 p-1 transition hover:bg-muted/30 ${
+                isWeekend(d) ? 'bg-muted/20' : ''
+              } ${inMonth ? '' : 'opacity-45'}`}
             >
-              <div className="mb-0.5 flex justify-end">
+              <div className="mb-0.5 flex items-center justify-between gap-1">
+                {holiday ? (
+                  <span className="truncate text-[10px] font-medium text-red-500" title={holiday}>
+                    {holiday}
+                  </span>
+                ) : (
+                  <span />
+                )}
                 <span
-                  className={`flex size-5 items-center justify-center rounded-full text-[11px] ${
-                    isToday ? 'bg-brand font-semibold text-brand-foreground' : inMonth ? 'text-foreground' : 'text-muted-foreground/50'
+                  className={`flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${
+                    isToday ? 'bg-brand text-brand-foreground' : numClass(d, Boolean(holiday))
                   }`}
                 >
                   {dayNum(d)}
@@ -162,15 +222,14 @@ function MonthGrid({
                   <button
                     key={task.id}
                     onClick={() => onEdit(task)}
-                    className="block w-full truncate rounded bg-brand-muted px-1.5 py-0.5 text-left text-[11px] text-brand"
+                    className="flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px] text-foreground transition hover:bg-brand-muted"
                   >
-                    {task.scheduled_time ? `${task.scheduled_time.slice(0, 5)} ` : ''}
-                    {task.title}
+                    <span className="size-1.5 shrink-0 rounded-full bg-brand" />
+                    {task.scheduled_time ? <span className="shrink-0 tabular-nums text-muted-foreground">{task.scheduled_time.slice(0, 5)}</span> : null}
+                    <span className="truncate">{task.title}</span>
                   </button>
                 ))}
-                {items.length > 3 ? (
-                  <p className="px-1 text-[10px] text-muted-foreground">+{items.length - 3}</p>
-                ) : null}
+                {items.length > 3 ? <p className="px-1 text-[10px] text-muted-foreground">+{items.length - 3}</p> : null}
               </div>
             </div>
           )
@@ -183,47 +242,62 @@ function MonthGrid({
 function Agenda({
   cursor,
   byDate,
+  holidays,
   today,
   t,
   onEdit,
 }: {
   cursor: string
   byDate: Map<string, TaskRow[]>
+  holidays: Map<string, string>
   today: string
   t: Tr
   onEdit: (t: TaskRow) => void
 }) {
   const start = cursor < today ? today : cursor
-  const days = Array.from({ length: 30 }, (_, i) => addDays(start, i)).filter((d) => byDate.has(d))
+  const days = Array.from({ length: 30 }, (_, i) => addDays(start, i)).filter((d) => byDate.has(d) || holidays.has(d))
   if (!days.length) {
-    return <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-[13px] text-muted-foreground">{t('Nothing scheduled in the next 30 days.', '未來 30 天沒有排程。')}</p>
+    return (
+      <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-[13px] text-muted-foreground">
+        {t('Nothing scheduled in the next 30 days.', '未來 30 天沒有排程。')}
+      </p>
+    )
   }
   return (
     <div className="space-y-3">
-      {days.map((d) => (
-        <div key={d}>
-          <p className="mb-1 text-[12px] font-semibold text-muted-foreground">
-            {d === today ? t('Today', '今天') : d} · {t(WD_EN[(new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7], WD_ZH[(new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7])}
-          </p>
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
-            {(byDate.get(d) ?? [])
-              .slice()
-              .sort((a, b) => (timeToMin(a.scheduled_time) ?? 1e9) - (timeToMin(b.scheduled_time) ?? 1e9))
-              .map((task) => (
-                <button
-                  key={task.id}
-                  onClick={() => onEdit(task)}
-                  className="flex w-full items-center gap-3 border-b border-border/60 px-3 py-2 text-left last:border-b-0 hover:bg-muted/40"
-                >
-                  <span className="w-12 shrink-0 text-[12px] tabular-nums text-muted-foreground">
-                    {task.scheduled_time ? task.scheduled_time.slice(0, 5) : '—'}
-                  </span>
-                  <span className="truncate text-[14px] text-foreground">{task.title}</span>
-                </button>
-              ))}
+      {days.map((d) => {
+        const wdIdx = (weekday(d) + 6) % 7 // 0=Mon … 6=Sun
+        const holiday = holidays.get(d)
+        return (
+          <div key={d}>
+            <p className="mb-1 flex items-center gap-2 text-[12px] font-semibold">
+              <span className={numClass(d, Boolean(holiday))}>
+                {d === today ? t('Today', '今天') : d} · {t(WD_EN[wdIdx], WD_ZH[wdIdx])}
+              </span>
+              {holiday ? <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] font-medium text-red-500">{holiday}</span> : null}
+            </p>
+            {(byDate.get(d) ?? []).length ? (
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+                {(byDate.get(d) ?? [])
+                  .slice()
+                  .sort((a, b) => (timeToMin(a.scheduled_time) ?? 1e9) - (timeToMin(b.scheduled_time) ?? 1e9))
+                  .map((task) => (
+                    <button
+                      key={task.id}
+                      onClick={() => onEdit(task)}
+                      className="flex w-full items-center gap-3 border-b border-border/60 px-3 py-2 text-left last:border-b-0 hover:bg-muted/40"
+                    >
+                      <span className="w-12 shrink-0 text-[12px] tabular-nums text-muted-foreground">
+                        {task.scheduled_time ? task.scheduled_time.slice(0, 5) : '—'}
+                      </span>
+                      <span className="truncate text-[14px] text-foreground">{task.title}</span>
+                    </button>
+                  ))}
+              </div>
+            ) : null}
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -231,6 +305,7 @@ function Agenda({
 function WeekGrid({
   cursor,
   tasks,
+  holidays,
   today,
   t,
   onEdit,
@@ -238,6 +313,7 @@ function WeekGrid({
 }: {
   cursor: string
   tasks: TaskRow[]
+  holidays: Map<string, string>
   today: string
   t: Tr
   onEdit: (t: TaskRow) => void
@@ -249,6 +325,12 @@ function WeekGrid({
 
   const unscheduled = tasks.filter((x) => !x.scheduled_date)
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i)
+
+  // Current-time indicator (only when this week contains today).
+  const now = new Date()
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const showNow = days.includes(today) && nowMin >= START_HOUR * 60 && nowMin <= END_HOUR * 60
+  const nowTop = ((nowMin - START_HOUR * 60) / 60) * HOUR_PX
 
   useEffect(() => {
     if (!drag) return
@@ -263,9 +345,8 @@ function WeekGrid({
       const rect = grid.getBoundingClientRect()
       if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return
       const col = Math.min(6, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * 7)))
-      const minsFromTop = ((e.clientY - rect.top) / HOUR_PX) * 60
-      let mins = START_HOUR * 60 + minsFromTop
-      mins = Math.round(mins / 15) * 15 // snap 15 min
+      let mins = START_HOUR * 60 + ((e.clientY - rect.top) / HOUR_PX) * 60
+      mins = Math.round(mins / 15) * 15
       onSchedule(task.id, days[col], minToTime(mins), task.duration_min ?? 60)
     }
     window.addEventListener('pointermove', move)
@@ -276,11 +357,12 @@ function WeekGrid({
     }
   }, [drag, days, onSchedule])
 
+  const allDayByDay = days.map((d) => tasks.filter((x) => x.scheduled_date === d && !x.scheduled_time))
+
   return (
     <div className="select-none">
-      {/* Unscheduled rail */}
       {unscheduled.length ? (
-        <div className="mb-2 flex flex-wrap gap-1.5 rounded-lg border border-dashed border-border p-2">
+        <div className="mb-2 flex flex-wrap gap-1.5 rounded-xl border border-dashed border-border p-2">
           <span className="self-center text-[11px] font-medium text-muted-foreground">{t('Drag onto a slot:', '拖到時段:')}</span>
           {unscheduled.slice(0, 12).map((task) => (
             <button
@@ -297,26 +379,53 @@ function WeekGrid({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[560px]">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-soft">
+        <div className="min-w-[580px]">
           {/* Day headers */}
-          <div className="grid" style={{ gridTemplateColumns: '3rem repeat(7, 1fr)' }}>
+          <div className="grid border-b border-border/60" style={{ gridTemplateColumns: '3rem repeat(7, 1fr)' }}>
             <div />
-            {days.map((d, i) => (
-              <div key={d} className="px-1 py-1 text-center">
-                <div className="text-[11px] text-muted-foreground">{t(WD_EN[i], WD_ZH[i])}</div>
-                <div
-                  className={`text-[13px] font-semibold ${d === today ? 'text-brand' : 'text-foreground'}`}
-                >
-                  {dayNum(d)}
+            {days.map((d, i) => {
+              const holiday = holidays.get(d)
+              return (
+                <div key={d} className={`px-1 py-1.5 text-center ${isWeekend(d) ? 'bg-muted/30' : ''}`}>
+                  <div className={`text-[11px] ${i === 6 ? 'text-red-500' : i === 5 ? 'text-blue-500' : 'text-muted-foreground'}`}>
+                    {t(WD_EN[i], WD_ZH[i])}
+                  </div>
+                  <div
+                    className={`mx-auto mt-0.5 flex size-6 items-center justify-center rounded-full text-[13px] font-semibold ${
+                      d === today ? 'bg-brand text-brand-foreground' : numClass(d, Boolean(holiday))
+                    }`}
+                  >
+                    {dayNum(d)}
+                  </div>
+                  {holiday ? <div className="mt-0.5 truncate text-[9px] text-red-500" title={holiday}>{holiday}</div> : null}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
+
+          {/* All-day row (holidays + untimed scheduled tasks) */}
+          {allDayByDay.some((a) => a.length) ? (
+            <div className="grid border-b border-border/60" style={{ gridTemplateColumns: '3rem repeat(7, 1fr)' }}>
+              <div className="py-1 pr-1 text-right text-[9px] text-muted-foreground/70">{t('all-day', '整天')}</div>
+              {days.map((d, i) => (
+                <div key={d} className={`space-y-0.5 p-0.5 ${isWeekend(d) ? 'bg-muted/20' : ''}`}>
+                  {allDayByDay[i].map((task) => (
+                    <button
+                      key={task.id}
+                      onClick={() => onEdit(task)}
+                      className="block w-full truncate rounded bg-brand-muted px-1 py-0.5 text-left text-[10px] text-brand"
+                    >
+                      {task.title}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           {/* Time grid */}
           <div className="grid" style={{ gridTemplateColumns: '3rem repeat(7, 1fr)' }}>
-            {/* hour gutter */}
             <div>
               {hours.map((h) => (
                 <div key={h} className="relative text-right" style={{ height: HOUR_PX }}>
@@ -324,20 +433,26 @@ function WeekGrid({
                 </div>
               ))}
             </div>
-            {/* day columns + blocks live in one positioned grid */}
             <div
               ref={gridRef}
               className="relative col-span-7 grid"
               style={{ gridTemplateColumns: 'repeat(7, 1fr)', height: hours.length * HOUR_PX }}
             >
               {days.map((d) => (
-                <div key={d} className="relative border-l border-border/60">
+                <div key={d} className={`relative border-l border-border/40 ${isWeekend(d) ? 'bg-muted/20' : ''}`}>
                   {hours.map((h) => (
-                    <div key={h} className="border-b border-border/40" style={{ height: HOUR_PX }} />
+                    <div key={h} className="border-b border-border/30" style={{ height: HOUR_PX }} />
                   ))}
                 </div>
               ))}
-              {/* blocks */}
+
+              {showNow ? (
+                <div className="pointer-events-none absolute inset-x-0 z-10 flex items-center" style={{ top: nowTop }}>
+                  <span className="size-2 -ml-1 rounded-full bg-red-500" />
+                  <span className="h-px flex-1 bg-red-500/70" />
+                </div>
+              ) : null}
+
               {tasks
                 .filter((x) => x.scheduled_date && days.includes(x.scheduled_date) && x.scheduled_time)
                 .map((task) => {
@@ -354,7 +469,7 @@ function WeekGrid({
                         setDrag({ task, x: e.clientX, y: e.clientY })
                       }}
                       onClick={() => onEdit(task)}
-                      className="absolute touch-none overflow-hidden rounded-md border border-brand/30 bg-brand-muted px-1.5 py-0.5 text-left text-[11px] text-brand active:cursor-grabbing"
+                      className="absolute touch-none overflow-hidden rounded-md border border-brand/30 bg-brand-muted px-1.5 py-0.5 text-left text-[11px] text-brand shadow-sm active:cursor-grabbing"
                       style={{
                         left: `calc(${(col / 7) * 100}% + 2px)`,
                         width: `calc(${100 / 7}% - 4px)`,
@@ -371,7 +486,6 @@ function WeekGrid({
         </div>
       </div>
 
-      {/* Drag ghost */}
       {drag ? (
         <div
           className="pointer-events-none fixed z-50 rounded-md border border-brand bg-brand-muted px-2 py-1 text-[12px] text-brand shadow-pop"
