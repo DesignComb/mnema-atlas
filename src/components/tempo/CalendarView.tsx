@@ -81,7 +81,7 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
     })
   }
 
-  const years = [yearOf(cursor), yearOf(cursor) + 1]
+  const years = [yearOf(cursor) - 1, yearOf(cursor), yearOf(cursor) + 1]
   const { data: holidaysData } = useHolidays(years, 'TW', showHolidays)
   const holidays = showHolidays ? holidaysData ?? EMPTY : EMPTY
 

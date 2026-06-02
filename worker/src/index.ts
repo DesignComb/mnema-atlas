@@ -70,6 +70,28 @@ app.all('/mcp', async (c) => {
   return handleMcpRequest(c.env, auth.userId, auth.scopes, c.req.raw)
 })
 
+// Public-holiday proxy (so the browser isn't blocked by Nager.Date's CORS).
+// Fetches server-side, edge-cached a day, returns a slim {date,name}[] with our
+// own permissive CORS. Used by the Tempo calendar's Holidays calendar.
+app.get('/holidays/:country/:year', async (c) => {
+  const country = (c.req.param('country') || '').toUpperCase().slice(0, 2)
+  const year = parseInt(c.req.param('year') || '', 10)
+  if (!/^[A-Z]{2}$/.test(country) || !Number.isFinite(year) || year < 1975 || year > 2100) {
+    return c.json([], 200)
+  }
+  try {
+    const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`, {
+      cf: { cacheTtl: 86400, cacheEverything: true },
+    } as RequestInit)
+    if (!res.ok) return c.json([], 200)
+    const data = (await res.json()) as Array<{ date: string; localName?: string; name?: string }>
+    const slim = data.map((h) => ({ date: h.date, name: h.localName || h.name || '' }))
+    return c.json(slim, 200, { 'Cache-Control': 'public, max-age=86400' })
+  } catch {
+    return c.json([], 200)
+  }
+})
+
 app.route('/rest', rest)
 
 // Debug: send a test push to the authenticated caller's own subscriptions.
