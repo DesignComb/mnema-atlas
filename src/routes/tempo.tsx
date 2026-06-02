@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { TaskDialog } from '@/components/tempo/TaskDialog'
 import { ListDialog } from '@/components/tempo/ListDialog'
+import { HabitCard } from '@/components/tempo/HabitCard'
 
 type ViewKey = 'all' | 'today' | 'upcoming' | 'habits' | 'calendar'
 
@@ -253,13 +254,35 @@ export function TempoScreen() {
                 </div>
               ) : sorted.length === 0 ? (
                 <EmptyState
-                  icon={<ListTodo className="size-6" />}
-                  title={showDone ? t('Nothing completed yet', '還沒有完成的項目') : t('All clear', '都清空了')}
-                  description={t(
-                    'Add a task above, or let a connected AI add and organise them for you.',
-                    '在上方新增任務,或讓連接的 AI 幫你新增與整理。',
-                  )}
+                  icon={view === 'habits' ? <Flame className="size-6" /> : <ListTodo className="size-6" />}
+                  title={
+                    view === 'habits'
+                      ? t('No habits yet', '還沒有習慣')
+                      : showDone
+                        ? t('Nothing completed yet', '還沒有完成的項目')
+                        : t('All clear', '都清空了')
+                  }
+                  description={
+                    view === 'habits'
+                      ? t('Add a habit above and check in daily to build a streak.', '在上方新增習慣,每天打卡累積連續紀錄。')
+                      : t(
+                          'Add a task above, or let a connected AI add and organise them for you.',
+                          '在上方新增任務,或讓連接的 AI 幫你新增與整理。',
+                        )
+                  }
                 />
+              ) : view === 'habits' ? (
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {sorted.map((habit) => (
+                    <HabitCard
+                      key={habit.id}
+                      habit={habit}
+                      today={today}
+                      onEdit={() => setTaskDialog({ open: true, task: habit })}
+                      onDelete={() => del.mutate(habit.id)}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
                   {sorted.map((task) => (
@@ -276,12 +299,14 @@ export function TempoScreen() {
                 </div>
               )}
 
-              <button
-                onClick={() => setShowDone((v) => !v)}
-                className="mt-3 text-[13px] font-medium text-muted-foreground transition hover:text-brand"
-              >
-                {showDone ? t('← Back to open tasks', '← 回到未完成') : t('Show completed', '顯示已完成')}
-              </button>
+              {view !== 'habits' ? (
+                <button
+                  onClick={() => setShowDone((v) => !v)}
+                  className="mt-3 text-[13px] font-medium text-muted-foreground transition hover:text-brand"
+                >
+                  {showDone ? t('← Back to open tasks', '← 回到未完成') : t('Show completed', '顯示已完成')}
+                </button>
+              ) : null}
             </>
           )}
         </div>
