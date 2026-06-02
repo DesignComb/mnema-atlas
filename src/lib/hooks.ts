@@ -23,7 +23,17 @@ import type {
   UpdateItineraryInput,
   UpdateNoteInput,
 } from '@shared/schemas'
-import type { ItineraryItem } from './api'
+import type {
+  AddReminderInput,
+  CreateTaskInput,
+  CreateTaskListInput,
+  CreateTasksBulkInput,
+  ScheduleTaskInput,
+  SetRecurrenceInput,
+  UpdateTaskInput,
+  UpdateTaskListInput,
+} from '@shared/schemas'
+import type { ItineraryItem, TaskFilters } from './api'
 
 export const qk = {
   decks: ['decks'] as const,
@@ -37,6 +47,13 @@ export const qk = {
   itinerary: (id: string) => ['itinerary', id] as const,
   shareLinks: (itineraryId: string) => ['share-links', itineraryId] as const,
   members: (itineraryId: string) => ['members', itineraryId] as const,
+  // Mnema Tempo
+  taskLists: ['task-lists'] as const,
+  tasks: (listId?: string, status?: string) => ['tasks', listId ?? 'all', status ?? 'todo'] as const,
+  task: (id: string) => ['task', id] as const,
+  habit: (id: string) => ['habit', id] as const,
+  streak: (id: string) => ['streak', id] as const,
+  recurringSuggestions: ['recurring-suggestions'] as const,
 }
 
 export function useDecks() {
@@ -441,6 +458,133 @@ export function useItineraryRealtime(itineraryId: string) {
       void supabase.removeChannel(channel)
     }
   }, [itineraryId, qc])
+}
+
+// ════════════════════ Mnema Tempo (todos / habits / reminders) ════════════════════
+
+/** Any task/list/habit edit invalidates the lists, task views, and any open detail. */
+function bumpTasks(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['tasks'] })
+  qc.invalidateQueries({ queryKey: ['task-lists'] })
+  qc.invalidateQueries({ queryKey: ['task'] })
+  qc.invalidateQueries({ queryKey: ['habit'] })
+  qc.invalidateQueries({ queryKey: ['streak'] })
+}
+
+export function useTaskLists() {
+  return useQuery({ queryKey: qk.taskLists, queryFn: api.listTaskLists })
+}
+export function useTasks(filters: TaskFilters = {}) {
+  return useQuery({ queryKey: qk.tasks(filters.listId, filters.status), queryFn: () => api.listTasks(filters) })
+}
+export function useTask(id: string) {
+  return useQuery({ queryKey: qk.task(id), queryFn: () => api.getTask(id), enabled: !!id })
+}
+export function useHabit(id: string) {
+  return useQuery({ queryKey: qk.habit(id), queryFn: () => api.getHabit(id), enabled: !!id })
+}
+export function useStreak(id: string) {
+  return useQuery({ queryKey: qk.streak(id), queryFn: () => api.getStreak(id), enabled: !!id })
+}
+export function useRecurringSuggestions(enabled = true) {
+  return useQuery({ queryKey: qk.recurringSuggestions, queryFn: () => api.suggestRecurringTasks(), enabled })
+}
+
+export function useCreateTaskList() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateTaskListInput) => api.createTaskList(input), onSuccess: () => bumpTasks(qc) })
+}
+export function useUpdateTaskList() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateTaskListInput) => api.updateTaskList(input), onSuccess: () => bumpTasks(qc) })
+}
+export function useDeleteTaskList() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteTaskList(id), onSuccess: () => bumpTasks(qc) })
+}
+export function useReorderTaskLists() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (ids: string[]) => api.reorderTaskLists(ids), onSuccess: () => bumpTasks(qc) })
+}
+
+export function useCreateTask() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateTaskInput) => api.createTask(input), onSuccess: () => bumpTasks(qc) })
+}
+export function useCreateTasksBulk() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateTasksBulkInput) => api.createTasksBulk(input), onSuccess: () => bumpTasks(qc) })
+}
+export function useUpdateTask() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateTaskInput) => api.updateTask(input), onSuccess: () => bumpTasks(qc) })
+}
+export function useCompleteTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { taskId: string; nextOccurrence?: string }) => api.completeTask(v.taskId, { nextOccurrence: v.nextOccurrence }),
+    onSuccess: () => bumpTasks(qc),
+  })
+}
+export function useUncompleteTask() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (taskId: string) => api.uncompleteTask(taskId), onSuccess: () => bumpTasks(qc) })
+}
+export function useDeleteTask() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (taskId: string) => api.deleteTask(taskId), onSuccess: () => bumpTasks(qc) })
+}
+export function useMoveTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { taskId: string; listId: string | null; parentId?: string | null }) =>
+      api.moveTask(v.taskId, v.listId, v.parentId ?? null),
+    onSuccess: () => bumpTasks(qc),
+  })
+}
+export function useReorderTasks() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { listId: string | null; taskIds: string[] }) => api.reorderTasks(v.listId, v.taskIds),
+    onSuccess: () => bumpTasks(qc),
+  })
+}
+export function useSetRecurrence() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: SetRecurrenceInput) => api.setRecurrence(input), onSuccess: () => bumpTasks(qc) })
+}
+export function useScheduleTask() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: ScheduleTaskInput) => api.scheduleTask(input), onSuccess: () => bumpTasks(qc) })
+}
+export function useSnoozeTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { taskId: string; until: string; untilTime?: string }) => api.snoozeTask(v.taskId, v.until, v.untilTime),
+    onSuccess: () => bumpTasks(qc),
+  })
+}
+export function useCheckIn() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { taskId: string; date?: string; note?: string }) => api.checkIn(v.taskId, v.date, v.note),
+    onSuccess: () => bumpTasks(qc),
+  })
+}
+export function useUncheckIn() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { taskId: string; date?: string }) => api.uncheckIn(v.taskId, v.date),
+    onSuccess: () => bumpTasks(qc),
+  })
+}
+export function useAddReminder() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: AddReminderInput) => api.addReminder(input), onSuccess: () => bumpTasks(qc) })
+}
+export function useRemoveReminder() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (reminderId: string) => api.removeReminder(reminderId), onSuccess: () => bumpTasks(qc) })
 }
 
 /** Create a blank note and open it (deduped from deck/notes/home). */

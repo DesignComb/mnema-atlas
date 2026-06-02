@@ -342,6 +342,143 @@ export const createChecklistBulkInput = z.object({ itinerary_id: uuid, items: z.
 export const setItemStatusInput = z.object({ item_id: uuid, status: itemStatus })
 export const setItemAssigneesInput = z.object({ item_id: uuid, assignees: assigneeList })
 
+// ── Mnema Tempo: todos / habits / reminders ───────────────────────
+export const taskStatus = z.enum(['todo', 'done', 'cancelled'])
+export type TaskStatus = z.infer<typeof taskStatus>
+export const taskKind = z.enum(['task', 'habit'])
+export const listKind = z.enum(['list', 'project'])
+const priority = z.number().int().min(0).max(4)
+const labelArray = z.array(z.string().trim().min(1).max(40)).max(20)
+const rrule = z.string().trim().max(1_000)
+const tzName = z.string().trim().max(64)
+
+export const createTaskListInput = z.object({
+  name: z.string().trim().min(1).max(120),
+  kind: listKind.optional(),
+  color: z.string().trim().max(40).optional(),
+  icon: z.string().trim().max(40).optional(),
+  sort_order: z.number().int().optional(),
+})
+export type CreateTaskListInput = z.infer<typeof createTaskListInput>
+
+export const updateTaskListInput = z.object({
+  list_id: uuid,
+  name: z.string().trim().min(1).max(120).optional(),
+  kind: listKind.optional(),
+  color: z.string().trim().max(40).optional(),
+  icon: z.string().trim().max(40).optional(),
+  is_archived: z.boolean().optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateTaskListInput = z.infer<typeof updateTaskListInput>
+
+export const deleteTaskListInput = z.object({ list_id: uuid })
+export const reorderTaskListsInput = z.object({ list_ids: z.array(uuid).max(2_000) })
+
+// Shared task fields, reused by create / bulk.
+const taskFields = {
+  title: z.string().trim().min(1, 'Title is required').max(500),
+  description: z.string().max(20_000).optional(),
+  list_id: uuid.optional(),
+  parent_task_id: uuid.optional(),
+  priority: priority.optional(),
+  labels: labelArray.optional(),
+  scheduled_date: isoDate.optional(),
+  scheduled_time: clockTime.optional(),
+  due_date: isoDate.optional(),
+  due_time: clockTime.optional(),
+  duration_min: z.number().int().min(0).max(1_440).optional(),
+  kind: taskKind.optional(),
+  recurrence_rule: rrule.optional(),
+  recurrence_after_completion: z.boolean().optional(),
+  recurrence_anchor: isoDate.optional(),
+  next_occurrence: isoDate.optional(),
+  tz: tzName.optional(),
+  sort_order: z.number().int().optional(),
+}
+export const createTaskInput = z.object({ ...taskFields })
+export type CreateTaskInput = z.infer<typeof createTaskInput>
+
+export const createTasksBulkInput = z.object({ tasks: z.array(z.object(taskFields)).min(1).max(200) })
+export type CreateTasksBulkInput = z.infer<typeof createTasksBulkInput>
+
+export const updateTaskInput = z.object({
+  task_id: uuid,
+  title: z.string().trim().min(1).max(500).optional(),
+  description: z.string().max(20_000).optional(),
+  list_id: uuid.optional(),
+  priority: priority.optional(),
+  labels: labelArray.optional(),
+  due_date: isoDate.optional(),
+  due_time: clockTime.optional(),
+  status: taskStatus.optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateTaskInput = z.infer<typeof updateTaskInput>
+
+export const completeTaskInput = z.object({
+  task_id: uuid,
+  completed_at: z.string().optional(),
+  next_occurrence: isoDate.optional(),
+})
+export const uncompleteTaskInput = z.object({ task_id: uuid })
+export const deleteTaskInput = z.object({ task_id: uuid })
+export const moveTaskInput = z.object({
+  task_id: uuid,
+  list_id: uuid.nullable().optional(),
+  parent_task_id: uuid.nullable().optional(),
+})
+export const reorderTasksInput = z.object({ list_id: uuid.optional(), task_ids: z.array(uuid).max(1_000) })
+
+export const setRecurrenceInput = z.object({
+  task_id: uuid,
+  recurrence_rule: rrule,
+  recurrence_after_completion: z.boolean().optional(),
+  recurrence_anchor: isoDate.optional(),
+  next_occurrence: isoDate.optional(),
+})
+export type SetRecurrenceInput = z.infer<typeof setRecurrenceInput>
+export const scheduleTaskInput = z.object({
+  task_id: uuid,
+  scheduled_date: isoDate.optional(),
+  scheduled_time: clockTime.optional(),
+  due_date: isoDate.optional(),
+  due_time: clockTime.optional(),
+  duration_min: z.number().int().min(0).max(1_440).optional(),
+})
+export type ScheduleTaskInput = z.infer<typeof scheduleTaskInput>
+export const snoozeTaskInput = z.object({ task_id: uuid, until: isoDate, until_time: clockTime.optional() })
+
+export const checkInInput = z.object({ task_id: uuid, checkin_date: isoDate.optional(), note: z.string().max(500).optional() })
+export const uncheckInInput = z.object({ task_id: uuid, checkin_date: isoDate.optional() })
+
+export const addReminderInput = z.object({
+  task_id: uuid,
+  remind_at: z.string().trim().min(1).max(40),
+  offset_min: z.number().int().optional(),
+})
+export type AddReminderInput = z.infer<typeof addReminderInput>
+export const removeReminderInput = z.object({ reminder_id: uuid })
+
+export const getTaskInput = z.object({ task_id: uuid })
+export const listTasksInput = z.object({
+  list_id: uuid.optional(),
+  status: taskStatus.optional(),
+  kind: taskKind.optional(),
+  label: z.string().trim().min(1).optional(),
+  due_before: isoDate.optional(),
+  scheduled_on: isoDate.optional(),
+  include_subtasks: z.boolean().optional(),
+  limit: z.number().int().min(1).max(500).default(100),
+})
+export const searchTasksInput = z.object({ query: z.string().trim().min(1), limit: z.number().int().min(1).max(200).default(50) })
+export const getHabitInput = z.object({ task_id: uuid })
+export const getStreakInput = z.object({ task_id: uuid })
+export const suggestRecurringTasksInput = z.object({
+  lookback_days: z.number().int().min(1).max(365).default(90),
+  min_count: z.number().int().min(2).max(50).default(3),
+})
+
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
  * emits inside a ```mnema fenced block for the in-app Quick Import. Cards link
@@ -422,4 +559,36 @@ export const toolDescriptions = {
   create_share_link:
     'Create a public read-only share link for a trip. Optionally hide costs. Returns a token; the link is /s/<token>.',
   revoke_share_link: 'Revoke a public share link so it can no longer be viewed.',
+  // Mnema Tempo (todos / habits / reminders)
+  create_task_list: 'Create a task list (or project) to organise todos. Returns the new list id.',
+  update_task_list: 'Rename a list, recolour it, archive it, or change its order.',
+  delete_task_list: 'Delete a list (its tasks fall back to the Inbox).',
+  reorder_task_lists: 'Set the order of lists by passing their ids in the desired order.',
+  list_task_lists: 'List the user’s task lists.',
+  create_task:
+    'Create a todo. Optional: list, parent (subtask), priority (0–4), labels, scheduled/due date+time, duration (for time-blocking), recurrence (RRULE), or make it a habit (kind="habit"). Returns the new task id.',
+  create_tasks_bulk: 'Create many tasks in one call (each may carry its own list/labels/schedule/recurrence).',
+  update_task: 'Update a task’s title, notes, list, priority, labels, due date, or status (only fields you pass change).',
+  complete_task:
+    'Mark a task done. A recurring task advances to its next occurrence; a habit records today’s check-in and bumps its streak. Pass next_occurrence (computed from the RRULE) to advance precisely.',
+  uncomplete_task: 'Reopen a completed task.',
+  delete_task: 'Delete a task (and its subtasks).',
+  move_task: 'Move a task to another list and/or under another task (parent). Pass null to send to the Inbox / top level.',
+  reorder_tasks: 'Set the order of tasks within a list by passing their ids in the desired order.',
+  set_recurrence:
+    'Make a task repeat using an iCal RRULE (e.g. FREQ=WEEKLY;BYDAY=MO,WE,FR). after_completion=true means the next due date is counted from when you actually complete it (Todoist’s "every!").',
+  schedule_task: 'Set or clear a task’s scheduled date+time, due date+time, and duration (minutes) — the calendar/time-block fields.',
+  snooze_task: 'Push a task’s scheduled date (and next occurrence) to a later day.',
+  check_in: 'Record a habit check-in for a date (default today) and recompute its streak. Returns the updated task.',
+  uncheck_in: 'Remove a habit check-in for a date and recompute the streak.',
+  add_reminder: 'Add a reminder to a task at an absolute time (ISO 8601). Delivered via web push when due.',
+  remove_reminder: 'Remove a reminder.',
+  get_task: 'Fetch one task with its subtasks, reminders, and (for habits) check-in history.',
+  list_tasks:
+    'List tasks with optional filters: list_id, status (todo/done/cancelled), kind (task/habit), label, due_before, scheduled_on. Top-level only unless include_subtasks=true.',
+  search_tasks: 'Search the user’s tasks by keyword (title/notes).',
+  get_habit: 'Fetch a habit with its full check-in history.',
+  get_streak: 'Get a habit’s current streak, longest streak, and check-in calendar.',
+  suggest_recurring_tasks:
+    'Find clusters of repeatedly-added non-recurring tasks (with an inferred cadence) so you can propose turning them into recurring tasks.',
 } as const

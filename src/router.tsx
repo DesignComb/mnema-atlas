@@ -69,6 +69,22 @@ const tripRoute = createRoute({
   },
   component: lazyRouteComponent(() => import('@/routes/trip'), 'TripScreen'),
 })
+const tempoRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'tempo',
+  // ?view=… selects the Tempo view; ?list=… focuses a single list.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { view?: 'today' | 'upcoming' | 'all' | 'calendar' | 'habits'; list?: string } => {
+    const view = search.view
+    const ok = view === 'today' || view === 'upcoming' || view === 'all' || view === 'calendar' || view === 'habits'
+    return {
+      view: ok ? (view as 'today' | 'upcoming' | 'all' | 'calendar' | 'habits') : undefined,
+      list: typeof search.list === 'string' && search.list ? search.list : undefined,
+    }
+  },
+  component: lazyRouteComponent(() => import('@/routes/tempo'), 'TempoScreen'),
+})
 const noteRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'notes/$noteId',
@@ -128,6 +144,7 @@ const routeTree = rootRoute.addChildren([
     cardsRoute,
     tripsRoute,
     tripRoute,
+    tempoRoute,
     studyRoute,
     studyDeckRoute,
     graphRoute,

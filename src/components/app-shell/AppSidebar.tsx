@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Home,
   Layers,
+  ListTodo,
   LogOut,
   Luggage,
   Map as MapIcon,
@@ -46,6 +47,7 @@ const NAV_STUDY = [
   { to: '/study', label: 'Study', zh: '複習', icon: GraduationCap, exact: false },
 ] as const
 const NAV_TRAVEL = [{ to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false }] as const
+const NAV_TEMPO = [{ to: '/tempo', label: 'Tasks', zh: '任務', icon: ListTodo, exact: false }] as const
 const TRIP_SECTIONS = [
   { key: 'itinerary', en: 'Itinerary', zh: '行程', icon: CalendarRange },
   { key: 'bookings', en: 'Reservations', zh: '訂位', icon: Ticket },
@@ -75,9 +77,13 @@ export function AppSidebar({
   const { data: decks } = useDecks()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
-  // Top-level space: Study vs Travel. Travel routes (/trips, /s) flip the rail.
-  const space: 'study' | 'travel' = pathname.startsWith('/trips') ? 'travel' : 'study'
-  const nav = space === 'travel' ? NAV_TRAVEL : NAV_STUDY
+  // Top-level space: Study / Travel / Tempo. The pathname flips the rail.
+  const space: 'study' | 'travel' | 'tempo' = pathname.startsWith('/trips')
+    ? 'travel'
+    : pathname.startsWith('/tempo')
+      ? 'tempo'
+      : 'study'
+  const nav = space === 'travel' ? NAV_TRAVEL : space === 'tempo' ? NAV_TEMPO : NAV_STUDY
   // On a trip detail page the rail shows that trip's sections instead of the Trips link.
   const tripMatch = pathname.match(/^\/trips\/([0-9a-fA-F-]{36})$/)
   const tripId = tripMatch ? tripMatch[1] : null
@@ -93,10 +99,16 @@ export function AppSidebar({
           <DropdownMenuTrigger asChild>
             <button className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition hover:bg-sidebar-accent">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
-                {space === 'travel' ? <MapIcon className="size-4" /> : <BookOpenCheck className="size-4" />}
+                {space === 'travel' ? (
+                  <MapIcon className="size-4" />
+                ) : space === 'tempo' ? (
+                  <ListTodo className="size-4" />
+                ) : (
+                  <BookOpenCheck className="size-4" />
+                )}
               </span>
               <span className="min-w-0 flex-1 truncate font-serif text-[16px] font-semibold tracking-tight text-foreground">
-                {space === 'travel' ? 'Mnema Voyage' : 'Mnema Atlas'}
+                {space === 'travel' ? 'Mnema Voyage' : space === 'tempo' ? 'Mnema Tempo' : 'Mnema Atlas'}
               </span>
               <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
             </button>
@@ -116,6 +128,14 @@ export function AppSidebar({
                 <span className="flex-1">Mnema Voyage</span>
                 <span className="text-[11px] text-muted-foreground">{t('Voyage', '旅遊')}</span>
                 {space === 'travel' ? <Check className="ml-1 size-4 text-brand" /> : null}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/tempo">
+                <ListTodo className="text-brand" />
+                <span className="flex-1">Mnema Tempo</span>
+                <span className="text-[11px] text-muted-foreground">{t('Tempo', '節奏')}</span>
+                {space === 'tempo' ? <Check className="ml-1 size-4 text-brand" /> : null}
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>

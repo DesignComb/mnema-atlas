@@ -49,6 +49,32 @@ import {
   updateItemInput,
   updateItineraryInput,
   updateNoteInput,
+  // Mnema Tempo
+  addReminderInput,
+  checkInInput,
+  completeTaskInput,
+  createTaskInput,
+  createTaskListInput,
+  createTasksBulkInput,
+  deleteTaskInput,
+  deleteTaskListInput,
+  getHabitInput,
+  getStreakInput,
+  getTaskInput,
+  listTasksInput,
+  moveTaskInput,
+  removeReminderInput,
+  reorderTaskListsInput,
+  reorderTasksInput,
+  scheduleTaskInput,
+  searchTasksInput,
+  setRecurrenceInput,
+  snoozeTaskInput,
+  suggestRecurringTasksInput,
+  uncheckInInput,
+  uncompleteTaskInput,
+  updateTaskInput,
+  updateTaskListInput,
 } from '../../shared/schemas'
 import { callRpc, ownedSelect, serviceClient } from './db'
 import type { ToolContext } from './env'
@@ -856,6 +882,394 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       await callRpc(ctx.env, ctx.userId, 'revoke_share_link', { p_id: a.share_link_id })
       return { summary: 'Share link revoked', data: { ok: true } }
+    },
+  },
+
+  // ── Mnema Tempo: lists ──
+  {
+    name: 'create_task_list',
+    description: toolDescriptions.create_task_list,
+    schema: createTaskListInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const list = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'create_task_list', {
+        p_name: a.name,
+        p_kind: a.kind ?? 'list',
+        p_color: a.color ?? null,
+        p_icon: a.icon ?? null,
+        p_sort_order: a.sort_order ?? 0,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Created list “${list.name}” (${list.id})`, data: list }
+    },
+  },
+  {
+    name: 'update_task_list',
+    description: toolDescriptions.update_task_list,
+    schema: updateTaskListInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const list = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'update_task_list', {
+        p_list_id: a.list_id,
+        p_name: a.name ?? null,
+        p_kind: a.kind ?? null,
+        p_color: a.color ?? null,
+        p_icon: a.icon ?? null,
+        p_is_archived: a.is_archived ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: `Updated list “${list.name}”`, data: list }
+    },
+  },
+  {
+    name: 'delete_task_list',
+    description: toolDescriptions.delete_task_list,
+    schema: deleteTaskListInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_task_list', { p_list_id: a.list_id })
+      return { summary: 'List deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'reorder_task_lists',
+    description: toolDescriptions.reorder_task_lists,
+    schema: reorderTaskListsInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'reorder_task_lists', { p_list_ids: a.list_ids })
+      return { summary: 'Lists reordered', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_task_lists',
+    description: toolDescriptions.list_task_lists,
+    schema: noArgs,
+    readOnly: true,
+    run: async (ctx) => {
+      const lists = await ownedSelect(ctx.env, ctx.userId, 'task_lists', 'id, name, kind, color, icon, sort_order, is_archived')
+      return { summary: `${lists.length} list(s)`, data: lists }
+    },
+  },
+
+  // ── Mnema Tempo: tasks ──
+  {
+    name: 'create_task',
+    description: toolDescriptions.create_task,
+    schema: createTaskInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const task = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'create_task', {
+        p_title: a.title,
+        p_list_id: a.list_id ?? null,
+        p_parent_task_id: a.parent_task_id ?? null,
+        p_description: a.description ?? null,
+        p_priority: a.priority ?? 0,
+        p_labels: a.labels ?? [],
+        p_scheduled_date: a.scheduled_date ?? null,
+        p_scheduled_time: a.scheduled_time ?? null,
+        p_due_date: a.due_date ?? null,
+        p_due_time: a.due_time ?? null,
+        p_duration_min: a.duration_min ?? null,
+        p_kind: a.kind ?? 'task',
+        p_recurrence_rule: a.recurrence_rule ?? null,
+        p_recurrence_after_completion: a.recurrence_after_completion ?? false,
+        p_recurrence_anchor: a.recurrence_anchor ?? null,
+        p_next_occurrence: a.next_occurrence ?? null,
+        p_tz: a.tz ?? null,
+        p_sort_order: a.sort_order ?? 0,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Created task “${task.title}” (${task.id})`, data: task }
+    },
+  },
+  {
+    name: 'create_tasks_bulk',
+    description: toolDescriptions.create_tasks_bulk,
+    schema: createTasksBulkInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const tasks = await callRpc<Array<{ id: string }>>(ctx.env, ctx.userId, 'create_tasks_bulk', { p_tasks: a.tasks })
+      return { summary: `Created ${tasks.length} task(s)`, data: tasks }
+    },
+  },
+  {
+    name: 'update_task',
+    description: toolDescriptions.update_task,
+    schema: updateTaskInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'update_task', {
+        p_task_id: a.task_id,
+        p_title: a.title ?? null,
+        p_description: a.description ?? null,
+        p_list_id: a.list_id ?? null,
+        p_priority: a.priority ?? null,
+        p_labels: a.labels ?? null,
+        p_due_date: a.due_date ?? null,
+        p_due_time: a.due_time ?? null,
+        p_status: a.status ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: `Updated task “${task.title}”`, data: task }
+    },
+  },
+  {
+    name: 'complete_task',
+    description: toolDescriptions.complete_task,
+    schema: completeTaskInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc<{ id: string; status: string; next_occurrence: string | null }>(
+        ctx.env,
+        ctx.userId,
+        'complete_task',
+        {
+          p_task_id: a.task_id,
+          p_completed_at: a.completed_at ?? undefined,
+          p_next_occurrence: a.next_occurrence ?? undefined,
+        },
+      )
+      return { summary: task.next_occurrence ? `Completed; next on ${task.next_occurrence}` : 'Task completed', data: task }
+    },
+  },
+  {
+    name: 'uncomplete_task',
+    description: toolDescriptions.uncomplete_task,
+    schema: uncompleteTaskInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc(ctx.env, ctx.userId, 'uncomplete_task', { p_task_id: a.task_id })
+      return { summary: 'Task reopened', data: task }
+    },
+  },
+  {
+    name: 'delete_task',
+    description: toolDescriptions.delete_task,
+    schema: deleteTaskInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_task', { p_task_id: a.task_id })
+      return { summary: 'Task deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'move_task',
+    description: toolDescriptions.move_task,
+    schema: moveTaskInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc(ctx.env, ctx.userId, 'move_task', {
+        p_task_id: a.task_id,
+        p_list_id: a.list_id ?? null,
+        p_parent_task_id: a.parent_task_id ?? null,
+      })
+      return { summary: 'Task moved', data: task }
+    },
+  },
+  {
+    name: 'reorder_tasks',
+    description: toolDescriptions.reorder_tasks,
+    schema: reorderTasksInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'reorder_tasks', { p_list_id: a.list_id ?? null, p_task_ids: a.task_ids })
+      return { summary: 'Tasks reordered', data: { ok: true } }
+    },
+  },
+  {
+    name: 'set_recurrence',
+    description: toolDescriptions.set_recurrence,
+    schema: setRecurrenceInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc(ctx.env, ctx.userId, 'set_recurrence', {
+        p_task_id: a.task_id,
+        p_recurrence_rule: a.recurrence_rule,
+        p_recurrence_after_completion: a.recurrence_after_completion ?? false,
+        p_recurrence_anchor: a.recurrence_anchor ?? null,
+        p_next_occurrence: a.next_occurrence ?? null,
+      })
+      return { summary: 'Recurrence set', data: task }
+    },
+  },
+  {
+    name: 'schedule_task',
+    description: toolDescriptions.schedule_task,
+    schema: scheduleTaskInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc(ctx.env, ctx.userId, 'schedule_task', {
+        p_task_id: a.task_id,
+        p_scheduled_date: a.scheduled_date ?? null,
+        p_scheduled_time: a.scheduled_time ?? null,
+        p_due_date: a.due_date ?? null,
+        p_due_time: a.due_time ?? null,
+        p_duration_min: a.duration_min ?? null,
+      })
+      return { summary: 'Task scheduled', data: task }
+    },
+  },
+  {
+    name: 'snooze_task',
+    description: toolDescriptions.snooze_task,
+    schema: snoozeTaskInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc(ctx.env, ctx.userId, 'snooze_task', {
+        p_task_id: a.task_id,
+        p_until: a.until,
+        p_until_time: a.until_time ?? undefined,
+      })
+      return { summary: `Snoozed to ${a.until}`, data: task }
+    },
+  },
+
+  // ── Mnema Tempo: habits ──
+  {
+    name: 'check_in',
+    description: toolDescriptions.check_in,
+    schema: checkInInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc<{ current_streak: number }>(ctx.env, ctx.userId, 'check_in', {
+        p_task_id: a.task_id,
+        p_checkin_date: a.checkin_date ?? undefined,
+        p_note: a.note ?? null,
+      })
+      return { summary: `Checked in — streak ${task.current_streak}`, data: task }
+    },
+  },
+  {
+    name: 'uncheck_in',
+    description: toolDescriptions.uncheck_in,
+    schema: uncheckInInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const task = await callRpc(ctx.env, ctx.userId, 'uncheck_in', {
+        p_task_id: a.task_id,
+        p_checkin_date: a.checkin_date ?? undefined,
+      })
+      return { summary: 'Check-in removed', data: task }
+    },
+  },
+
+  // ── Mnema Tempo: reminders ──
+  {
+    name: 'add_reminder',
+    description: toolDescriptions.add_reminder,
+    schema: addReminderInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const r = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'add_reminder', {
+        p_task_id: a.task_id,
+        p_remind_at: a.remind_at,
+        p_offset_min: a.offset_min ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Reminder set (${r.id})`, data: r }
+    },
+  },
+  {
+    name: 'remove_reminder',
+    description: toolDescriptions.remove_reminder,
+    schema: removeReminderInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'remove_reminder', { p_reminder_id: a.reminder_id })
+      return { summary: 'Reminder removed', data: { ok: true } }
+    },
+  },
+
+  // ── Mnema Tempo: reads ──
+  {
+    name: 'get_task',
+    description: toolDescriptions.get_task,
+    schema: getTaskInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const task = await callRpc(ctx.env, ctx.userId, 'get_task', { p_task_id: a.task_id })
+      return { summary: 'Task', data: task }
+    },
+  },
+  {
+    name: 'list_tasks',
+    description: toolDescriptions.list_tasks,
+    schema: listTasksInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const tasks = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_tasks', {
+        p_list_id: a.list_id ?? null,
+        p_status: a.status ?? undefined,
+        p_kind: a.kind ?? null,
+        p_label: a.label ?? null,
+        p_due_before: a.due_before ?? null,
+        p_scheduled_on: a.scheduled_on ?? null,
+        p_include_subtasks: a.include_subtasks ?? false,
+        p_limit: a.limit ?? 100,
+      })
+      return { summary: `${tasks.length} task(s)`, data: tasks }
+    },
+  },
+  {
+    name: 'search_tasks',
+    description: toolDescriptions.search_tasks,
+    schema: searchTasksInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const tasks = await callRpc<unknown[]>(ctx.env, ctx.userId, 'search_tasks', {
+        p_query: a.query,
+        p_limit: a.limit ?? 50,
+      })
+      return { summary: `${tasks.length} task(s) matched`, data: tasks }
+    },
+  },
+  {
+    name: 'get_habit',
+    description: toolDescriptions.get_habit,
+    schema: getHabitInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const habit = await callRpc(ctx.env, ctx.userId, 'get_habit', { p_task_id: a.task_id })
+      return { summary: 'Habit', data: habit }
+    },
+  },
+  {
+    name: 'get_streak',
+    description: toolDescriptions.get_streak,
+    schema: getStreakInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const streak = await callRpc(ctx.env, ctx.userId, 'get_streak', { p_task_id: a.task_id })
+      return { summary: 'Streak', data: streak }
+    },
+  },
+  {
+    name: 'suggest_recurring_tasks',
+    description: toolDescriptions.suggest_recurring_tasks,
+    schema: suggestRecurringTasksInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const clusters = await callRpc<unknown[]>(ctx.env, ctx.userId, 'suggest_recurring_tasks', {
+        p_lookback_days: a.lookback_days ?? 90,
+        p_min_count: a.min_count ?? 3,
+      })
+      return { summary: `${clusters.length} suggestion(s)`, data: clusters }
     },
   },
 ]

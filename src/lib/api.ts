@@ -32,6 +32,18 @@ import type {
   UpdateItineraryInput,
   UpdateNoteInput,
 } from '@shared/schemas'
+import type {
+  AddReminderInput,
+  CreateTaskInput,
+  CreateTaskListInput,
+  CreateTasksBulkInput,
+  ScheduleTaskInput,
+  SetRecurrenceInput,
+  TaskStatus,
+  UpdateTaskInput,
+  UpdateTaskListInput,
+} from '@shared/schemas'
+import type { TaskListRow, TaskReminderRow, TaskRow } from './database.types'
 
 /**
  * Thin typed wrappers over the shared SECURITY DEFINER RPCs and RLS-protected
@@ -787,5 +799,270 @@ export async function revokeApiKey(id: string): Promise<void> {
   // Goes through the RPC now — direct UPDATE on api_keys is no longer permitted
   // (the shared write path is enforced; see migration 0011).
   const res = await supabase.rpc('revoke_api_key', { p_user_id: null, p_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ════════════════════ Mnema Tempo (todos / habits / reminders) ════════════════════
+
+/** A task plus its subtasks, reminders, and (for habits) check-in dates. */
+export interface TaskTree extends TaskRow {
+  subtasks: TaskRow[]
+  reminders: TaskReminderRow[]
+  checkins: string[]
+}
+
+export interface TaskFilters {
+  listId?: string
+  status?: TaskStatus
+  kind?: 'task' | 'habit'
+  label?: string
+  dueBefore?: string
+  scheduledOn?: string
+  includeSubtasks?: boolean
+  limit?: number
+}
+
+// ── Reads ──
+export async function listTaskLists(): Promise<TaskListRow[]> {
+  return unwrap(await supabase.from('task_lists').select('*').order('sort_order', { ascending: true }))
+}
+
+export async function listTasks(filters: TaskFilters = {}): Promise<TaskRow[]> {
+  return unwrap(
+    await supabase.rpc('list_tasks', {
+      p_user_id: null,
+      p_list_id: filters.listId ?? undefined,
+      p_status: filters.status ?? undefined,
+      p_kind: filters.kind ?? undefined,
+      p_label: filters.label ?? undefined,
+      p_due_before: filters.dueBefore ?? undefined,
+      p_scheduled_on: filters.scheduledOn ?? undefined,
+      p_include_subtasks: filters.includeSubtasks ?? undefined,
+      p_limit: filters.limit ?? undefined,
+    }),
+  )
+}
+
+export async function getTask(id: string): Promise<TaskTree> {
+  return unwrap(await supabase.rpc('get_task', { p_user_id: null, p_task_id: id })) as unknown as TaskTree
+}
+
+export async function searchTasks(query: string, limit = 50): Promise<TaskRow[]> {
+  return unwrap(await supabase.rpc('search_tasks', { p_user_id: null, p_query: query, p_limit: limit }))
+}
+
+export async function getHabit(id: string): Promise<TaskTree> {
+  return unwrap(await supabase.rpc('get_habit', { p_user_id: null, p_task_id: id })) as unknown as TaskTree
+}
+
+export interface StreakInfo {
+  current_streak: number
+  longest_streak: number
+  last_checkin_date: string | null
+  calendar: string[]
+}
+export async function getStreak(id: string): Promise<StreakInfo> {
+  return unwrap(await supabase.rpc('get_streak', { p_user_id: null, p_task_id: id })) as unknown as StreakInfo
+}
+
+export interface RecurringSuggestion {
+  title: string
+  count: number
+  task_ids: string[]
+  avg_gap_days: number | null
+  suggested_rule: string
+}
+export async function suggestRecurringTasks(opts: { lookbackDays?: number; minCount?: number } = {}): Promise<RecurringSuggestion[]> {
+  return unwrap(
+    await supabase.rpc('suggest_recurring_tasks', {
+      p_user_id: null,
+      p_lookback_days: opts.lookbackDays ?? undefined,
+      p_min_count: opts.minCount ?? undefined,
+    }),
+  ) as unknown as RecurringSuggestion[]
+}
+
+// ── List writes ──
+export async function createTaskList(input: CreateTaskListInput): Promise<TaskListRow> {
+  return unwrap(
+    await supabase.rpc('create_task_list', {
+      p_user_id: null,
+      p_name: input.name,
+      p_kind: input.kind ?? undefined,
+      p_color: input.color ?? undefined,
+      p_icon: input.icon ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function updateTaskList(input: UpdateTaskListInput): Promise<TaskListRow> {
+  return unwrap(
+    await supabase.rpc('update_task_list', {
+      p_user_id: null,
+      p_list_id: input.list_id,
+      p_name: input.name ?? undefined,
+      p_kind: input.kind ?? undefined,
+      p_color: input.color ?? undefined,
+      p_icon: input.icon ?? undefined,
+      p_is_archived: input.is_archived ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function deleteTaskList(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_task_list', { p_user_id: null, p_list_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function reorderTaskLists(listIds: string[]): Promise<void> {
+  const res = await supabase.rpc('reorder_task_lists', { p_user_id: null, p_list_ids: listIds })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ── Task writes ──
+export async function createTask(input: CreateTaskInput): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('create_task', {
+      p_user_id: null,
+      p_title: input.title,
+      p_list_id: input.list_id ?? undefined,
+      p_parent_task_id: input.parent_task_id ?? undefined,
+      p_description: input.description ?? undefined,
+      p_priority: input.priority ?? undefined,
+      p_labels: input.labels ?? undefined,
+      p_scheduled_date: input.scheduled_date ?? undefined,
+      p_scheduled_time: input.scheduled_time ?? undefined,
+      p_due_date: input.due_date ?? undefined,
+      p_due_time: input.due_time ?? undefined,
+      p_duration_min: input.duration_min ?? undefined,
+      p_kind: input.kind ?? undefined,
+      p_recurrence_rule: input.recurrence_rule ?? undefined,
+      p_recurrence_after_completion: input.recurrence_after_completion ?? undefined,
+      p_recurrence_anchor: input.recurrence_anchor ?? undefined,
+      p_next_occurrence: input.next_occurrence ?? undefined,
+      p_tz: input.tz ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function createTasksBulk(input: CreateTasksBulkInput): Promise<TaskRow[]> {
+  return unwrap(await supabase.rpc('create_tasks_bulk', { p_user_id: null, p_tasks: input.tasks as unknown as Json }))
+}
+export async function updateTask(input: UpdateTaskInput): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('update_task', {
+      p_user_id: null,
+      p_task_id: input.task_id,
+      p_title: input.title ?? undefined,
+      p_description: input.description ?? undefined,
+      p_list_id: input.list_id ?? undefined,
+      p_priority: input.priority ?? undefined,
+      p_labels: input.labels ?? undefined,
+      p_due_date: input.due_date ?? undefined,
+      p_due_time: input.due_time ?? undefined,
+      p_status: input.status ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function completeTask(taskId: string, opts: { completedAt?: string; nextOccurrence?: string } = {}): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('complete_task', {
+      p_user_id: null,
+      p_task_id: taskId,
+      p_completed_at: opts.completedAt ?? undefined,
+      p_next_occurrence: opts.nextOccurrence ?? undefined,
+    }),
+  )
+}
+export async function uncompleteTask(taskId: string): Promise<TaskRow> {
+  return unwrap(await supabase.rpc('uncomplete_task', { p_user_id: null, p_task_id: taskId }))
+}
+export async function deleteTask(taskId: string): Promise<void> {
+  const res = await supabase.rpc('delete_task', { p_user_id: null, p_task_id: taskId })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function moveTask(taskId: string, listId: string | null, parentId: string | null = null): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('move_task', {
+      p_user_id: null,
+      p_task_id: taskId,
+      p_list_id: listId ?? undefined,
+      p_parent_task_id: parentId ?? undefined,
+    }),
+  )
+}
+export async function reorderTasks(listId: string | null, taskIds: string[]): Promise<void> {
+  const res = await supabase.rpc('reorder_tasks', {
+    p_user_id: null,
+    p_list_id: listId as unknown as string,
+    p_task_ids: taskIds,
+  })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function setRecurrence(input: SetRecurrenceInput): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('set_recurrence', {
+      p_user_id: null,
+      p_task_id: input.task_id,
+      p_recurrence_rule: input.recurrence_rule,
+      p_recurrence_after_completion: input.recurrence_after_completion ?? undefined,
+      p_recurrence_anchor: input.recurrence_anchor ?? undefined,
+      p_next_occurrence: input.next_occurrence ?? undefined,
+    }),
+  )
+}
+export async function scheduleTask(input: ScheduleTaskInput): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('schedule_task', {
+      p_user_id: null,
+      p_task_id: input.task_id,
+      p_scheduled_date: input.scheduled_date ?? undefined,
+      p_scheduled_time: input.scheduled_time ?? undefined,
+      p_due_date: input.due_date ?? undefined,
+      p_due_time: input.due_time ?? undefined,
+      p_duration_min: input.duration_min ?? undefined,
+    }),
+  )
+}
+export async function snoozeTask(taskId: string, until: string, untilTime?: string): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('snooze_task', {
+      p_user_id: null,
+      p_task_id: taskId,
+      p_until: until,
+      p_until_time: untilTime ?? undefined,
+    }),
+  )
+}
+export async function checkIn(taskId: string, date?: string, note?: string): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('check_in', {
+      p_user_id: null,
+      p_task_id: taskId,
+      p_checkin_date: date ?? undefined,
+      p_note: note ?? undefined,
+    }),
+  )
+}
+export async function uncheckIn(taskId: string, date?: string): Promise<TaskRow> {
+  return unwrap(
+    await supabase.rpc('uncheck_in', { p_user_id: null, p_task_id: taskId, p_checkin_date: date ?? undefined }),
+  )
+}
+export async function addReminder(input: AddReminderInput): Promise<TaskReminderRow> {
+  return unwrap(
+    await supabase.rpc('add_reminder', {
+      p_user_id: null,
+      p_task_id: input.task_id,
+      p_remind_at: input.remind_at,
+      p_offset_min: input.offset_min ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function removeReminder(reminderId: string): Promise<void> {
+  const res = await supabase.rpc('remove_reminder', { p_user_id: null, p_reminder_id: reminderId })
   if (res.error) throw new Error(res.error.message)
 }

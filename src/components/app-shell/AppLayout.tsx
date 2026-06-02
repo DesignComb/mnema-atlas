@@ -70,6 +70,7 @@ export function AppLayout() {
         className={cn(
           'flex h-dvh overflow-hidden bg-background text-foreground',
           pathname.startsWith('/trips') && 'theme-voyage',
+          pathname.startsWith('/tempo') && 'theme-tempo',
         )}
       >
         {/* Desktop: persistent sidebar (lg+). */}
