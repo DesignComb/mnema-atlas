@@ -217,11 +217,13 @@ export function TempoScreen() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
-          {view === 'calendar' ? (
-            <CalendarView tasks={tasks ?? []} onEdit={(task) => setTaskDialog({ open: true, task })} />
-          ) : (
+      {view === 'calendar' ? (
+        <div className="flex min-h-0 flex-1 flex-col px-2.5 pb-2.5 pt-2.5 sm:px-5 sm:pb-4">
+          <CalendarView tasks={tasks ?? []} onEdit={(task) => setTaskDialog({ open: true, task })} />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
             <>
               {/* Quick add */}
               <div className="mb-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 shadow-soft focus-within:border-brand/50">
@@ -302,9 +304,9 @@ export function TempoScreen() {
                 </button>
               ) : null}
             </>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       <TaskDialog
         open={taskDialog.open}

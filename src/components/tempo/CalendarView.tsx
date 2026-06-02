@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useScheduleTask } from '@/lib/hooks'
 import { useHolidays } from '@/lib/holidays'
 import { useT } from '@/lib/i18n'
 import type { TaskRow } from '@/lib/database.types'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   addDays,
   dayNum,
@@ -19,8 +26,9 @@ import {
 } from '@/lib/tempo-date'
 
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const WD_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const WD_ZH = ['一', '二', '三', '四', '五', '六', '日']
+// Week starts Sunday.
+const WD_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WD_ZH = ['日', '一', '二', '三', '四', '五', '六']
 const START_HOUR = 6
 const END_HOUR = 23
 const HOUR_PX = 44
@@ -52,7 +60,26 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
       return true
     }
   })
+  const [showTasks, setShowTasks] = useState(() => {
+    try {
+      return localStorage.getItem('mnema-show-tasks') !== '0'
+    } catch {
+      return true
+    }
+  })
   const today = todayISO()
+
+  function toggleTasks() {
+    setShowTasks((v) => {
+      const n = !v
+      try {
+        localStorage.setItem('mnema-show-tasks', n ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      return n
+    })
+  }
 
   const years = [yearOf(cursor), yearOf(cursor) + 1]
   const { data: holidaysData } = useHolidays(years, 'TW', showHolidays)
@@ -70,7 +97,8 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
     })
   }
 
-  const dated = tasks.filter((x) => dateOf(x))
+  const visibleTasks = showTasks ? tasks : []
+  const dated = visibleTasks.filter((x) => dateOf(x))
   const byDate = new Map<string, TaskRow[]>()
   for (const task of dated) {
     const d = dateOf(task)!
@@ -92,8 +120,8 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
       : `${t(MONTHS_EN[monthOf(cursor)], `${monthOf(cursor) + 1}月`)} ${yearOf(cursor)}`
 
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="mb-2.5 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <button onClick={() => shift(-1)} className="rounded-md p-1 text-muted-foreground transition hover:bg-card hover:text-foreground">
             <ChevronLeft className="size-4" />
@@ -110,16 +138,40 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
           </button>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={toggleHolidays}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition ${
-              showHolidays ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400' : 'border-border text-muted-foreground hover:text-foreground'
-            }`}
-            title={t('Public holidays (Taiwan)', '國定假日(台灣)')}
-          >
-            <span className={`size-2 rounded-full ${showHolidays ? 'bg-red-500' : 'bg-muted-foreground/40'}`} />
-            {t('Holidays', '假日')}
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[12px] font-medium text-muted-foreground transition hover:text-foreground">
+                <CalendarRange className="size-3.5" /> {t('Calendars', '行事曆')}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>{t('Shown calendars', '顯示的行事曆')}</DropdownMenuLabel>
+              <DropdownMenuItem
+                className="gap-2.5"
+                onSelect={(e) => {
+                  e.preventDefault()
+                  toggleTasks()
+                }}
+              >
+                <span
+                  className={`size-4 shrink-0 rounded-[5px] border ${showTasks ? 'border-transparent bg-brand' : 'border-muted-foreground/40'}`}
+                />
+                <span className="flex-1">{t('Tasks', '任務')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2.5"
+                onSelect={(e) => {
+                  e.preventDefault()
+                  toggleHolidays()
+                }}
+              >
+                <span
+                  className={`size-4 shrink-0 rounded-[5px] border ${showHolidays ? 'border-transparent bg-red-500' : 'border-muted-foreground/40'}`}
+                />
+                <span className="flex-1">{t('Holidays · Taiwan', '國定假日 · 台灣')}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className="flex items-center rounded-full bg-muted/60 p-0.5">
             {(['month', 'week', 'agenda'] as Mode[]).map((m) => (
               <button
@@ -136,23 +188,29 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
         </div>
       </div>
 
-      {mode === 'month' ? (
-        <MonthGrid cursor={cursor} byDate={byDate} holidays={holidays} today={today} t={t} onEdit={onEdit} />
-      ) : mode === 'week' ? (
-        <WeekGrid
-          cursor={cursor}
-          tasks={tasks}
-          holidays={holidays}
-          today={today}
-          t={t}
-          onEdit={onEdit}
-          onSchedule={(taskId, date, time, dur) =>
-            schedule.mutate({ task_id: taskId, scheduled_date: date, scheduled_time: time, duration_min: dur })
-          }
-        />
-      ) : (
-        <Agenda cursor={cursor} byDate={byDate} holidays={holidays} today={today} t={t} onEdit={onEdit} />
-      )}
+      <div className="min-h-0 flex-1">
+        {mode === 'month' ? (
+          <MonthGrid cursor={cursor} byDate={byDate} holidays={holidays} today={today} t={t} onEdit={onEdit} />
+        ) : (
+          <div className="h-full overflow-y-auto pb-1">
+            {mode === 'week' ? (
+              <WeekGrid
+                cursor={cursor}
+                tasks={visibleTasks}
+                holidays={holidays}
+                today={today}
+                t={t}
+                onEdit={onEdit}
+                onSchedule={(taskId, date, time, dur) =>
+                  schedule.mutate({ task_id: taskId, scheduled_date: date, scheduled_time: time, duration_min: dur })
+                }
+              />
+            ) : (
+              <Agenda cursor={cursor} byDate={byDate} holidays={holidays} today={today} t={t} onEdit={onEdit} />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -175,20 +233,20 @@ function MonthGrid({
   const days = monthGrid(yearOf(cursor), monthOf(cursor))
   const curMonth = monthOf(cursor)
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-      <div className="grid grid-cols-7">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+      <div className="grid shrink-0 grid-cols-7">
         {WD_EN.map((d, i) => (
           <div
             key={d}
-            className={`px-2 py-2 text-center text-[11px] font-semibold ${
-              i === 6 ? 'text-red-500' : i === 5 ? 'text-blue-500' : 'text-muted-foreground'
+            className={`px-2 py-1.5 text-center text-[11px] font-semibold ${
+              i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-muted-foreground'
             }`}
           >
             {t(d, WD_ZH[i])}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
+      <div className="grid min-h-0 flex-1 grid-cols-7 grid-rows-6">
         {days.map((d) => {
           const inMonth = monthOf(d) === curMonth
           const items = byDate.get(d) ?? []
@@ -197,11 +255,11 @@ function MonthGrid({
           return (
             <div
               key={d}
-              className={`min-h-[5.75rem] border-t border-r border-border/40 p-1 transition hover:bg-muted/30 ${
+              className={`flex min-h-0 flex-col overflow-hidden border-t border-r border-border/40 p-1 transition hover:bg-muted/30 ${
                 isWeekend(d) ? 'bg-muted/20' : ''
               } ${inMonth ? '' : 'opacity-45'}`}
             >
-              <div className="mb-0.5 flex items-center justify-between gap-1">
+              <div className="mb-0.5 flex shrink-0 items-center justify-between gap-1">
                 {holiday ? (
                   <span className="truncate text-[10px] font-medium text-red-500" title={holiday}>
                     {holiday}
@@ -217,7 +275,7 @@ function MonthGrid({
                   {dayNum(d)}
                 </span>
               </div>
-              <div className="space-y-0.5">
+              <div className="min-h-0 flex-1 space-y-0.5 overflow-hidden">
                 {items.slice(0, 3).map((task) => (
                   <button
                     key={task.id}
@@ -266,7 +324,7 @@ function Agenda({
   return (
     <div className="space-y-3">
       {days.map((d) => {
-        const wdIdx = (weekday(d) + 6) % 7 // 0=Mon … 6=Sun
+        const wdIdx = weekday(d) // 0=Sun … 6=Sat
         const holiday = holidays.get(d)
         return (
           <div key={d}>
@@ -388,7 +446,7 @@ function WeekGrid({
               const holiday = holidays.get(d)
               return (
                 <div key={d} className={`px-1 py-1.5 text-center ${isWeekend(d) ? 'bg-muted/30' : ''}`}>
-                  <div className={`text-[11px] ${i === 6 ? 'text-red-500' : i === 5 ? 'text-blue-500' : 'text-muted-foreground'}`}>
+                  <div className={`text-[11px] ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-muted-foreground'}`}>
                     {t(WD_EN[i], WD_ZH[i])}
                   </div>
                   <div

@@ -24,10 +24,9 @@ export function todayISO(): string {
 export function weekday(iso: string): number {
   return parseISO(iso).getUTCDay()
 }
-/** Monday-based start of the week containing `iso`. */
+/** Sunday-based start of the week containing `iso` (week starts on Sunday). */
 export function startOfWeek(iso: string): string {
-  const wd = weekday(iso)
-  return addDays(iso, wd === 0 ? -6 : 1 - wd)
+  return addDays(iso, -weekday(iso))
 }
 export function weekDays(iso: string): string[] {
   const s = startOfWeek(iso)
