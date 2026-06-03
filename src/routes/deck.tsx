@@ -9,7 +9,7 @@ import { NewDeckDialog } from '@/components/app-shell/NewDeckDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { Button } from '@/components/ui/button'
 import { relativeDue } from '@/lib/utils'
-import { useT } from '@/lib/i18n'
+import { useI18n } from '@/lib/i18n'
 
 export function DeckScreen() {
   const { deckId } = useParams({ strict: false }) as { deckId: string }
@@ -20,7 +20,7 @@ export function DeckScreen() {
   const createNote = useCreateNote()
   const deleteDeck = useDeleteDeck()
   const navigate = useNavigate()
-  const t = useT()
+  const { t, lang } = useI18n()
   const [cardOpen, setCardOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
@@ -144,7 +144,7 @@ export function DeckScreen() {
                   >
                     <FileText className="size-4 shrink-0 text-muted-foreground group-hover:text-brand" />
                     <span className="min-w-0 flex-1 truncate text-sm text-foreground">{n.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{relativeDue(n.updated_at)}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{relativeDue(n.updated_at, undefined, lang)}</span>
                   </Link>
                 ))}
               </div>

@@ -180,7 +180,10 @@ export function IntegrationsScreen() {
                         {k.revoked_at ? <span className="ml-2 text-xs text-destructive">{t('revoked', '已撤銷')}</span> : null}
                       </p>
                       <p className="font-mono text-xs text-muted-foreground">
-                        {k.key_prefix}••••••• · {k.last_used_at ? t(`used ${relativeDue(k.last_used_at)}`, `使用於 ${relativeDue(k.last_used_at)}`) : t('never used', '從未使用')}
+                        {k.key_prefix}••••••• ·{' '}
+                        {k.last_used_at
+                          ? t(`used ${relativeDue(k.last_used_at, undefined, 'en')}`, `使用於 ${relativeDue(k.last_used_at, undefined, 'zh')}`)
+                          : t('never used', '從未使用')}
                       </p>
                     </div>
                     {!k.revoked_at ? (

@@ -5,11 +5,11 @@ import { ArrowRight, FilePlus2, FileText, GraduationCap, Layers, Sparkles } from
 import { useDecks, useDueCards, useNewNote, useNotes, useSeedSample } from '@/lib/hooks'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
-import { useT } from '@/lib/i18n'
-import { modKey, relativeDue } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
+import { fmtLocalDate, modKey, relativeDue } from '@/lib/utils'
 
 export function HomeScreen() {
-  const t = useT()
+  const { t, lang } = useI18n()
   const { data: due } = useDueCards()
   const { data: notes } = useNotes()
   const { data: decks } = useDecks()
@@ -18,11 +18,11 @@ export function HomeScreen() {
 
   const dueCount = due?.length ?? 0
   const isNew = (decks?.length ?? 0) === 0 && (notes?.length ?? 0) === 0
-  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+  const today = fmtLocalDate(new Date(), lang, { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
     <>
-      <PageHeader title="Today" subtitle={today} />
+      <PageHeader title={t('Today', '今天')} subtitle={today} />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
           {isNew ? (
@@ -112,7 +112,7 @@ export function HomeScreen() {
                   >
                     <FileText className="size-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1 truncate text-sm text-foreground">{n.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{relativeDue(n.updated_at)}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{relativeDue(n.updated_at, undefined, lang)}</span>
                   </Link>
                 ))}
               </div>

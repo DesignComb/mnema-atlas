@@ -1,11 +1,18 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, Cloud, Layers, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { Check, Cloud, Copy, Download, Layers, Loader2, MoreHorizontal, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import * as api from '@/lib/api'
 import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useUpdateNote } from '@/lib/hooks'
+import { downloadText, safeFilename } from '@/lib/utils'
 import { TagEditor } from '@/components/editor/TagEditor'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 // TipTap is heavy (~0.5 MB) and only the note editor needs it — split it into
 // its own chunk so the note shell (title, deck, cards) paints immediately.
@@ -40,6 +47,11 @@ export function NoteScreen() {
   const [askOpen, setAskOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
   const loadedId = useRef<string | null>(null)
+  // Last values actually persisted to the server. The autosave effect diffs
+  // against THIS (not the react-query `note` object, which churns a new
+  // reference on every refetch) so a completed save reliably lands on "Saved"
+  // instead of being re-triggered into a stuck "Saving…".
+  const savedRef = useRef<{ title: string; body: string } | null>(null)
   // Latest values for the unmount-time "discard abandoned blank note" cleanup.
   const discardedRef = useRef(false)
   const latest = useRef({ title: '', body: '', cards: 0 })
@@ -50,6 +62,7 @@ export function NoteScreen() {
     if (note && loadedId.current !== note.id) {
       setTitle(note.title)
       setBody(note.body)
+      savedRef.current = { title: note.title, body: note.body }
       loadedId.current = note.id
       setStatus('idle')
     }
@@ -74,22 +87,36 @@ export function NoteScreen() {
     }
   }, [qc])
 
-  // Debounced autosave.
+  // Debounced autosave. Deps are only the user-driven values + the note id
+  // (stable across refetches), so the effect fires on real edits — never on the
+  // post-save refetch or the mutation's isPending churn.
   useEffect(() => {
-    if (!note || loadedId.current !== note.id) return
-    if (title === note.title && body === note.body) return
+    const saved = savedRef.current
+    if (!note || loadedId.current !== note.id || !saved) return
+    const tt = title.trim() || 'Untitled'
+    if (tt === saved.title && body === saved.body) {
+      if (status === 'saving') setStatus('saved')
+      return
+    }
     setStatus('saving')
-    const timer = setTimeout(async () => {
-      try {
-        await updateNote.mutateAsync({ note_id: note.id, title: title.trim() || 'Untitled', body })
-        setStatus('saved')
-      } catch (err) {
-        setStatus('idle')
-        toast.error(err instanceof Error ? err.message : t('Failed to save', '儲存失敗'))
-      }
+    const timer = setTimeout(() => {
+      updateNote.mutate(
+        { note_id: note.id, title: tt, body },
+        {
+          onSuccess: () => {
+            savedRef.current = { title: tt, body }
+            setStatus('saved')
+          },
+          onError: (err) => {
+            setStatus('idle')
+            toast.error(err instanceof Error ? err.message : t('Failed to save', '儲存失敗'))
+          },
+        },
+      )
     }, 700)
     return () => clearTimeout(timer)
-  }, [title, body, note, updateNote, t])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, body, note?.id])
 
   if (isLoading) {
     return (
@@ -120,6 +147,35 @@ export function NoteScreen() {
             <Button variant="outline" size="sm" onClick={() => setAskOpen(true)}>
               <Sparkles className="size-4" /> <span className="hidden sm:inline">{t('Ask AI', '問 AI')}</span>
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" aria-label={t('Export', '匯出')} title={t('Export', '匯出')}>
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={() => {
+                    const md = `# ${title.trim() || t('Untitled', '未命名')}\n\n${body}`
+                    downloadText(`${safeFilename(title || 'note')}.md`, md)
+                  }}
+                >
+                  <Download /> {t('Download .md', '下載 .md')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    try {
+                      await navigator.clipboard.writeText(body)
+                      toast.success(t('Copied markdown', '已複製 Markdown'))
+                    } catch {
+                      toast.error(t('Copy failed', '複製失敗'))
+                    }
+                  }}
+                >
+                  <Copy /> {t('Copy markdown', '複製 Markdown')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="ghost"
               size="sm"
@@ -177,7 +233,15 @@ export function NoteScreen() {
             <TagEditor noteId={note.id} tags={note.tags ?? []} />
           </div>
           <Suspense fallback={<div className="mt-2 h-64 animate-pulse rounded-lg bg-card/60" />}>
-            <NoteEditor key={note.id} initialMarkdown={note.body} onChange={setBody} />
+            <NoteEditor
+              key={note.id}
+              value={body}
+              onChange={setBody}
+              placeholder={t(
+                'Start writing — markdown supported. Your notes become flashcards and graph nodes…',
+                '開始書寫 — 支援 Markdown。你的筆記會變成字卡與圖譜節點…',
+              )}
+            />
           </Suspense>
 
           {noteCards && noteCards.length > 0 ? (

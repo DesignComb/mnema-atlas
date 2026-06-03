@@ -1,17 +1,17 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { FilePlus2, FileText } from 'lucide-react'
+import { Download, FilePlus2, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateNote, useNotes } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
-import { relativeDue } from '@/lib/utils'
-import { useT } from '@/lib/i18n'
+import { downloadText, relativeDue } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 export function NotesScreen() {
   const { data: notes, isLoading } = useNotes()
   const createNote = useCreateNote()
   const navigate = useNavigate()
-  const t = useT()
+  const { t, lang } = useI18n()
 
   async function newNote() {
     try {
@@ -32,9 +32,23 @@ export function NotesScreen() {
             : undefined
         }
         actions={
-          <Button variant="brand" size="sm" onClick={newNote} disabled={createNote.isPending}>
-            <FilePlus2 className="size-4" /> <span className="hidden sm:inline">{t('New note', '新增筆記')}</span>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            {notes && notes.length > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const md = notes.map((n) => `# ${n.title}\n\n${n.body ?? ''}`).join('\n\n---\n\n')
+                  downloadText('mnema-notes.md', md)
+                }}
+              >
+                <Download className="size-4" /> <span className="hidden sm:inline">{t('Export all', '全部匯出')}</span>
+              </Button>
+            ) : null}
+            <Button variant="brand" size="sm" onClick={newNote} disabled={createNote.isPending}>
+              <FilePlus2 className="size-4" /> <span className="hidden sm:inline">{t('New note', '新增筆記')}</span>
+            </Button>
+          </div>
         }
       />
       <div className="flex-1 overflow-y-auto">
@@ -64,7 +78,7 @@ export function NotesScreen() {
                     ) : null}
                   </div>
                   <span className="shrink-0 pt-0.5 text-xs text-muted-foreground">
-                    {relativeDue(n.updated_at)}
+                    {relativeDue(n.updated_at, undefined, lang)}
                   </span>
                 </Link>
               ))}

@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { FileText, Pencil } from 'lucide-react'
 import type { CardRow } from '@/lib/database.types'
 import { relativeDue } from '@/lib/utils'
-import { useT } from '@/lib/i18n'
+import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import { tagChipStyle } from '@/lib/tags'
 import { NewCardDialog } from './NewCardDialog'
@@ -18,7 +18,7 @@ const STATE_META: Record<number, { label: string; zh: string; cls: string }> = {
 
 export function FlashcardTile({ card, noteTitle }: { card: CardRow; noteTitle?: string }) {
   const [editing, setEditing] = useState(false)
-  const t = useT()
+  const { t, lang } = useI18n()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const meta = STATE_META[card.state] ?? STATE_META[0]
@@ -35,7 +35,7 @@ export function FlashcardTile({ card, noteTitle }: { card: CardRow; noteTitle?: 
       <p className="mt-1 line-clamp-2 font-serif text-[13px] text-muted-foreground">{card.back}</p>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${meta.cls}`}>{t(meta.label, meta.zh)}</span>
-        <span className="text-[11px] text-muted-foreground/80">{t('due', '到期')} {relativeDue(card.due)}</span>
+        <span className="text-[11px] text-muted-foreground/80">{t('due', '到期')} {relativeDue(card.due, undefined, lang)}</span>
         {card.reps > 0 ? (
           <span className="text-[11px] text-muted-foreground/70">· {t(`${card.reps} review${card.reps === 1 ? '' : 's'}`, `${card.reps} 次複習`)}</span>
         ) : null}
