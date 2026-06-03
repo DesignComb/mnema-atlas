@@ -37,6 +37,7 @@ import {
   useRunDueRecurring,
   useSetBudget,
   useSettlements,
+  useSplitTxnIds,
 } from '@/lib/hooks'
 import { useI18n, useT } from '@/lib/i18n'
 import type { BudgetStatusItem, LedgerAccount, LedgerCategory, LedgerDetail, MemberBalanceItem } from '@/lib/api'
@@ -81,6 +82,7 @@ export function GalleonScreen() {
 
   const { data: ledger } = useLedger(ledgerId)
   const { data: balancesForDialog = [] } = useBalances(ledgerId)
+  const { data: splitIdsTop = [] } = useSplitTxnIds(ledgerId)
   const deleteLedger = useDeleteLedger()
   const canEdit = !ledger || ledger.my_role !== 'viewer'
 
@@ -281,6 +283,7 @@ export function GalleonScreen() {
             onOpenChange={(o) => setTxnDialog((s) => ({ ...s, open: o }))}
             ledger={ledger}
             transaction={txnDialog.txn}
+            isSplit={txnDialog.txn ? splitIdsTop.includes(txnDialog.txn.id) : false}
           />
           <RecurringDialog open={recurringDialog} onOpenChange={setRecurringDialog} ledger={ledger} />
           <MemberDialog
@@ -414,6 +417,8 @@ function Overview({ ledger, onEditTxn, onSeeAll, t }: { ledger: LedgerDetail; on
 function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTxn: (t: TransactionRow) => void; t: Tr }) {
   const { lang } = useI18n()
   const { data: txns, isLoading } = useLedgerTransactions({ ledgerId: ledger.id, limit: 300 })
+  const { data: splitIds } = useSplitTxnIds(ledger.id)
+  const splitSet = new Set(splitIds ?? [])
   if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card" />
   if (!(txns ?? []).length) {
     return <EmptyState icon={<Coins className="size-6" />} title={t('No transactions yet', '還沒有交易')} description={t('Tap “Add” to log one, or let your AI do it.', '點「記一筆」新增,或讓你的 AI 幫你記。')} />
@@ -432,7 +437,7 @@ function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTx
           <p className="mb-1 px-1 text-[12px] font-semibold text-muted-foreground">{fmtLedgerDate(g.date, lang)}</p>
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
             {g.rows.map((tx) => (
-              <TxnRow key={tx.id} tx={tx} ledger={ledger} onEdit={() => onEditTxn(tx)} t={t} withMenu />
+              <TxnRow key={tx.id} tx={tx} ledger={ledger} onEdit={() => onEditTxn(tx)} t={t} withMenu isSplit={splitSet.has(tx.id)} />
             ))}
           </div>
         </div>
@@ -441,7 +446,7 @@ function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTx
   )
 }
 
-function TxnRow({ tx, ledger, onEdit, t, withMenu }: { tx: TransactionRow; ledger: LedgerDetail; onEdit: () => void; t: Tr; withMenu?: boolean }) {
+function TxnRow({ tx, ledger, onEdit, t, withMenu, isSplit }: { tx: TransactionRow; ledger: LedgerDetail; onEdit: () => void; t: Tr; withMenu?: boolean; isSplit?: boolean }) {
   const del = useDeleteTransaction()
   const cat = ledger.categories.find((c) => c.id === tx.category_id)
   const acc = ledger.accounts.find((a) => a.id === tx.account_id)
@@ -458,7 +463,10 @@ function TxnRow({ tx, ledger, onEdit, t, withMenu }: { tx: TransactionRow; ledge
           {tx.type === 'transfer' ? <ArrowLeftRight className="size-4 text-muted-foreground" /> : cat?.icon || '💸'}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] text-foreground">{label}</span>
+          <span className="flex items-center gap-1.5 text-[14px] text-foreground">
+            <span className="truncate">{label}</span>
+            {isSplit ? <HandCoins className="size-3 shrink-0 text-brand" aria-label={t('Split', '分帳')} /> : null}
+          </span>
           <span className="block truncate text-[12px] text-muted-foreground">
             {acc?.name}
             {tx.note ? ` · ${tx.note}` : ''}
@@ -525,7 +533,18 @@ function Accounts({ ledger, onNew, onEdit, t }: { ledger: LedgerDetail; onNew: (
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive [&_svg]:text-destructive"
                     onSelect={() => {
-                      if (confirm(t(`Delete account “${a.name}”?`, `刪除帳戶「${a.name}」?`))) del.mutate(a.id)
+                      const other = accounts.find((x) => x.id !== a.id && !x.is_archived)
+                      const n = a.txn_count ?? 0
+                      if (n > 0) {
+                        if (!confirm(t(`Delete “${a.name}”? Its ${n} transaction(s) will lose their account link.`, `刪除「${a.name}」?此帳戶的 ${n} 筆交易將失去帳戶歸屬。`))) return
+                        if (other && confirm(t(`Reassign those ${n} transaction(s) to “${other.name}”? Cancel keeps them unassigned.`, `把這 ${n} 筆交易改派到「${other.name}」?取消則維持無歸屬。`))) {
+                          del.mutate({ id: a.id, reassignTo: other.id })
+                          return
+                        }
+                        del.mutate({ id: a.id })
+                        return
+                      }
+                      if (confirm(t(`Delete account “${a.name}”?`, `刪除帳戶「${a.name}」?`))) del.mutate({ id: a.id })
                     }}
                   >
                     <Trash2 /> {t('Delete', '刪除')}

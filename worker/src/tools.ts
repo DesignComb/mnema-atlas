@@ -100,6 +100,7 @@ import {
   listLedgerMembersInput,
   listRecurringInput,
   listSettlementsInput,
+  listSplitTxnIdsInput,
   listTransactionsInput,
   recordSettlementInput,
   removeLedgerMemberInput,
@@ -1471,7 +1472,10 @@ export const tools: ToolDef[] = [
     readOnly: false,
     requiresScope: 'edit',
     run: async (ctx, a) => {
-      await callRpc(ctx.env, ctx.userId, 'delete_account', { p_account_id: a.account_id })
+      await callRpc(ctx.env, ctx.userId, 'delete_account', {
+        p_account_id: a.account_id,
+        p_reassign_to_account_id: a.reassign_to_account_id ?? null,
+      })
       return { summary: 'Account deleted', data: { ok: true } }
     },
   },
@@ -1914,6 +1918,16 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       const tx = await callRpc(ctx.env, ctx.userId, 'get_transaction', { p_transaction_id: a.transaction_id })
       return { summary: 'Transaction with splits', data: tx }
+    },
+  },
+  {
+    name: 'list_split_txn_ids',
+    description: toolDescriptions.list_split_txn_ids,
+    schema: listSplitTxnIdsInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const ids = await callRpc(ctx.env, ctx.userId, 'list_split_txn_ids', { p_ledger_id: a.ledger_id })
+      return { summary: 'Split transaction ids', data: ids }
     },
   },
 ]

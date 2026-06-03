@@ -20,15 +20,20 @@ export function TransactionDialog({
   ledger,
   transaction,
   defaultAccountId,
+  isSplit,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   ledger: LedgerDetail
   transaction?: TransactionRow
   defaultAccountId?: string
+  isSplit?: boolean
 }) {
   const t = useT()
   const editing = Boolean(transaction)
+  // A split expense's amount/type/account are owned by its per-member splits;
+  // editing them here would desync the splits, so lock them and steer to Split.
+  const locked = editing && !!isSplit
   const createTxn = useCreateTransaction()
   const updateTxn = useUpdateTransaction()
   const accounts = ledger.accounts.filter((a) => !a.is_archived)
@@ -70,7 +75,16 @@ export function TransactionDialog({
       return
     }
     try {
-      if (editing && transaction) {
+      if (editing && transaction && locked) {
+        // Split expense: only the non-amount metadata is safe to edit here.
+        await updateTxn.mutateAsync({
+          transaction_id: transaction.id,
+          category_id: categoryId || undefined,
+          payee: payee || undefined,
+          note: note || undefined,
+          txn_date: date,
+        })
+      } else if (editing && transaction) {
         await updateTxn.mutateAsync({
           transaction_id: transaction.id,
           type,
@@ -114,13 +128,22 @@ export function TransactionDialog({
           <DialogTitle>{editing ? t('Edit transaction', '編輯交易') : t('New transaction', '新增交易')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-4">
+          {locked ? (
+            <div className="rounded-lg border border-brand/30 bg-brand/5 p-2.5 text-[12px] leading-relaxed text-muted-foreground">
+              {t(
+                'This is a split expense — its amount is set by the per-person split. Edit shares from the Split tab; here you can still change category, payee, date, and note.',
+                '這是分帳交易,金額由各人分攤決定。請到「分帳」頁編輯分攤;此處仍可改分類、對象、日期與備註。',
+              )}
+            </div>
+          ) : null}
           <div className="grid grid-cols-3 gap-1.5 rounded-lg bg-muted/60 p-1">
             {TYPE_TABS.map((tt) => (
               <button
                 type="button"
                 key={tt.v}
+                disabled={locked}
                 onClick={() => setType(tt.v)}
-                className={`rounded-md py-1.5 text-[13px] font-medium transition ${
+                className={`rounded-md py-1.5 text-[13px] font-medium transition disabled:opacity-50 ${
                   type === tt.v ? 'bg-brand text-brand-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -133,19 +156,20 @@ export function TransactionDialog({
             <span className="text-lg text-muted-foreground">{ledger.base_currency}</span>
             <input
               id="txn-amount"
-              autoFocus
+              autoFocus={!locked}
               inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              readOnly={locked}
               placeholder="0"
-              className="w-full bg-transparent text-2xl font-semibold tabular-nums outline-none placeholder:text-muted-foreground/40"
+              className={`w-full bg-transparent text-2xl font-semibold tabular-nums outline-none placeholder:text-muted-foreground/40 ${locked ? 'opacity-50' : ''}`}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="txn-account">{type === 'transfer' ? t('From', '從') : t('Account', '帳戶')}</Label>
-              <Select id="txn-account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+              <Select id="txn-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={locked}>
                 <option value="">{t('—', '—')}</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>

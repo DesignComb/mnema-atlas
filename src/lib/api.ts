@@ -1106,6 +1106,7 @@ export interface LedgerAccount {
   is_archived: boolean
   sort_order: number
   balance: number
+  txn_count?: number
 }
 export interface LedgerCategory {
   id: string
@@ -1238,8 +1239,8 @@ export async function updateAccount(input: UpdateAccountInput): Promise<AccountR
     }),
   )
 }
-export async function deleteAccount(id: string): Promise<void> {
-  const res = await supabase.rpc('delete_account', { p_user_id: null, p_account_id: id })
+export async function deleteAccount(id: string, reassignTo?: string): Promise<void> {
+  const res = await supabase.rpc('delete_account', { p_user_id: null, p_account_id: id, p_reassign_to_account_id: reassignTo ?? undefined })
   if (res.error) throw new Error(res.error.message)
 }
 
@@ -1502,4 +1503,8 @@ export async function deleteSettlement(id: string): Promise<void> {
 }
 export async function listSettlements(ledgerId: string): Promise<SettlementRow[]> {
   return unwrap(await supabase.from('settlements').select('*').eq('ledger_id', ledgerId).order('sett_date', { ascending: false }))
+}
+export async function listSplitTxnIds(ledgerId: string): Promise<string[]> {
+  const rows = unwrap(await supabase.from('transaction_splits').select('transaction_id').eq('ledger_id', ledgerId)) as { transaction_id: string }[]
+  return [...new Set(rows.map((r) => r.transaction_id))]
 }

@@ -529,7 +529,7 @@ export const updateAccountInput = z.object({
   sort_order: z.number().int().optional(),
 })
 export type UpdateAccountInput = z.infer<typeof updateAccountInput>
-export const deleteAccountInput = z.object({ account_id: uuid })
+export const deleteAccountInput = z.object({ account_id: uuid, reassign_to_account_id: uuid.optional() })
 
 export const createCategoryInput = z.object({
   ledger_id: uuid,
@@ -683,6 +683,7 @@ export const recordSettlementInput = z.object({
 export type RecordSettlementInput = z.infer<typeof recordSettlementInput>
 export const deleteSettlementInput = z.object({ settlement_id: uuid })
 export const listLedgerMembersInput = z.object({ ledger_id: uuid })
+export const listSplitTxnIdsInput = z.object({ ledger_id: uuid })
 export const listSettlementsInput = z.object({ ledger_id: uuid })
 export const listRecurringInput = z.object({ ledger_id: uuid })
 export const getTransactionInput = z.object({ transaction_id: uuid })
@@ -828,7 +829,7 @@ export const toolDescriptions = {
   delete_recurring_transaction: 'Remove a recurring transaction template.',
   get_monthly_trend: 'Income vs expense per month for the last N months — for trend charts.',
   add_ledger_member:
-    'Add a person to a shared ledger so expenses can be split with them. If you pass an email of an existing Mnema user they join as a real collaborator (can open the ledger with their own AI); otherwise they are added as a name-only guest. Owner only.',
+    'Add a person to a shared ledger so expenses can be split with them. If you pass the email of an existing Mnema user they join as a real collaborator (can open the ledger with their own AI); any other email (or none) adds a name-only guest. Owner only.',
   update_ledger_member: 'Rename a ledger member or change their role (editor/viewer). Cannot change the owner.',
   remove_ledger_member: 'Remove a member from a shared ledger. Cannot remove the owner.',
   create_split_expense:
@@ -842,4 +843,5 @@ export const toolDescriptions = {
   list_settlements: 'List recorded settlements (who paid whom, how much, when) in a ledger — including each settlement_id needed to delete one.',
   list_recurring: 'List a ledger’s recurring-transaction templates with their recurring_id, amount, rule, and next run date.',
   get_transaction: 'Get one transaction plus its per-member split breakdown (paid/owed). Read this before editing splits so you do not overwrite other members’ shares.',
+  list_split_txn_ids: 'List the ids of transactions in a ledger that have a split breakdown — use it to tell which transactions are shared.',
 } as const

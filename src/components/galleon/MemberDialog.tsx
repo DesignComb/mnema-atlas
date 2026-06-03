@@ -81,8 +81,8 @@ export function MemberDialog({
               />
               <p className="text-[11px] text-muted-foreground/80">
                 {t(
-                  'With an email, they join as a real collaborator and can open this ledger with their own AI. Leave blank to add a name-only guest.',
-                  '填 Email 對方會成為真正的協作者,能用自己的 AI 開這本帳本。留空則只是掛名成員。',
+                  'A registered Mnema user joins as a real collaborator (can open this ledger with their own AI). Any other email — or none — just adds a name-only guest.',
+                  '已註冊的 Mnema 使用者會成為真正的協作者(能用自己的 AI 開這本帳本)。其他 Email(或留空)則只是加為掛名成員。',
                 )}
               </p>
             </div>

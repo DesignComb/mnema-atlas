@@ -2536,7 +2536,11 @@ export type Database = {
         Returns: Json
       }
       delete_account: {
-        Args: { p_account_id: string; p_user_id: string | null }
+        Args: {
+          p_account_id: string
+          p_reassign_to_account_id?: string
+          p_user_id: string | null
+        }
         Returns: boolean
       }
       delete_booking: {
@@ -2778,6 +2782,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      list_split_txn_ids: {
+        Args: { p_ledger_id: string; p_user_id: string | null }
+        Returns: Json
       }
       list_tasks: {
         Args: {
@@ -4358,13 +4366,11 @@ export type ShareLinkRow = PublicTables['share_links']['Row']
 export type ItineraryMemberRow = PublicTables['itinerary_members']['Row']
 export type TripBookingRow = PublicTables['trip_bookings']['Row']
 export type TripChecklistRow = PublicTables['trip_checklist']['Row']
-// Tempo
 export type TaskListRow = PublicTables['task_lists']['Row']
 export type TaskRow = PublicTables['tasks']['Row']
 export type TaskCheckinRow = PublicTables['task_checkins']['Row']
 export type TaskReminderRow = PublicTables['task_reminders']['Row']
 export type PushSubscriptionRow = PublicTables['push_subscriptions']['Row']
-// Galleon (money)
 export type LedgerRow = PublicTables['ledgers']['Row']
 export type LedgerMemberRow = PublicTables['ledger_members']['Row']
 export type AccountRow = PublicTables['accounts']['Row']

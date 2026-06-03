@@ -46,6 +46,8 @@ export function SplitExpenseDialog({
   const [accountId, setAccountId] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [paidBy, setPaidBy] = useState('')
+  const [multiPayer, setMultiPayer] = useState(false)
+  const [paidById, setPaidById] = useState<Record<string, string>>({})
   const [method, setMethod] = useState<Method>('equally')
   const [included, setIncluded] = useState<Record<string, boolean>>({})
   const [exact, setExact] = useState<Record<string, string>>({})
@@ -60,6 +62,8 @@ export function SplitExpenseDialog({
     setCategoryId('')
     setMethod('equally')
     setPaidBy(members[0]?.member_id ?? '')
+    setMultiPayer(false)
+    setPaidById({})
     setIncluded(Object.fromEntries(members.map((m) => [m.member_id, true])))
     setExact({})
     setShares(Object.fromEntries(members.map((m) => [m.member_id, '1'])))
@@ -101,14 +105,27 @@ export function SplitExpenseDialog({
   const remaining = roundCur(total - owedSum)
   const balanced = total > 0 && Math.abs(remaining) < 0.5 / f && includedIds.length > 0
 
+  const paidMap: Record<string, number> = multiPayer
+    ? Object.fromEntries(members.map((m) => [m.member_id, Number(paidById[m.member_id]) || 0]))
+    : paidBy
+      ? { [paidBy]: total }
+      : {}
+  const paidSum = roundCur(Object.values(paidMap).reduce((s, v) => s + v, 0))
+  const paidBalanced = !multiPayer || Math.abs(roundCur(total - paidSum)) < 0.5 / f
+  const canSubmit = balanced && paidBalanced
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (total <= 0) {
       toast.error(t('Enter an amount', '請輸入金額'))
       return
     }
-    if (!paidBy) {
+    if (!multiPayer && !paidBy) {
       toast.error(t('Pick who paid', '請選擇付款人'))
+      return
+    }
+    if (!paidBalanced) {
+      toast.error(t('Paid amounts must add up to the total', '付款金額需等於總額'))
       return
     }
     if (!balanced) {
@@ -118,7 +135,7 @@ export function SplitExpenseDialog({
     const splits = members
       .map((m) => ({
         member_id: m.member_id,
-        paid: m.member_id === paidBy ? total : 0,
+        paid: paidMap[m.member_id] || 0,
         owed: owedById[m.member_id] || 0,
       }))
       .filter((s) => s.paid > 0 || s.owed > 0)
@@ -176,14 +193,23 @@ export function SplitExpenseDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="sp-paid">{t('Paid by', '付款人')}</Label>
-              <Select id="sp-paid" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
-                {members.map((m) => (
-                  <option key={m.member_id} value={m.member_id}>
-                    {m.display_name}
-                  </option>
-                ))}
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sp-paid">{t('Paid by', '付款人')}</Label>
+                <button type="button" onClick={() => setMultiPayer((v) => !v)} className="text-[11px] font-medium text-brand hover:underline">
+                  {multiPayer ? t('Single', '單一') : t('Multiple', '多人')}
+                </button>
+              </div>
+              {multiPayer ? (
+                <span className="flex h-9 items-center px-1 text-[12.5px] text-muted-foreground">{t('Enter amounts below', '在下方輸入金額')}</span>
+              ) : (
+                <Select id="sp-paid" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+                  {members.map((m) => (
+                    <option key={m.member_id} value={m.member_id}>
+                      {m.display_name}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="sp-cat">{t('Category', '分類')}</Label>
@@ -214,13 +240,50 @@ export function SplitExpenseDialog({
             </div>
           ) : null}
 
+          {multiPayer ? (
+            <div className="flex flex-col gap-2">
+              <Label>{t('Who paid', '誰付了款')}</Label>
+              <div className="overflow-hidden rounded-xl border border-border">
+                {members.map((m) => (
+                  <div key={m.member_id} className="flex items-center gap-2.5 border-b border-border/60 px-3 py-2 last:border-b-0">
+                    <span className="flex-1 truncate text-[14px]">{m.display_name}</span>
+                    <input
+                      inputMode="decimal"
+                      value={paidById[m.member_id] ?? ''}
+                      onChange={(e) => setPaidById((s) => ({ ...s, [m.member_id]: e.target.value }))}
+                      placeholder="0"
+                      className="w-24 rounded border border-input bg-card px-2 py-1 text-right text-[13px] tabular-nums outline-none focus:border-brand"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className={`flex items-center justify-between px-1 text-[12px] ${paidBalanced ? 'text-muted-foreground' : 'text-red-500'}`}>
+                <span>
+                  {t('Paid', '已付')} {fmtMoney(paidSum, cur)} / {fmtMoney(total, cur)}
+                </span>
+                <span className="tabular-nums">
+                  {paidBalanced ? t('✓ balanced', '✓ 剛好') : `${t('remaining', '剩餘')} ${fmtMoney(roundCur(total - paidSum), cur)}`}
+                </span>
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-2">
             <div className="grid grid-cols-3 gap-1.5 rounded-lg bg-muted/60 p-1">
               {METHODS.map((m) => (
                 <button
                   type="button"
                   key={m.v}
-                  onClick={() => setMethod(m.v)}
+                  onClick={() => {
+                    if (m.v === 'exact') {
+                      // seed the exact inputs with the equal split as a starting point
+                      const parts = splitEqually(total, includedIds.length, dec)
+                      const seed: Record<string, string> = {}
+                      includedIds.forEach((id, i) => (seed[id] = String(parts[i] ?? 0)))
+                      setExact(seed)
+                    }
+                    setMethod(m.v)
+                  }}
                   className={`rounded-md py-1.5 text-[13px] font-medium transition ${
                     method === m.v ? 'bg-brand text-brand-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                   }`}
@@ -284,7 +347,7 @@ export function SplitExpenseDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}
             </Button>
-            <Button type="submit" variant="brand" disabled={create.isPending || !balanced}>
+            <Button type="submit" variant="brand" disabled={create.isPending || !canSubmit}>
               {create.isPending ? t('Saving…', '儲存中…') : t('Add split', '新增分帳')}
             </Button>
           </DialogFooter>

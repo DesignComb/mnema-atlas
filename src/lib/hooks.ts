@@ -80,6 +80,7 @@ export const qk = {
   monthlyTrend: (ledgerId: string, months: number) => ['monthly-trend', ledgerId, months] as const,
   balances: (ledgerId: string) => ['ledger-balances', ledgerId] as const,
   settlements: (ledgerId: string) => ['ledger-settlements', ledgerId] as const,
+  splitTxnIds: (ledgerId: string) => ['ledger-split-ids', ledgerId] as const,
 }
 
 export function useDecks() {
@@ -616,7 +617,7 @@ export function useRemoveReminder() {
 // ════════════════════ Mnema Galleon (money) ════════════════════
 
 function bumpGalleon(qc: ReturnType<typeof useQueryClient>) {
-  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend', 'ledger-balances', 'ledger-settlements']) {
+  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend', 'ledger-balances', 'ledger-settlements', 'ledger-split-ids']) {
     qc.invalidateQueries({ queryKey: [k] })
   }
 }
@@ -665,7 +666,11 @@ export function useUpdateAccount() {
 }
 export function useDeleteAccount() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (id: string) => api.deleteAccount(id), onSuccess: () => bumpGalleon(qc) })
+  return useMutation({
+    mutationFn: (v: string | { id: string; reassignTo?: string }) =>
+      typeof v === 'string' ? api.deleteAccount(v) : api.deleteAccount(v.id, v.reassignTo),
+    onSuccess: () => bumpGalleon(qc),
+  })
 }
 export function useCreateCategory() {
   const qc = useQueryClient()
@@ -744,6 +749,9 @@ export function useBalances(ledgerId: string) {
 }
 export function useSettlements(ledgerId: string) {
   return useQuery({ queryKey: qk.settlements(ledgerId), queryFn: () => api.listSettlements(ledgerId), enabled: !!ledgerId })
+}
+export function useSplitTxnIds(ledgerId: string) {
+  return useQuery({ queryKey: qk.splitTxnIds(ledgerId), queryFn: () => api.listSplitTxnIds(ledgerId), enabled: !!ledgerId })
 }
 export function useAddLedgerMember() {
   const qc = useQueryClient()
