@@ -24,6 +24,8 @@ const PRIORITIES = [
 
 const WD_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const WD_ZH = ['一', '二', '三', '四', '五', '六', '日']
+const UNIT_EN: Record<Freq, string> = { DAILY: 'days', WEEKLY: 'weeks', MONTHLY: 'months', YEARLY: 'years' }
+const UNIT_ZH: Record<Freq, string> = { DAILY: '天', WEEKLY: '週', MONTHLY: '個月', YEARLY: '年' }
 
 function localToday(): string {
   const d = new Date()
@@ -86,6 +88,18 @@ export function TaskDialog({
   }, [open, task, defaultListId])
 
   const pending = createTask.isPending || updateTask.isPending || setRecurrence.isPending || addReminder.isPending
+
+  // Plain-language preview of the chosen recurrence, so "fixed vs after-completion" is obvious.
+  const unitEn = repeat !== 'none' ? UNIT_EN[repeat] : ''
+  const unitZh = repeat !== 'none' ? UNIT_ZH[repeat] : ''
+  const recurExample =
+    repeat === 'none'
+      ? ''
+      : afterCompletion
+        ? t(`Next appears ${interval} ${unitEn} after you complete it`, `做完後 ${interval} ${unitZh}才會再出現`)
+        : repeat === 'WEEKLY' && byday.length
+          ? t('Repeats on the chosen weekdays, by the calendar', '照日曆,每週固定在勾選的星期重複')
+          : t(`Repeats every ${interval} ${unitEn} by the calendar`, `照日曆,每 ${interval} ${unitZh}重複`)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -226,30 +240,56 @@ export function TaskDialog({
                 </div>
               ) : null}
             </div>
-            {repeat === 'WEEKLY' ? (
-              <div className="flex flex-wrap gap-1">
-                {WEEKDAYS.map((d, i) => {
-                  const on = byday.includes(d)
-                  return (
-                    <button
-                      type="button"
-                      key={d}
-                      onClick={() => setByday(on ? byday.filter((x) => x !== d) : [...byday, d])}
-                      className={`size-7 rounded-full border text-[11px] font-medium transition ${
-                        on ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
-                      }`}
-                    >
-                      {t(WD_EN[i], WD_ZH[i])}
-                    </button>
-                  )
-                })}
-              </div>
-            ) : null}
             {repeat !== 'none' ? (
-              <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
-                <input type="checkbox" checked={afterCompletion} onChange={(e) => setAfterCompletion(e.target.checked)} />
-                {t('Count next from when I complete it', '完成後才開始算下一次')}
-              </label>
+              <>
+                {/* Fixed-schedule vs after-completion — the key distinction. */}
+                <span className="text-[12px] text-muted-foreground">{t('When is the next one due?', '下一次什麼時候?')}</span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAfterCompletion(false)}
+                    className={`rounded-md border px-2.5 py-1.5 text-left transition ${
+                      !afterCompletion ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
+                    }`}
+                  >
+                    <span className="block text-[13px] font-medium">{t('Fixed schedule', '固定排程')}</span>
+                    <span className="block text-[11px] opacity-70">{t('on the calendar (e.g. every Mon)', '照日曆(例:每週一)')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAfterCompletion(true)}
+                    className={`rounded-md border px-2.5 py-1.5 text-left transition ${
+                      afterCompletion ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
+                    }`}
+                  >
+                    <span className="block text-[13px] font-medium">{t('After completion', '完成後再算')}</span>
+                    <span className="block text-[11px] opacity-70">{t('from the day you finish', '從你完成那天起算')}</span>
+                  </button>
+                </div>
+
+                {/* Weekday picker only applies to a fixed weekly schedule. */}
+                {repeat === 'WEEKLY' && !afterCompletion ? (
+                  <div className="flex flex-wrap gap-1">
+                    {WEEKDAYS.map((d, i) => {
+                      const on = byday.includes(d)
+                      return (
+                        <button
+                          type="button"
+                          key={d}
+                          onClick={() => setByday(on ? byday.filter((x) => x !== d) : [...byday, d])}
+                          className={`size-7 rounded-full border text-[11px] font-medium transition ${
+                            on ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
+                          }`}
+                        >
+                          {t(WD_EN[i], WD_ZH[i])}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
+
+                {recurExample ? <p className="text-[12px] font-medium text-brand">↻ {recurExample}</p> : null}
+              </>
             ) : null}
           </div>
 
