@@ -30,6 +30,7 @@
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-muted: var(--brand-muted);
+  --color-brand-strong: var(--brand-strong);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -70,7 +71,7 @@
   --secondary-foreground: oklch(0.32 0.013 60);
 
   --muted: oklch(0.972 0.004 80);
-  --muted-foreground: oklch(0.56 0.012 65);
+  --muted-foreground: oklch(0.52 0.012 65);
 
   /* Accent = faint blue wash for hovers */
   --accent: oklch(0.965 0.012 245);
@@ -87,6 +88,8 @@
   --brand: oklch(0.58 0.13 250);
   --brand-foreground: oklch(0.99 0.003 95);
   --brand-muted: oklch(0.95 0.025 250);
+  /* A touch darker, for small brand-coloured TEXT (eyebrows, inline links) so it clears WCAG AA. */
+  --brand-strong: oklch(0.52 0.14 250);
 
   /* Sidebar — a hair warmer/greyer than the page */
   --sidebar: oklch(0.978 0.004 85);
@@ -127,6 +130,7 @@
   --brand: oklch(0.72 0.12 250);
   --brand-foreground: oklch(0.2 0.02 250);
   --brand-muted: oklch(0.34 0.055 250);
+  --brand-strong: oklch(0.78 0.11 250);
 
   --sidebar: oklch(0.235 0.012 70);
   --sidebar-foreground: oklch(0.8 0.01 80);

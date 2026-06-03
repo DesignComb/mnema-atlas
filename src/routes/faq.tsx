@@ -49,7 +49,7 @@ export function FaqScreen() {
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-3">
             <GoogleButton busy={busy} onClick={google} label={t('Continue with Google', '使用 Google 繼續')} />
-            <Link to="/self-host" className="text-sm font-medium text-brand hover:underline">
+            <Link to="/self-host" className="text-sm font-medium text-brand-strong hover:underline">
               {t('Self-host it →', '自行架設 →')}
             </Link>
           </div>

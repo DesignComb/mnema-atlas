@@ -22,7 +22,7 @@ export function SharedTripScreen() {
           <span className="flex size-7 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
             <BookOpenCheck className="size-4" />
           </span>
-          <span className="font-serif text-[16px] font-semibold tracking-tight">Mnema Atlas</span>
+          <span className="font-serif text-[16px] font-semibold tracking-tight">Mnema</span>
         </Link>
         <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
           <Eye className="size-3" /> {t('View only', '唯讀檢視')}
@@ -53,7 +53,7 @@ export function SharedTripScreen() {
               to="/"
               className="mt-2 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground transition hover:opacity-90"
             >
-              {t('Go to Mnema Atlas', '前往 Mnema Atlas')}
+              {t('Go to Mnema', '前往 Mnema')}
             </Link>
           </div>
         ) : (
@@ -66,7 +66,7 @@ export function SharedTripScreen() {
           <div className="rounded-xl border border-dashed border-border px-4 py-4 text-center text-[13px] text-muted-foreground">
             {t('Planned with', '使用')}{' '}
             <Link to="/" className="font-medium text-brand hover:underline">
-              Mnema Atlas
+              Mnema
             </Link>{' '}
             {t('— plan and share your own trips.', '——規劃並分享你自己的行程。')}
           </div>

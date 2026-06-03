@@ -16,14 +16,36 @@ import { CardsScreen } from '@/routes/cards'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
+// Public landing at the root. Logged-in visitors go straight to the app.
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  async beforeLoad() {
+    const { data } = await supabase.auth.getSession()
+    if (data.session) throw redirect({ to: '/today' })
+  },
+  component: LandingScreen,
+})
+
+// Back-compat: /login now just forwards to the landing (the sign-in CTA lives there).
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
-  async beforeLoad() {
-    const { data } = await supabase.auth.getSession()
-    if (data.session) throw redirect({ to: '/' })
+  beforeLoad: () => {
+    throw redirect({ to: '/' })
   },
-  component: LandingScreen,
+})
+
+// Public marketing pages (no auth) — code-split so the landing stays lean.
+const faqRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/faq',
+  component: lazyRouteComponent(() => import('@/routes/faq'), 'FaqScreen'),
+})
+const selfHostRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/self-host',
+  component: lazyRouteComponent(() => import('@/routes/self-host'), 'SelfHostScreen'),
 })
 
 // Public, no-auth route: anyone with a share token can view a trip read-only.
@@ -37,10 +59,10 @@ const sharedTripRoute = createRoute({
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: '_app',
-  async beforeLoad({ location }) {
+  async beforeLoad() {
     const { data } = await supabase.auth.getSession()
     if (!data.session) {
-      throw redirect({ to: '/login', search: { redirect: location.href } })
+      throw redirect({ to: '/' })
     }
   },
   component: AppLayout,
@@ -48,7 +70,7 @@ const appRoute = createRoute({
 
 // Light, common screens stay eager; heavy/rare leaves are code-split so a new
 // user who only sees "/" doesn't download TipTap, force-graph, or motion.
-const homeRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: HomeScreen })
+const homeRoute = createRoute({ getParentRoute: () => appRoute, path: 'today', component: HomeScreen })
 const notesRoute = createRoute({ getParentRoute: () => appRoute, path: 'notes', component: NotesScreen })
 const deckRoute = createRoute({ getParentRoute: () => appRoute, path: 'decks/$deckId', component: DeckScreen })
 const cardsRoute = createRoute({ getParentRoute: () => appRoute, path: 'cards', component: CardsScreen })
@@ -151,7 +173,10 @@ const connectRedirect = redirectToIntegrations('settings/connect')
 const toolsRedirect = redirectToIntegrations('settings/tools')
 
 const routeTree = rootRoute.addChildren([
+  indexRoute,
   loginRoute,
+  faqRoute,
+  selfHostRoute,
   sharedTripRoute,
   appRoute.addChildren([
     homeRoute,

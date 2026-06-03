@@ -32,7 +32,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     q_en: 'Which AIs can I connect?',
     q_zh: '可以連接哪些 AI？',
     a_en: 'Anything that speaks MCP (Claude, Claude Code, Cursor…) or can call a REST API with a Bearer key (a custom GPT via OpenAPI, your own scripts, the Claude API). Plain ChatGPT or Gemini work through the no-setup copy-paste import.',
-    a_zh: '任何支援 MCP 的工具(Claude、Claude Code、Cursor…)，或能以 Bearer 金鑰呼叫 REST API 的(透過 OpenAPI 的自訂 GPT、你自己的腳本、Claude API)。一般的 ChatGPT 或 Gemini 則可用免設定的複製貼上匯入。',
+    a_zh: '任何支援 MCP 的工具（Claude、Claude Code、Cursor…），或能以 Bearer 金鑰呼叫 REST API 的工具（透過 OpenAPI 的自訂 GPT、你自己的腳本、Claude API）。一般的 ChatGPT 或 Gemini 則可用免設定的複製貼上匯入。',
   },
   {
     q_en: 'What can my AI actually do here?',
@@ -44,13 +44,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     q_en: 'Is it free?',
     q_zh: '免費嗎？',
     a_en: 'The hosted app is free to use with your Google account; you bring (and pay for) your own AI. Mnema is also open source under the MIT license, so you can self-host it for free.',
-    a_zh: '託管版可用你的 Google 帳號免費使用，AI 由你自備(費用也由你負擔)。Mnema 同時以 MIT 授權開源，所以你也可以免費自行架設。',
+    a_zh: '託管版可用你的 Google 帳號免費使用，AI 由你自備（費用也由你負擔）。Mnema 同時以 MIT 授權開源，所以你也可以免費自行架設。',
   },
   {
     q_en: 'Can I self-host it?',
     q_zh: '我可以自己架設嗎？',
     a_en: 'Yes. Mnema is open source (MIT) and runs on Supabase + a Cloudflare Worker + any static host. The self-host guide walks through it end to end.',
-    a_zh: '可以。Mnema 是開源的(MIT 授權)，跑在 Supabase + Cloudflare Worker + 任何靜態主機上。「自行架設」指南會帶你從頭到尾走一遍。',
+    a_zh: '可以。Mnema 是開源的（MIT 授權），跑在 Supabase + Cloudflare Worker + 任何靜態主機上。「自行架設」指南會帶你從頭到尾走一遍。',
   },
   {
     q_en: 'Which languages does it support?',

@@ -68,7 +68,7 @@ export function CommandPalette({
   ].filter((a) => match(a.en, a.zh))
 
   const goto = [
-    { key: 'today', en: 'Today', zh: '今天', icon: <Home className="size-4" />, to: '/' as const },
+    { key: 'today', en: 'Today', zh: '今天', icon: <Home className="size-4" />, to: '/today' as const },
     { key: 'graph', en: 'Graph', zh: '圖譜', icon: <Share2 className="size-4" />, to: '/graph' as const },
     { key: 'connect', en: 'Connect an AI', zh: '連接 AI', icon: <Plug className="size-4" />, to: '/settings/integrations' as const },
   ].filter((g) => match(g.en, g.zh))

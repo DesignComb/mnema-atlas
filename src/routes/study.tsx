@@ -182,7 +182,7 @@ export function StudyScreen() {
                   {t('Study ahead', '超前複習')}
                 </Button>
                 <Button asChild variant="outline" size="sm">
-                  <Link to="/">{t('Back to Today', '回到今天')}</Link>
+                  <Link to="/today">{t('Back to Today', '回到今天')}</Link>
                 </Button>
               </div>
             }
@@ -220,7 +220,7 @@ export function StudyScreen() {
                 {t('Study ahead', '超前複習')}
               </Button>
               <Button asChild variant="brand">
-                <Link to="/">{t('Back to Today', '回到今天')}</Link>
+                <Link to="/today">{t('Back to Today', '回到今天')}</Link>
               </Button>
             </div>
           </motion.div>

@@ -1,4 +1,4 @@
-import { Link, useRouterState } from '@tanstack/react-router'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const NAV_STUDY = [
-  { to: '/', label: 'Today', zh: '今天', icon: Home, exact: true },
+  { to: '/today', label: 'Today', zh: '今天', icon: Home, exact: true },
   { to: '/notes', label: 'Notes', zh: '筆記', icon: FileText, exact: false },
   { to: '/cards', label: 'Flashcards', zh: '閃卡', icon: Layers, exact: false },
   { to: '/graph', label: 'Graph', zh: '圖譜', icon: Share2, exact: false },
@@ -92,6 +92,7 @@ export function AppSidebar({
   const { data: decks } = useDecks()
   const { data: taskLists } = useTaskLists()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const navigate = useNavigate()
 
   // Top-level space: Study / Travel / Tempo / Galleon. The pathname flips the rail.
   const space: 'study' | 'travel' | 'tempo' | 'galleon' = pathname.startsWith('/trips')
@@ -145,7 +146,7 @@ export function AppSidebar({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[14.5rem]">
             <DropdownMenuItem asChild>
-              <Link to="/">
+              <Link to="/today">
                 <BookOpenCheck className="text-brand" />
                 <span className="flex-1">Mnema Atlas</span>
                 <span className="text-[11px] text-muted-foreground">{t('Study', '讀書')}</span>
@@ -429,7 +430,12 @@ export function AppSidebar({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => void signOut()}>
+            <DropdownMenuItem
+              onSelect={async () => {
+                await signOut()
+                navigate({ to: '/' })
+              }}
+            >
               <LogOut /> {t('Sign out', '登出')}
             </DropdownMenuItem>
           </DropdownMenuContent>
