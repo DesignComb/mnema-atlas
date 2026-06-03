@@ -72,6 +72,7 @@ export function AppLayout() {
           'flex h-dvh overflow-hidden bg-background text-foreground',
           pathname.startsWith('/trips') && 'theme-voyage',
           pathname.startsWith('/tempo') && 'theme-tempo',
+          pathname.startsWith('/galleon') && 'theme-galleon',
         )}
       >
         {/* Desktop: persistent sidebar (lg+). */}

@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
 import { AppLayout } from '@/components/app-shell/AppLayout'
-import { LoginScreen } from '@/routes/login'
+import { LandingScreen } from '@/routes/landing'
 import { HomeScreen } from '@/routes/home'
 import { NotesScreen } from '@/routes/notes'
 import { DeckScreen } from '@/routes/deck'
@@ -23,7 +23,7 @@ const loginRoute = createRoute({
     const { data } = await supabase.auth.getSession()
     if (data.session) throw redirect({ to: '/' })
   },
-  component: LoginScreen,
+  component: LandingScreen,
 })
 
 // Public, no-auth route: anyone with a share token can view a trip read-only.
@@ -86,6 +86,22 @@ const tempoRoute = createRoute({
   },
   component: lazyRouteComponent(() => import('@/routes/tempo'), 'TempoScreen'),
 })
+const galleonRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'galleon',
+  // `section` (not `view`) so it never collides with Tempo's `view` search param.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { section?: 'overview' | 'transactions' | 'accounts'; ledger?: string } => {
+    const s = search.section
+    const ok = s === 'overview' || s === 'transactions' || s === 'accounts'
+    return {
+      section: ok ? (s as 'overview' | 'transactions' | 'accounts') : undefined,
+      ledger: typeof search.ledger === 'string' && search.ledger ? search.ledger : undefined,
+    }
+  },
+  component: lazyRouteComponent(() => import('@/routes/galleon'), 'GalleonScreen'),
+})
 const noteRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'notes/$noteId',
@@ -146,6 +162,7 @@ const routeTree = rootRoute.addChildren([
     tripsRoute,
     tripRoute,
     tempoRoute,
+    galleonRoute,
     studyRoute,
     studyDeckRoute,
     graphRoute,

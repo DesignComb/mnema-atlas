@@ -33,7 +33,19 @@ import type {
   UpdateTaskInput,
   UpdateTaskListInput,
 } from '@shared/schemas'
-import type { ItineraryItem, TaskFilters } from './api'
+import type { ItineraryItem, TaskFilters, TxnFilters } from './api'
+import type {
+  CreateAccountInput,
+  CreateCategoryInput,
+  CreateLedgerInput,
+  CreateTransactionInput,
+  CreateTransactionsBulkInput,
+  CreateTransferInput,
+  UpdateAccountInput,
+  UpdateCategoryInput,
+  UpdateLedgerInput,
+  UpdateTransactionInput,
+} from '@shared/schemas'
 
 export const qk = {
   decks: ['decks'] as const,
@@ -54,6 +66,11 @@ export const qk = {
   habit: (id: string) => ['habit', id] as const,
   streak: (id: string) => ['streak', id] as const,
   recurringSuggestions: ['recurring-suggestions'] as const,
+  // Mnema Galleon
+  ledgers: ['ledgers'] as const,
+  ledger: (id: string) => ['ledger', id] as const,
+  ledgerTxns: (ledgerId: string, key?: string) => ['ledger-txns', ledgerId, key ?? 'all'] as const,
+  ledgerSummary: (ledgerId: string, key: string) => ['ledger-summary', ledgerId, key] as const,
 }
 
 export function useDecks() {
@@ -585,6 +602,94 @@ export function useAddReminder() {
 export function useRemoveReminder() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (reminderId: string) => api.removeReminder(reminderId), onSuccess: () => bumpTasks(qc) })
+}
+
+// ════════════════════ Mnema Galleon (money) ════════════════════
+
+function bumpGalleon(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['ledgers'] })
+  qc.invalidateQueries({ queryKey: ['ledger'] })
+  qc.invalidateQueries({ queryKey: ['ledger-txns'] })
+  qc.invalidateQueries({ queryKey: ['ledger-summary'] })
+}
+
+export function useLedgers() {
+  return useQuery({ queryKey: qk.ledgers, queryFn: api.listLedgers })
+}
+export function useLedger(id: string) {
+  return useQuery({ queryKey: qk.ledger(id), queryFn: () => api.getLedger(id), enabled: !!id })
+}
+export function useLedgerTransactions(filters: TxnFilters) {
+  const key = [filters.accountId, filters.categoryId, filters.type, filters.from, filters.to].join('|')
+  return useQuery({
+    queryKey: qk.ledgerTxns(filters.ledgerId, key),
+    queryFn: () => api.listTransactions(filters),
+    enabled: !!filters.ledgerId,
+  })
+}
+export function useLedgerSummary(ledgerId: string, from: string, to: string) {
+  return useQuery({
+    queryKey: qk.ledgerSummary(ledgerId, `${from}_${to}`),
+    queryFn: () => api.getLedgerSummary(ledgerId, from, to),
+    enabled: !!ledgerId,
+  })
+}
+
+export function useCreateLedger() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateLedgerInput) => api.createLedger(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useUpdateLedger() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateLedgerInput) => api.updateLedger(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useDeleteLedger() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteLedger(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function useCreateAccount() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateAccountInput) => api.createAccount(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useUpdateAccount() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateAccountInput) => api.updateAccount(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useDeleteAccount() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteAccount(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function useCreateCategory() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateCategoryInput) => api.createCategory(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useUpdateCategory() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateCategoryInput) => api.updateCategory(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useDeleteCategory() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteCategory(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function useCreateTransaction() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateTransactionInput) => api.createTransaction(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useCreateTransactionsBulk() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateTransactionsBulkInput) => api.createTransactionsBulk(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useUpdateTransaction() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateTransactionInput) => api.updateTransaction(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useDeleteTransaction() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteTransaction(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function useCreateTransfer() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateTransferInput) => api.createTransfer(input), onSuccess: () => bumpGalleon(qc) })
 }
 
 // Reminders already surfaced this session (so the poll doesn't re-toast them).

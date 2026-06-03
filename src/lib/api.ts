@@ -44,6 +44,19 @@ import type {
   UpdateTaskListInput,
 } from '@shared/schemas'
 import type { TaskListRow, TaskReminderRow, TaskRow } from './database.types'
+import type { AccountRow, CategoryRow, LedgerRow, TransactionRow } from './database.types'
+import type {
+  CreateAccountInput,
+  CreateCategoryInput,
+  CreateLedgerInput,
+  CreateTransactionInput,
+  CreateTransactionsBulkInput,
+  CreateTransferInput,
+  UpdateAccountInput,
+  UpdateCategoryInput,
+  UpdateLedgerInput,
+  UpdateTransactionInput,
+} from '@shared/schemas'
 
 /**
  * Thin typed wrappers over the shared SECURITY DEFINER RPCs and RLS-protected
@@ -1065,4 +1078,254 @@ export async function addReminder(input: AddReminderInput): Promise<TaskReminder
 export async function removeReminder(reminderId: string): Promise<void> {
   const res = await supabase.rpc('remove_reminder', { p_user_id: null, p_reminder_id: reminderId })
   if (res.error) throw new Error(res.error.message)
+}
+
+// ════════════════════ Mnema Galleon (money) ════════════════════
+
+export interface LedgerAccount {
+  id: string
+  name: string
+  type: string
+  currency: string
+  opening_balance: number
+  icon: string | null
+  color: string | null
+  is_archived: boolean
+  sort_order: number
+  balance: number
+}
+export interface LedgerCategory {
+  id: string
+  name: string
+  kind: 'income' | 'expense'
+  parent_id: string | null
+  icon: string | null
+  color: string | null
+  sort_order: number
+}
+export interface LedgerDetail {
+  id: string
+  owner_id: string
+  name: string
+  base_currency: string
+  icon: string | null
+  color: string | null
+  is_archived: boolean
+  my_role: string
+  accounts: LedgerAccount[]
+  categories: LedgerCategory[]
+}
+export interface LedgerSummary {
+  income: number
+  expense: number
+  by_category: { category_id: string | null; name: string | null; icon: string | null; total: number }[]
+}
+export interface TxnFilters {
+  ledgerId: string
+  accountId?: string
+  categoryId?: string
+  type?: 'income' | 'expense' | 'transfer'
+  from?: string
+  to?: string
+  limit?: number
+}
+
+// ── Reads ──
+export async function listLedgers(): Promise<LedgerRow[]> {
+  return unwrap(await supabase.from('ledgers').select('*').order('sort_order', { ascending: true }))
+}
+export async function getLedger(id: string): Promise<LedgerDetail> {
+  return unwrap(await supabase.rpc('get_ledger', { p_user_id: null, p_ledger_id: id })) as unknown as LedgerDetail
+}
+export async function listTransactions(f: TxnFilters): Promise<TransactionRow[]> {
+  return unwrap(
+    await supabase.rpc('list_transactions', {
+      p_user_id: null,
+      p_ledger_id: f.ledgerId,
+      p_account_id: f.accountId ?? undefined,
+      p_category_id: f.categoryId ?? undefined,
+      p_type: f.type ?? undefined,
+      p_from: f.from ?? undefined,
+      p_to: f.to ?? undefined,
+      p_limit: f.limit ?? undefined,
+    }),
+  )
+}
+export async function searchTransactions(ledgerId: string, query: string, limit = 50): Promise<TransactionRow[]> {
+  return unwrap(await supabase.rpc('search_transactions', { p_user_id: null, p_ledger_id: ledgerId, p_query: query, p_limit: limit }))
+}
+export async function getLedgerSummary(ledgerId: string, from: string, to: string): Promise<LedgerSummary> {
+  return unwrap(
+    await supabase.rpc('get_ledger_summary', { p_user_id: null, p_ledger_id: ledgerId, p_from: from, p_to: to }),
+  ) as unknown as LedgerSummary
+}
+
+// ── Ledger writes ──
+export async function createLedger(input: CreateLedgerInput): Promise<LedgerRow> {
+  return unwrap(
+    await supabase.rpc('create_ledger', {
+      p_user_id: null,
+      p_name: input.name,
+      p_base_currency: input.base_currency ?? undefined,
+      p_icon: input.icon ?? undefined,
+      p_color: input.color ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function updateLedger(input: UpdateLedgerInput): Promise<LedgerRow> {
+  return unwrap(
+    await supabase.rpc('update_ledger', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_name: input.name ?? undefined,
+      p_base_currency: input.base_currency ?? undefined,
+      p_icon: input.icon ?? undefined,
+      p_color: input.color ?? undefined,
+      p_is_archived: input.is_archived ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function deleteLedger(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_ledger', { p_user_id: null, p_ledger_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ── Account writes ──
+export async function createAccount(input: CreateAccountInput): Promise<AccountRow> {
+  return unwrap(
+    await supabase.rpc('create_account', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_name: input.name,
+      p_type: input.type ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_opening_balance: input.opening_balance ?? undefined,
+      p_icon: input.icon ?? undefined,
+      p_color: input.color ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function updateAccount(input: UpdateAccountInput): Promise<AccountRow> {
+  return unwrap(
+    await supabase.rpc('update_account', {
+      p_user_id: null,
+      p_account_id: input.account_id,
+      p_name: input.name ?? undefined,
+      p_type: input.type ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_opening_balance: input.opening_balance ?? undefined,
+      p_icon: input.icon ?? undefined,
+      p_color: input.color ?? undefined,
+      p_is_archived: input.is_archived ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function deleteAccount(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_account', { p_user_id: null, p_account_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ── Category writes ──
+export async function createCategory(input: CreateCategoryInput): Promise<CategoryRow> {
+  return unwrap(
+    await supabase.rpc('create_category', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_name: input.name,
+      p_kind: input.kind,
+      p_parent_id: input.parent_id ?? undefined,
+      p_icon: input.icon ?? undefined,
+      p_color: input.color ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function updateCategory(input: UpdateCategoryInput): Promise<CategoryRow> {
+  return unwrap(
+    await supabase.rpc('update_category', {
+      p_user_id: null,
+      p_category_id: input.category_id,
+      p_name: input.name ?? undefined,
+      p_kind: input.kind ?? undefined,
+      p_parent_id: input.parent_id ?? undefined,
+      p_icon: input.icon ?? undefined,
+      p_color: input.color ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function deleteCategory(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_category', { p_user_id: null, p_category_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ── Transaction writes ──
+export async function createTransaction(input: CreateTransactionInput): Promise<TransactionRow> {
+  return unwrap(
+    await supabase.rpc('create_transaction', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_type: input.type,
+      p_amount: input.amount,
+      p_account_id: input.account_id ?? undefined,
+      p_category_id: input.category_id ?? undefined,
+      p_transfer_account_id: input.transfer_account_id ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_fx_rate: input.fx_rate ?? undefined,
+      p_payee: input.payee ?? undefined,
+      p_note: input.note ?? undefined,
+      p_txn_date: input.txn_date ?? undefined,
+      p_tags: input.tags ?? undefined,
+      p_receipt_url: input.receipt_url ?? undefined,
+      p_created_via: 'ui',
+    }),
+  )
+}
+export async function createTransactionsBulk(input: CreateTransactionsBulkInput): Promise<TransactionRow[]> {
+  return unwrap(
+    await supabase.rpc('create_transactions_bulk', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_transactions: input.transactions as unknown as Json,
+    }),
+  )
+}
+export async function updateTransaction(input: UpdateTransactionInput): Promise<TransactionRow> {
+  return unwrap(
+    await supabase.rpc('update_transaction', {
+      p_user_id: null,
+      p_transaction_id: input.transaction_id,
+      p_amount: input.amount ?? undefined,
+      p_type: input.type ?? undefined,
+      p_account_id: input.account_id ?? undefined,
+      p_category_id: input.category_id ?? undefined,
+      p_transfer_account_id: input.transfer_account_id ?? undefined,
+      p_payee: input.payee ?? undefined,
+      p_note: input.note ?? undefined,
+      p_txn_date: input.txn_date ?? undefined,
+      p_tags: input.tags ?? undefined,
+      p_receipt_url: input.receipt_url ?? undefined,
+    }),
+  )
+}
+export async function deleteTransaction(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_transaction', { p_user_id: null, p_transaction_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function createTransfer(input: CreateTransferInput): Promise<TransactionRow> {
+  return createTransaction({
+    ledger_id: input.ledger_id,
+    type: 'transfer',
+    amount: input.amount,
+    account_id: input.from_account_id,
+    transfer_account_id: input.to_account_id,
+    note: input.note,
+    txn_date: input.txn_date,
+  })
 }

@@ -8,6 +8,7 @@ import {
   CalendarRange,
   Check,
   ChevronsUpDown,
+  Coins,
   FileText,
   Flame,
   GraduationCap,
@@ -53,6 +54,7 @@ const NAV_STUDY = [
 ] as const
 const NAV_TRAVEL = [{ to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false }] as const
 const NAV_TEMPO = [{ to: '/tempo', label: 'Tasks', zh: '任務', icon: ListTodo, exact: false }] as const
+const NAV_GALLEON = [{ to: '/galleon', label: 'Money', zh: '記帳', icon: Coins, exact: false }] as const
 // In the Tempo space the rail shows views (by ?view=) + the user's lists (by ?list=).
 const TEMPO_VIEWS = [
   { key: 'today', en: 'Today', zh: '今天', icon: CalendarCheck },
@@ -91,13 +93,16 @@ export function AppSidebar({
   const { data: taskLists } = useTaskLists()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
-  // Top-level space: Study / Travel / Tempo. The pathname flips the rail.
-  const space: 'study' | 'travel' | 'tempo' = pathname.startsWith('/trips')
+  // Top-level space: Study / Travel / Tempo / Galleon. The pathname flips the rail.
+  const space: 'study' | 'travel' | 'tempo' | 'galleon' = pathname.startsWith('/trips')
     ? 'travel'
     : pathname.startsWith('/tempo')
       ? 'tempo'
-      : 'study'
-  const nav = space === 'travel' ? NAV_TRAVEL : space === 'tempo' ? NAV_TEMPO : NAV_STUDY
+      : pathname.startsWith('/galleon')
+        ? 'galleon'
+        : 'study'
+  const nav =
+    space === 'travel' ? NAV_TRAVEL : space === 'tempo' ? NAV_TEMPO : space === 'galleon' ? NAV_GALLEON : NAV_STUDY
   // On a trip detail page the rail shows that trip's sections instead of the Trips link.
   const tripMatch = pathname.match(/^\/trips\/([0-9a-fA-F-]{36})$/)
   const tripId = tripMatch ? tripMatch[1] : null
@@ -120,12 +125,20 @@ export function AppSidebar({
                   <MapIcon className="size-4" />
                 ) : space === 'tempo' ? (
                   <ListTodo className="size-4" />
+                ) : space === 'galleon' ? (
+                  <Coins className="size-4" />
                 ) : (
                   <BookOpenCheck className="size-4" />
                 )}
               </span>
               <span className="min-w-0 flex-1 truncate font-serif text-[16px] font-semibold tracking-tight text-foreground">
-                {space === 'travel' ? 'Mnema Voyage' : space === 'tempo' ? 'Mnema Tempo' : 'Mnema Atlas'}
+                {space === 'travel'
+                  ? 'Mnema Voyage'
+                  : space === 'tempo'
+                    ? 'Mnema Tempo'
+                    : space === 'galleon'
+                      ? 'Mnema Galleon'
+                      : 'Mnema Atlas'}
               </span>
               <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
             </button>
@@ -153,6 +166,14 @@ export function AppSidebar({
                 <span className="flex-1">Mnema Tempo</span>
                 <span className="text-[11px] text-muted-foreground">{t('Tempo', '節奏')}</span>
                 {space === 'tempo' ? <Check className="ml-1 size-4 text-brand" /> : null}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/galleon">
+                <Coins className="text-brand" />
+                <span className="flex-1">Mnema Galleon</span>
+                <span className="text-[11px] text-muted-foreground">{t('Money', '記帳')}</span>
+                {space === 'galleon' ? <Check className="ml-1 size-4 text-brand" /> : null}
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>

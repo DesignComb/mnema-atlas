@@ -479,6 +479,138 @@ export const suggestRecurringTasksInput = z.object({
   min_count: z.number().int().min(2).max(50).default(3),
 })
 
+// ── Mnema Galleon: money (ledgers / accounts / categories / transactions) ──
+export const accountType = z.enum(['cash', 'bank', 'credit', 'ewallet', 'investment'])
+export const txnType = z.enum(['income', 'expense', 'transfer'])
+export const categoryKind = z.enum(['income', 'expense'])
+const money = z.number()
+const txnTags = z.array(z.string().trim().min(1).max(40)).max(20)
+
+export const createLedgerInput = z.object({
+  name: z.string().trim().min(1).max(120),
+  base_currency: currency.optional(),
+  icon: z.string().trim().max(8).optional(),
+  color: z.string().trim().max(40).optional(),
+})
+export type CreateLedgerInput = z.infer<typeof createLedgerInput>
+export const updateLedgerInput = z.object({
+  ledger_id: uuid,
+  name: z.string().trim().min(1).max(120).optional(),
+  base_currency: currency.optional(),
+  icon: z.string().trim().max(8).optional(),
+  color: z.string().trim().max(40).optional(),
+  is_archived: z.boolean().optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateLedgerInput = z.infer<typeof updateLedgerInput>
+export const deleteLedgerInput = z.object({ ledger_id: uuid })
+export const getLedgerInput = z.object({ ledger_id: uuid })
+
+export const createAccountInput = z.object({
+  ledger_id: uuid,
+  name: z.string().trim().min(1).max(120),
+  type: accountType.optional(),
+  currency: currency.optional(),
+  opening_balance: money.optional(),
+  icon: z.string().trim().max(8).optional(),
+  color: z.string().trim().max(40).optional(),
+  sort_order: z.number().int().optional(),
+})
+export type CreateAccountInput = z.infer<typeof createAccountInput>
+export const updateAccountInput = z.object({
+  account_id: uuid,
+  name: z.string().trim().min(1).max(120).optional(),
+  type: accountType.optional(),
+  currency: currency.optional(),
+  opening_balance: money.optional(),
+  icon: z.string().trim().max(8).optional(),
+  color: z.string().trim().max(40).optional(),
+  is_archived: z.boolean().optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateAccountInput = z.infer<typeof updateAccountInput>
+export const deleteAccountInput = z.object({ account_id: uuid })
+
+export const createCategoryInput = z.object({
+  ledger_id: uuid,
+  name: z.string().trim().min(1).max(80),
+  kind: categoryKind,
+  parent_id: uuid.optional(),
+  icon: z.string().trim().max(8).optional(),
+  color: z.string().trim().max(40).optional(),
+  sort_order: z.number().int().optional(),
+})
+export type CreateCategoryInput = z.infer<typeof createCategoryInput>
+export const updateCategoryInput = z.object({
+  category_id: uuid,
+  name: z.string().trim().min(1).max(80).optional(),
+  kind: categoryKind.optional(),
+  parent_id: uuid.optional(),
+  icon: z.string().trim().max(8).optional(),
+  color: z.string().trim().max(40).optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateCategoryInput = z.infer<typeof updateCategoryInput>
+export const deleteCategoryInput = z.object({ category_id: uuid })
+
+const txnFields = {
+  type: txnType,
+  amount: money,
+  account_id: uuid.optional(),
+  category_id: uuid.optional(),
+  transfer_account_id: uuid.optional(),
+  currency: currency.optional(),
+  fx_rate: z.number().positive().optional(),
+  payee: z.string().trim().max(200).optional(),
+  note: z.string().max(2_000).optional(),
+  txn_date: isoDate.optional(),
+  tags: txnTags.optional(),
+  receipt_url: placeUrl.optional(),
+}
+export const createTransactionInput = z.object({ ledger_id: uuid, ...txnFields })
+export type CreateTransactionInput = z.infer<typeof createTransactionInput>
+export const createTransactionsBulkInput = z.object({
+  ledger_id: uuid,
+  transactions: z.array(z.object(txnFields)).min(1).max(200),
+})
+export type CreateTransactionsBulkInput = z.infer<typeof createTransactionsBulkInput>
+export const updateTransactionInput = z.object({
+  transaction_id: uuid,
+  type: txnType.optional(),
+  amount: money.optional(),
+  account_id: uuid.optional(),
+  category_id: uuid.optional(),
+  transfer_account_id: uuid.optional(),
+  payee: z.string().trim().max(200).optional(),
+  note: z.string().max(2_000).optional(),
+  txn_date: isoDate.optional(),
+  tags: txnTags.optional(),
+  receipt_url: placeUrl.optional(),
+})
+export type UpdateTransactionInput = z.infer<typeof updateTransactionInput>
+export const deleteTransactionInput = z.object({ transaction_id: uuid })
+export const createTransferInput = z.object({
+  ledger_id: uuid,
+  from_account_id: uuid,
+  to_account_id: uuid,
+  amount: money,
+  txn_date: isoDate.optional(),
+  note: z.string().max(2_000).optional(),
+})
+export type CreateTransferInput = z.infer<typeof createTransferInput>
+
+export const listTransactionsInput = z.object({
+  ledger_id: uuid,
+  account_id: uuid.optional(),
+  category_id: uuid.optional(),
+  type: txnType.optional(),
+  from: isoDate.optional(),
+  to: isoDate.optional(),
+  limit: z.number().int().min(1).max(1000).default(100),
+})
+export const searchTransactionsInput = z.object({ ledger_id: uuid, query: z.string().trim().min(1), limit: z.number().int().min(1).max(200).default(50) })
+export const getLedgerSummaryInput = z.object({ ledger_id: uuid, from: isoDate, to: isoDate })
+
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
  * emits inside a ```mnema fenced block for the in-app Quick Import. Cards link
@@ -591,4 +723,28 @@ export const toolDescriptions = {
   get_streak: 'Get a habit’s current streak, longest streak, and check-in calendar.',
   suggest_recurring_tasks:
     'Find clusters of repeatedly-added non-recurring tasks (with an inferred cadence) so you can propose turning them into recurring tasks.',
+  // Mnema Galleon (money)
+  create_ledger: 'Create a money ledger (帳本). Seeds default categories. Returns the new ledger id.',
+  update_ledger: 'Rename a ledger, change its base currency, icon, colour, or archive it.',
+  delete_ledger: 'Delete a ledger and everything in it (owner only).',
+  list_ledgers: 'List the user’s money ledgers.',
+  get_ledger: 'Fetch a ledger with its accounts (incl. computed balances) and categories.',
+  create_account: 'Add an account/wallet to a ledger (cash, bank, credit, ewallet, investment) with an opening balance.',
+  update_account: 'Update an account’s name, type, currency, opening balance, or archive it.',
+  delete_account: 'Delete an account (its transactions keep but lose the account link).',
+  list_accounts: 'List a ledger’s accounts.',
+  create_category: 'Add an income or expense category to a ledger.',
+  update_category: 'Update a category’s name, kind, parent, icon, or colour.',
+  delete_category: 'Delete a category.',
+  list_categories: 'List a ledger’s categories.',
+  create_transaction:
+    'Record one transaction — income, expense, or transfer. Pass account_id (the wallet), category_id (not for transfers), amount, and optional payee/note/txn_date/tags. Returns the new id. This is the "log a transaction" tool.',
+  create_transactions_bulk: 'Record many transactions in one call (e.g. line items from a receipt).',
+  create_transfer: 'Move money between two accounts in the same ledger (no income/expense effect).',
+  update_transaction: 'Update a transaction’s amount, type, account, category, payee, note, date, or tags.',
+  delete_transaction: 'Delete a transaction.',
+  list_transactions: 'List a ledger’s transactions with optional filters: account, category, type, date range.',
+  search_transactions: 'Search a ledger’s transactions by payee/note keyword.',
+  get_ledger_summary:
+    'Totals (income, expense) and spending-by-category for a ledger over a date range — for dashboards/reports.',
 } as const

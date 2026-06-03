@@ -75,6 +75,25 @@ import {
   uncompleteTaskInput,
   updateTaskInput,
   updateTaskListInput,
+  // Mnema Galleon
+  createAccountInput,
+  createCategoryInput,
+  createLedgerInput,
+  createTransactionInput,
+  createTransactionsBulkInput,
+  createTransferInput,
+  deleteAccountInput,
+  deleteCategoryInput,
+  deleteLedgerInput,
+  deleteTransactionInput,
+  getLedgerInput,
+  getLedgerSummaryInput,
+  listTransactionsInput,
+  searchTransactionsInput,
+  updateAccountInput,
+  updateCategoryInput,
+  updateLedgerInput,
+  updateTransactionInput,
 } from '../../shared/schemas'
 import { callRpc, ownedSelect, serviceClient } from './db'
 import { computeOccurrence, todayISO } from './recurrence'
@@ -1307,6 +1326,323 @@ export const tools: ToolDef[] = [
         p_min_count: a.min_count ?? 3,
       })
       return { summary: `${clusters.length} suggestion(s)`, data: clusters }
+    },
+  },
+
+  // ── Mnema Galleon: ledgers ──
+  {
+    name: 'create_ledger',
+    description: toolDescriptions.create_ledger,
+    schema: createLedgerInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const l = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'create_ledger', {
+        p_name: a.name,
+        p_base_currency: a.base_currency ?? null,
+        p_icon: a.icon ?? null,
+        p_color: a.color ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Created ledger “${l.name}” (${l.id})`, data: l }
+    },
+  },
+  {
+    name: 'update_ledger',
+    description: toolDescriptions.update_ledger,
+    schema: updateLedgerInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const l = await callRpc(ctx.env, ctx.userId, 'update_ledger', {
+        p_ledger_id: a.ledger_id,
+        p_name: a.name ?? null,
+        p_base_currency: a.base_currency ?? null,
+        p_icon: a.icon ?? null,
+        p_color: a.color ?? null,
+        p_is_archived: a.is_archived ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: 'Ledger updated', data: l }
+    },
+  },
+  {
+    name: 'delete_ledger',
+    description: toolDescriptions.delete_ledger,
+    schema: deleteLedgerInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_ledger', { p_ledger_id: a.ledger_id })
+      return { summary: 'Ledger deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_ledgers',
+    description: toolDescriptions.list_ledgers,
+    schema: noArgs,
+    readOnly: true,
+    run: async (ctx) => {
+      const { data, error } = await serviceClient(ctx.env)
+        .from('ledgers')
+        .select('id, name, base_currency, icon, color, is_archived')
+        .eq('owner_id', ctx.userId)
+        .order('sort_order')
+      if (error) throw new Error(error.message)
+      return { summary: `${(data ?? []).length} ledger(s)`, data }
+    },
+  },
+  {
+    name: 'get_ledger',
+    description: toolDescriptions.get_ledger,
+    schema: getLedgerInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const l = await callRpc(ctx.env, ctx.userId, 'get_ledger', { p_ledger_id: a.ledger_id })
+      return { summary: 'Ledger', data: l }
+    },
+  },
+
+  // ── Mnema Galleon: accounts ──
+  {
+    name: 'create_account',
+    description: toolDescriptions.create_account,
+    schema: createAccountInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const acc = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'create_account', {
+        p_ledger_id: a.ledger_id,
+        p_name: a.name,
+        p_type: a.type ?? 'cash',
+        p_currency: a.currency ?? null,
+        p_opening_balance: a.opening_balance ?? 0,
+        p_icon: a.icon ?? null,
+        p_color: a.color ?? null,
+        p_sort_order: a.sort_order ?? 0,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Created account “${acc.name}” (${acc.id})`, data: acc }
+    },
+  },
+  {
+    name: 'update_account',
+    description: toolDescriptions.update_account,
+    schema: updateAccountInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const acc = await callRpc(ctx.env, ctx.userId, 'update_account', {
+        p_account_id: a.account_id,
+        p_name: a.name ?? null,
+        p_type: a.type ?? null,
+        p_currency: a.currency ?? null,
+        p_opening_balance: a.opening_balance ?? null,
+        p_icon: a.icon ?? null,
+        p_color: a.color ?? null,
+        p_is_archived: a.is_archived ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: 'Account updated', data: acc }
+    },
+  },
+  {
+    name: 'delete_account',
+    description: toolDescriptions.delete_account,
+    schema: deleteAccountInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_account', { p_account_id: a.account_id })
+      return { summary: 'Account deleted', data: { ok: true } }
+    },
+  },
+
+  // ── Mnema Galleon: categories ──
+  {
+    name: 'create_category',
+    description: toolDescriptions.create_category,
+    schema: createCategoryInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const c = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'create_category', {
+        p_ledger_id: a.ledger_id,
+        p_name: a.name,
+        p_kind: a.kind,
+        p_parent_id: a.parent_id ?? null,
+        p_icon: a.icon ?? null,
+        p_color: a.color ?? null,
+        p_sort_order: a.sort_order ?? 0,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Created category “${c.name}”`, data: c }
+    },
+  },
+  {
+    name: 'update_category',
+    description: toolDescriptions.update_category,
+    schema: updateCategoryInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const c = await callRpc(ctx.env, ctx.userId, 'update_category', {
+        p_category_id: a.category_id,
+        p_name: a.name ?? null,
+        p_kind: a.kind ?? null,
+        p_parent_id: a.parent_id ?? null,
+        p_icon: a.icon ?? null,
+        p_color: a.color ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: 'Category updated', data: c }
+    },
+  },
+  {
+    name: 'delete_category',
+    description: toolDescriptions.delete_category,
+    schema: deleteCategoryInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_category', { p_category_id: a.category_id })
+      return { summary: 'Category deleted', data: { ok: true } }
+    },
+  },
+
+  // ── Mnema Galleon: transactions ──
+  {
+    name: 'create_transaction',
+    description: toolDescriptions.create_transaction,
+    schema: createTransactionInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const tx = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'create_transaction', {
+        p_ledger_id: a.ledger_id,
+        p_type: a.type,
+        p_amount: a.amount,
+        p_account_id: a.account_id ?? null,
+        p_category_id: a.category_id ?? null,
+        p_transfer_account_id: a.transfer_account_id ?? null,
+        p_currency: a.currency ?? null,
+        p_fx_rate: a.fx_rate ?? 1,
+        p_payee: a.payee ?? null,
+        p_note: a.note ?? null,
+        p_txn_date: a.txn_date ?? null,
+        p_tags: a.tags ?? [],
+        p_receipt_url: a.receipt_url ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Logged ${a.type} ${a.amount} (${tx.id})`, data: tx }
+    },
+  },
+  {
+    name: 'create_transactions_bulk',
+    description: toolDescriptions.create_transactions_bulk,
+    schema: createTransactionsBulkInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const rows = await callRpc<Array<{ id: string }>>(ctx.env, ctx.userId, 'create_transactions_bulk', {
+        p_ledger_id: a.ledger_id,
+        p_transactions: a.transactions,
+      })
+      return { summary: `Logged ${rows.length} transaction(s)`, data: rows }
+    },
+  },
+  {
+    name: 'create_transfer',
+    description: toolDescriptions.create_transfer,
+    schema: createTransferInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const tx = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'create_transaction', {
+        p_ledger_id: a.ledger_id,
+        p_type: 'transfer',
+        p_amount: a.amount,
+        p_account_id: a.from_account_id,
+        p_transfer_account_id: a.to_account_id,
+        p_note: a.note ?? null,
+        p_txn_date: a.txn_date ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Transferred ${a.amount}`, data: tx }
+    },
+  },
+  {
+    name: 'update_transaction',
+    description: toolDescriptions.update_transaction,
+    schema: updateTransactionInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const tx = await callRpc(ctx.env, ctx.userId, 'update_transaction', {
+        p_transaction_id: a.transaction_id,
+        p_amount: a.amount ?? null,
+        p_type: a.type ?? null,
+        p_account_id: a.account_id ?? null,
+        p_category_id: a.category_id ?? null,
+        p_transfer_account_id: a.transfer_account_id ?? null,
+        p_payee: a.payee ?? null,
+        p_note: a.note ?? null,
+        p_txn_date: a.txn_date ?? null,
+        p_tags: a.tags ?? null,
+        p_receipt_url: a.receipt_url ?? null,
+      })
+      return { summary: 'Transaction updated', data: tx }
+    },
+  },
+  {
+    name: 'delete_transaction',
+    description: toolDescriptions.delete_transaction,
+    schema: deleteTransactionInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_transaction', { p_transaction_id: a.transaction_id })
+      return { summary: 'Transaction deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_transactions',
+    description: toolDescriptions.list_transactions,
+    schema: listTransactionsInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_transactions', {
+        p_ledger_id: a.ledger_id,
+        p_account_id: a.account_id ?? null,
+        p_category_id: a.category_id ?? null,
+        p_type: a.type ?? null,
+        p_from: a.from ?? null,
+        p_to: a.to ?? null,
+        p_limit: a.limit ?? 100,
+      })
+      return { summary: `${rows.length} transaction(s)`, data: rows }
+    },
+  },
+  {
+    name: 'search_transactions',
+    description: toolDescriptions.search_transactions,
+    schema: searchTransactionsInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'search_transactions', {
+        p_ledger_id: a.ledger_id,
+        p_query: a.query,
+        p_limit: a.limit ?? 50,
+      })
+      return { summary: `${rows.length} matched`, data: rows }
+    },
+  },
+  {
+    name: 'get_ledger_summary',
+    description: toolDescriptions.get_ledger_summary,
+    schema: getLedgerSummaryInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const s = await callRpc(ctx.env, ctx.userId, 'get_ledger_summary', {
+        p_ledger_id: a.ledger_id,
+        p_from: a.from,
+        p_to: a.to,
+      })
+      return { summary: 'Summary', data: s }
     },
   },
 ]
