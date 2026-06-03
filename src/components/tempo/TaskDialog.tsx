@@ -27,6 +27,17 @@ const WD_ZH = ['一', '二', '三', '四', '五', '六', '日']
 const UNIT_EN: Record<Freq, string> = { DAILY: 'days', WEEKLY: 'weeks', MONTHLY: 'months', YEARLY: 'years' }
 const UNIT_ZH: Record<Freq, string> = { DAILY: '天', WEEKLY: '週', MONTHLY: '個月', YEARLY: '年' }
 
+// Reminder presets — minutes before the due date/time (or custom absolute).
+const REMIND_PRESETS = [
+  { v: '', en: 'No reminder', zh: '不提醒' },
+  { v: '0', en: 'At due time', zh: '準時' },
+  { v: '10', en: '10 minutes before', zh: '10 分鐘前' },
+  { v: '60', en: '1 hour before', zh: '1 小時前' },
+  { v: '1440', en: '1 day before', zh: '1 天前' },
+  { v: '10080', en: '1 week before', zh: '1 週前' },
+  { v: 'custom', en: 'Custom time…', zh: '自訂時間…' },
+] as const
+
 function localToday(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -68,10 +79,12 @@ export function TaskDialog({
   const [byday, setByday] = useState<string[]>([])
   const [afterCompletion, setAfterCompletion] = useState(false)
   const [reminderLocal, setReminderLocal] = useState('')
+  const [reminderPreset, setReminderPreset] = useState('')
 
   useEffect(() => {
     if (!open) return
     setReminderLocal('')
+    setReminderPreset('')
     setTitle(task?.title ?? '')
     setListId(task?.list_id ?? defaultListId ?? INBOX)
     setPriority(task?.priority ?? 0)
@@ -100,6 +113,16 @@ export function TaskDialog({
         : repeat === 'WEEKLY' && byday.length
           ? t('Repeats on the chosen weekdays, by the calendar', '照日曆,每週固定在勾選的星期重複')
           : t(`Repeats every ${interval} ${unitEn} by the calendar`, `照日曆,每 ${interval} ${unitZh}重複`)
+
+  // A relative reminder is computed from the due date/time (all-day → 09:00).
+  function computeRemindAt(): string | null {
+    if (reminderPreset === 'custom') return reminderLocal ? new Date(reminderLocal).toISOString() : null
+    if (!reminderPreset || !dueDate) return null
+    const at = new Date(`${dueDate}T${dueTime || '09:00'}`)
+    at.setMinutes(at.getMinutes() - Number(reminderPreset))
+    return at.toISOString()
+  }
+  const remindPreview = reminderPreset && reminderPreset !== 'custom' && dueDate ? computeRemindAt() : null
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -149,9 +172,14 @@ export function TaskDialog({
         })
         taskId = created.id
       }
-      // A datetime here adds a reminder (absolute instant from local time).
-      if (reminderLocal && taskId) {
-        await addReminder.mutateAsync({ task_id: taskId, remind_at: new Date(reminderLocal).toISOString() })
+      // Add the reminder (relative to the due date, or a custom absolute time).
+      const remindAt = computeRemindAt()
+      if (remindAt && taskId) {
+        await addReminder.mutateAsync({
+          task_id: taskId,
+          remind_at: remindAt,
+          offset_min: reminderPreset && reminderPreset !== 'custom' ? Number(reminderPreset) : undefined,
+        })
       }
       onOpenChange(false)
     } catch (err) {
@@ -296,15 +324,27 @@ export function TaskDialog({
           {/* Reminder */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="task-remind">{t('Reminder', '提醒')}</Label>
-            <Input
-              id="task-remind"
-              type="datetime-local"
-              value={reminderLocal}
-              onChange={(e) => setReminderLocal(e.target.value)}
-            />
-            {reminderLocal ? (
+            <Select id="task-remind" value={reminderPreset} onChange={(e) => setReminderPreset(e.target.value)}>
+              {REMIND_PRESETS.map((p) => (
+                <option key={p.v} value={p.v}>
+                  {t(p.en, p.zh)}
+                </option>
+              ))}
+            </Select>
+            {reminderPreset === 'custom' ? (
+              <Input type="datetime-local" value={reminderLocal} onChange={(e) => setReminderLocal(e.target.value)} />
+            ) : reminderPreset && !dueDate ? (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                {t('Relative reminders need a due date — set one above.', '相對提醒需要先設上面的「截止日」。')}
+              </p>
+            ) : remindPreview ? (
               <p className="text-[11px] text-muted-foreground">
-                {t('Sends a push when due — enable reminders in Settings first.', '到時會推播 —— 請先在「設定」開啟提醒。')}
+                {t('Reminds at', '提醒於')} {new Date(remindPreview).toLocaleString()}
+              </p>
+            ) : null}
+            {reminderPreset ? (
+              <p className="text-[11px] text-muted-foreground/80">
+                {t('Push needs to be enabled once in Settings → Reminders.', '推播需先在「設定 → 提醒」開啟一次。')}
               </p>
             ) : null}
           </div>
