@@ -77,8 +77,10 @@ import {
   updateTaskListInput,
   // Mnema Galleon
   createAccountInput,
+  addLedgerMemberInput,
   createCategoryInput,
   createLedgerInput,
+  createSplitExpenseInput,
   createTransactionInput,
   createTransactionsBulkInput,
   createTransferInput,
@@ -87,20 +89,28 @@ import {
   deleteCategoryInput,
   deleteLedgerInput,
   deleteRecurringTransactionInput,
+  deleteSettlementInput,
   deleteTransactionInput,
+  getBalancesInput,
   getBudgetStatusInput,
   getLedgerInput,
   getLedgerSummaryInput,
   getMonthlyTrendInput,
   listTransactionsInput,
+  recordSettlementInput,
+  removeLedgerMemberInput,
   searchTransactionsInput,
   setBudgetInput,
   setRecurringTransactionInput,
+  setTransactionSplitsInput,
+  suggestSettlementInput,
   updateAccountInput,
   updateCategoryInput,
   updateLedgerInput,
+  updateLedgerMemberInput,
   updateTransactionInput,
 } from '../../shared/schemas'
+import { settleUp, type MemberBalance } from '../../shared/settle'
 import { callRpc, ownedSelect, serviceClient } from './db'
 import { computeOccurrence, todayISO } from './recurrence'
 import type { ToolContext } from './env'
@@ -1733,6 +1743,129 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       const trend = await callRpc(ctx.env, ctx.userId, 'get_monthly_trend', { p_ledger_id: a.ledger_id, p_months: a.months ?? 6 })
       return { summary: 'Monthly trend', data: trend }
+    },
+  },
+  // ── Galleon P3: shared ledgers + splitting ──────────────────────────────
+  {
+    name: 'add_ledger_member',
+    description: toolDescriptions.add_ledger_member,
+    schema: addLedgerMemberInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const m = await callRpc(ctx.env, ctx.userId, 'add_ledger_member', {
+        p_ledger_id: a.ledger_id,
+        p_display_name: a.display_name,
+        p_email: a.email ?? null,
+        p_role: a.role ?? 'editor',
+      })
+      return { summary: 'Member added', data: m }
+    },
+  },
+  {
+    name: 'update_ledger_member',
+    description: toolDescriptions.update_ledger_member,
+    schema: updateLedgerMemberInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const m = await callRpc(ctx.env, ctx.userId, 'update_ledger_member', {
+        p_member_id: a.member_id,
+        p_display_name: a.display_name ?? null,
+        p_role: a.role ?? null,
+      })
+      return { summary: 'Member updated', data: m }
+    },
+  },
+  {
+    name: 'remove_ledger_member',
+    description: toolDescriptions.remove_ledger_member,
+    schema: removeLedgerMemberInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'remove_ledger_member', { p_member_id: a.member_id })
+      return { summary: 'Member removed', data: { ok: true } }
+    },
+  },
+  {
+    name: 'create_split_expense',
+    description: toolDescriptions.create_split_expense,
+    schema: createSplitExpenseInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const tx = await callRpc(ctx.env, ctx.userId, 'create_split_expense', {
+        p_ledger_id: a.ledger_id,
+        p_amount: a.amount,
+        p_splits: a.splits,
+        p_account_id: a.account_id ?? null,
+        p_category_id: a.category_id ?? null,
+        p_payee: a.payee ?? null,
+        p_note: a.note ?? null,
+        p_txn_date: a.txn_date ?? null,
+        p_currency: a.currency ?? null,
+      })
+      return { summary: 'Split expense recorded', data: tx }
+    },
+  },
+  {
+    name: 'set_transaction_splits',
+    description: toolDescriptions.set_transaction_splits,
+    schema: setTransactionSplitsInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'set_transaction_splits', { p_transaction_id: a.transaction_id, p_splits: a.splits })
+      return { summary: 'Splits updated', data: { ok: true } }
+    },
+  },
+  {
+    name: 'get_balances',
+    description: toolDescriptions.get_balances,
+    schema: getBalancesInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const b = await callRpc(ctx.env, ctx.userId, 'get_balances', { p_ledger_id: a.ledger_id })
+      return { summary: 'Member balances', data: b }
+    },
+  },
+  {
+    name: 'suggest_settlement',
+    description: toolDescriptions.suggest_settlement,
+    schema: suggestSettlementInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const balances = (await callRpc<MemberBalance[]>(ctx.env, ctx.userId, 'get_balances', { p_ledger_id: a.ledger_id })) ?? []
+      const payments = settleUp(balances.map((b) => ({ member_id: b.member_id, display_name: b.display_name, balance: Number(b.balance) })))
+      return { summary: `${payments.length} payment(s) settle everyone up`, data: { balances, payments } }
+    },
+  },
+  {
+    name: 'record_settlement',
+    description: toolDescriptions.record_settlement,
+    schema: recordSettlementInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const s = await callRpc(ctx.env, ctx.userId, 'record_settlement', {
+        p_ledger_id: a.ledger_id,
+        p_from_member: a.from_member,
+        p_to_member: a.to_member,
+        p_amount: a.amount,
+        p_note: a.note ?? null,
+        p_sett_date: a.sett_date ?? null,
+        p_currency: a.currency ?? null,
+      })
+      return { summary: 'Settlement recorded', data: s }
+    },
+  },
+  {
+    name: 'delete_settlement',
+    description: toolDescriptions.delete_settlement,
+    schema: deleteSettlementInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_settlement', { p_settlement_id: a.settlement_id })
+      return { summary: 'Settlement removed', data: { ok: true } }
     },
   },
 ]

@@ -10,7 +10,7 @@ export function discoveryIndex(origin: string) {
     description:
       'A personal notes + assistant workspace that the user drives with THEIR OWN AI. ' +
       'Mnema does not host, bundle, or call any AI itself — you (an external assistant) connect via MCP or REST and act as a TOOL. ' +
-      'The workspace is organized into spaces; choose tools by context (notes/cards → Study; trips → Travel; tasks/habits/reminders → Tasks). ' +
+      'The workspace is organized into spaces; choose tools by context (notes/cards → Study; trips → Travel; tasks/habits/reminders → Tasks; money/expenses/splitting bills → Money). ' +
       'More spaces may be added over time, so route by what the user is asking for, not a fixed list.',
     spaces: [
       {
@@ -30,6 +30,14 @@ export function discoveryIndex(origin: string) {
         name: 'Tasks (Mnema Tempo)',
         about: 'To-dos & lists, habits with streaks, a calendar with time-blocking, RRULE recurrence, and reminders.',
         tools: 'create_task, create_tasks_bulk, create_task_list, complete_task, set_recurrence, schedule_task, check_in, add_reminder, list_tasks, …',
+      },
+      {
+        key: 'money',
+        name: 'Money (Mnema Galleon)',
+        about:
+          'Ledgers, accounts & balances, categorised income/expense/transfers, monthly budgets, recurring transactions, and Splitwise-style bill-splitting with shared members and settle-up.',
+        tools:
+          'create_ledger, create_transaction, create_transfer, get_ledger_summary, set_budget, set_recurring_transaction, add_ledger_member, create_split_expense, get_balances, suggest_settlement, record_settlement, …',
       },
     ],
     endpoints: {

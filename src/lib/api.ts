@@ -48,17 +48,21 @@ import type {
   AccountRow,
   BudgetRow,
   CategoryRow,
+  LedgerMemberRow,
   LedgerRow,
   RecurringTransactionRow,
+  SettlementRow,
   TransactionRow,
 } from './database.types'
 import type {
   CreateAccountInput,
   CreateCategoryInput,
   CreateLedgerInput,
+  CreateSplitExpenseInput,
   CreateTransactionInput,
   CreateTransactionsBulkInput,
   CreateTransferInput,
+  RecordSettlementInput,
   SetBudgetInput,
   SetRecurringTransactionInput,
   UpdateAccountInput,
@@ -1414,4 +1418,85 @@ export async function getMonthlyTrend(ledgerId: string, months = 6): Promise<Mon
   return unwrap(
     await supabase.rpc('get_monthly_trend', { p_user_id: null, p_ledger_id: ledgerId, p_months: months }),
   ) as unknown as MonthlyTrendItem[]
+}
+
+// ── Members + splitting (P3) ──
+export interface MemberBalanceItem {
+  member_id: string
+  display_name: string
+  user_id: string | null
+  role: string
+  balance: number
+}
+
+export async function getBalances(ledgerId: string): Promise<MemberBalanceItem[]> {
+  return unwrap(await supabase.rpc('get_balances', { p_user_id: null, p_ledger_id: ledgerId })) as unknown as MemberBalanceItem[]
+}
+export async function addLedgerMember(input: {
+  ledger_id: string
+  display_name: string
+  email?: string
+  role?: 'editor' | 'viewer'
+}): Promise<LedgerMemberRow> {
+  return unwrap(
+    await supabase.rpc('add_ledger_member', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_display_name: input.display_name,
+      p_email: input.email ?? undefined,
+      p_role: input.role ?? undefined,
+    }),
+  )
+}
+export async function updateLedgerMember(input: {
+  member_id: string
+  display_name?: string
+  role?: 'editor' | 'viewer'
+}): Promise<LedgerMemberRow> {
+  return unwrap(
+    await supabase.rpc('update_ledger_member', {
+      p_user_id: null,
+      p_member_id: input.member_id,
+      p_display_name: input.display_name ?? undefined,
+      p_role: input.role ?? undefined,
+    }),
+  )
+}
+export async function removeLedgerMember(memberId: string): Promise<void> {
+  const res = await supabase.rpc('remove_ledger_member', { p_user_id: null, p_member_id: memberId })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function createSplitExpense(input: CreateSplitExpenseInput): Promise<TransactionRow> {
+  return unwrap(
+    await supabase.rpc('create_split_expense', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_amount: input.amount,
+      p_splits: input.splits as unknown as Json,
+      p_account_id: input.account_id ?? undefined,
+      p_category_id: input.category_id ?? undefined,
+      p_payee: input.payee ?? undefined,
+      p_note: input.note ?? undefined,
+      p_txn_date: input.txn_date ?? undefined,
+      p_currency: input.currency ?? undefined,
+    }),
+  )
+}
+export async function recordSettlement(input: RecordSettlementInput): Promise<SettlementRow> {
+  return unwrap(
+    await supabase.rpc('record_settlement', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_from_member: input.from_member,
+      p_to_member: input.to_member,
+      p_amount: input.amount,
+      p_note: input.note ?? undefined,
+      p_sett_date: input.sett_date ?? undefined,
+      p_currency: input.currency ?? undefined,
+    }),
+  )
+}
+export async function deleteSettlement(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_settlement', { p_user_id: null, p_settlement_id: id })
+  if (res.error) throw new Error(res.error.message)
 }

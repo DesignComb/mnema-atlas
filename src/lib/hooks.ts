@@ -38,9 +38,11 @@ import type {
   CreateAccountInput,
   CreateCategoryInput,
   CreateLedgerInput,
+  CreateSplitExpenseInput,
   CreateTransactionInput,
   CreateTransactionsBulkInput,
   CreateTransferInput,
+  RecordSettlementInput,
   SetBudgetInput,
   SetRecurringTransactionInput,
   UpdateAccountInput,
@@ -76,6 +78,7 @@ export const qk = {
   budgetStatus: (ledgerId: string, key: string) => ['budget-status', ledgerId, key] as const,
   recurring: (ledgerId: string) => ['recurring', ledgerId] as const,
   monthlyTrend: (ledgerId: string, months: number) => ['monthly-trend', ledgerId, months] as const,
+  balances: (ledgerId: string) => ['ledger-balances', ledgerId] as const,
 }
 
 export function useDecks() {
@@ -612,7 +615,7 @@ export function useRemoveReminder() {
 // ════════════════════ Mnema Galleon (money) ════════════════════
 
 function bumpGalleon(qc: ReturnType<typeof useQueryClient>) {
-  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend']) {
+  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend', 'ledger-balances']) {
     qc.invalidateQueries({ queryKey: [k] })
   }
 }
@@ -732,6 +735,35 @@ export function useDeleteRecurringTransaction() {
 export function useRunDueRecurring() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (ledgerId: string) => api.runDueRecurring(ledgerId), onSuccess: () => bumpGalleon(qc) })
+}
+
+// ── Members + splitting (P3) ──
+export function useBalances(ledgerId: string) {
+  return useQuery({ queryKey: qk.balances(ledgerId), queryFn: () => api.getBalances(ledgerId), enabled: !!ledgerId })
+}
+export function useAddLedgerMember() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: Parameters<typeof api.addLedgerMember>[0]) => api.addLedgerMember(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useUpdateLedgerMember() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: Parameters<typeof api.updateLedgerMember>[0]) => api.updateLedgerMember(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useRemoveLedgerMember() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.removeLedgerMember(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function useCreateSplitExpense() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateSplitExpenseInput) => api.createSplitExpense(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useRecordSettlement() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: RecordSettlementInput) => api.recordSettlement(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useDeleteSettlement() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteSettlement(id), onSuccess: () => bumpGalleon(qc) })
 }
 
 // Reminders already surfaced this session (so the poll doesn't re-toast them).

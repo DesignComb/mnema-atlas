@@ -92,11 +92,11 @@ const galleonRoute = createRoute({
   // `section` (not `view`) so it never collides with Tempo's `view` search param.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { section?: 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports'; ledger?: string } => {
+  ): { section?: 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split'; ledger?: string } => {
     const s = search.section
-    const ok = s === 'overview' || s === 'transactions' || s === 'accounts' || s === 'budgets' || s === 'reports'
+    const ok = s === 'overview' || s === 'transactions' || s === 'accounts' || s === 'budgets' || s === 'reports' || s === 'split'
     return {
-      section: ok ? (s as 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports') : undefined,
+      section: ok ? (s as 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split') : undefined,
       ledger: typeof search.ledger === 'string' && search.ledger ? search.ledger : undefined,
     }
   },

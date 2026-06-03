@@ -642,6 +642,47 @@ export const deleteRecurringTransactionInput = z.object({ recurring_id: uuid })
 export const runDueRecurringInput = z.object({ ledger_id: uuid })
 export const getMonthlyTrendInput = z.object({ ledger_id: uuid, months: z.number().int().min(1).max(36).default(6) })
 
+// Galleon P3: members + splitting
+const splitShare = z.object({ member_id: uuid, paid: money, owed: money })
+export const addLedgerMemberInput = z.object({
+  ledger_id: uuid,
+  display_name: z.string().trim().min(1).max(80),
+  email: z.string().trim().email().optional(),
+  role: z.enum(['editor', 'viewer']).optional(),
+})
+export const updateLedgerMemberInput = z.object({
+  member_id: uuid,
+  display_name: z.string().trim().min(1).max(80).optional(),
+  role: z.enum(['editor', 'viewer']).optional(),
+})
+export const removeLedgerMemberInput = z.object({ member_id: uuid })
+export const createSplitExpenseInput = z.object({
+  ledger_id: uuid,
+  amount: money,
+  splits: z.array(splitShare).min(1).max(100),
+  account_id: uuid.optional(),
+  category_id: uuid.optional(),
+  payee: z.string().trim().max(200).optional(),
+  note: z.string().max(2_000).optional(),
+  txn_date: isoDate.optional(),
+  currency: currency.optional(),
+})
+export type CreateSplitExpenseInput = z.infer<typeof createSplitExpenseInput>
+export const setTransactionSplitsInput = z.object({ transaction_id: uuid, splits: z.array(splitShare).max(100) })
+export const getBalancesInput = z.object({ ledger_id: uuid })
+export const suggestSettlementInput = z.object({ ledger_id: uuid })
+export const recordSettlementInput = z.object({
+  ledger_id: uuid,
+  from_member: uuid,
+  to_member: uuid,
+  amount: money,
+  note: z.string().max(2_000).optional(),
+  sett_date: isoDate.optional(),
+  currency: currency.optional(),
+})
+export type RecordSettlementInput = z.infer<typeof recordSettlementInput>
+export const deleteSettlementInput = z.object({ settlement_id: uuid })
+
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
  * emits inside a ```mnema fenced block for the in-app Quick Import. Cards link
@@ -785,4 +826,15 @@ export const toolDescriptions = {
     'Create or update a recurring transaction template (salary, rent, subscriptions). Uses an RRULE + next_run; posted automatically when the ledger is next opened. Pass recurring_id to update.',
   delete_recurring_transaction: 'Remove a recurring transaction template.',
   get_monthly_trend: 'Income vs expense per month for the last N months — for trend charts.',
+  add_ledger_member:
+    'Add a person to a shared ledger so expenses can be split with them. If you pass an email of an existing Mnema user they join as a real collaborator (can open the ledger with their own AI); otherwise they are added as a name-only guest. Owner only.',
+  update_ledger_member: 'Rename a ledger member or change their role (editor/viewer). Cannot change the owner.',
+  remove_ledger_member: 'Remove a member from a shared ledger. Cannot remove the owner.',
+  create_split_expense:
+    'Record an expense split among members. Pass the total amount plus a `splits` array of {member_id, paid, owed} resolved amounts (Splitwise model — paid is what each person fronted, owed is their share). Sum of paid and sum of owed should each equal the amount.',
+  set_transaction_splits: 'Replace the per-member paid/owed splits on an existing transaction.',
+  get_balances: 'Per-member net balance in a shared ledger: positive = they are owed money, negative = they owe. Accounts for all splits and recorded settlements.',
+  suggest_settlement: 'Compute the minimal set of who-pays-whom payments that settles everyone up in a shared ledger. Returns current balances plus a list of suggested payments — read-only, records nothing.',
+  record_settlement: 'Record that one member paid another to settle up (e.g. a debtor repaid a creditor). Adjusts both balances toward zero.',
+  delete_settlement: 'Remove a previously recorded settlement.',
 } as const

@@ -951,6 +951,73 @@ export type Database = {
           },
         ]
       }
+      settlements: {
+        Row: {
+          amount: number
+          created_at: string
+          created_via: string
+          currency: string
+          from_member: string
+          id: string
+          ledger_id: string
+          note: string | null
+          owner_id: string
+          sett_date: string
+          to_member: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_via?: string
+          currency?: string
+          from_member: string
+          id?: string
+          ledger_id: string
+          note?: string | null
+          owner_id: string
+          sett_date?: string
+          to_member: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_via?: string
+          currency?: string
+          from_member?: string
+          id?: string
+          ledger_id?: string
+          note?: string | null
+          owner_id?: string
+          sett_date?: string
+          to_member?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlements_from_member_fkey"
+            columns: ["from_member"]
+            isOneToOne: false
+            referencedRelation: "ledger_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "ledgers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_to_member_fkey"
+            columns: ["to_member"]
+            isOneToOne: false
+            referencedRelation: "ledger_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       share_links: {
         Row: {
           can_edit: boolean
@@ -1227,6 +1294,58 @@ export type Database = {
           },
         ]
       }
+      transaction_splits: {
+        Row: {
+          created_at: string
+          id: string
+          ledger_id: string
+          member_id: string
+          owed: number
+          paid: number
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ledger_id: string
+          member_id: string
+          owed?: number
+          paid?: number
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ledger_id?: string
+          member_id?: string
+          owed?: number
+          paid?: number
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_splits_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "ledgers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_splits_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_splits_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           account_id: string | null
@@ -1460,6 +1579,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_ledger_member: {
+        Args: {
+          p_display_name: string
+          p_email?: string
+          p_ledger_id: string
+          p_role?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          added_by: string | null
+          created_at: string
+          display_name: string
+          id: string
+          ledger_id: string
+          role: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       add_member: {
         Args: {
           p_email: string
@@ -2144,6 +2287,47 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_split_expense: {
+        Args: {
+          p_account_id?: string
+          p_amount: number
+          p_category_id?: string
+          p_currency?: string
+          p_ledger_id: string
+          p_note?: string
+          p_payee?: string
+          p_splits: Json
+          p_txn_date?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          currency: string
+          fx_rate: number
+          id: string
+          ledger_id: string
+          note: string | null
+          owner_id: string
+          payee: string | null
+          receipt_url: string | null
+          tags: string[]
+          transfer_account_id: string | null
+          txn_date: string
+          type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_task: {
         Args: {
           p_created_via?: string
@@ -2407,6 +2591,10 @@ export type Database = {
         Args: { p_recurring_id: string; p_user_id: string | null }
         Returns: boolean
       }
+      delete_settlement: {
+        Args: { p_settlement_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       delete_task: {
         Args: { p_task_id: string; p_user_id: string | null }
         Returns: boolean
@@ -2420,6 +2608,10 @@ export type Database = {
         Returns: boolean
       }
       due_reminders_for_cron: { Args: never; Returns: Json }
+      get_balances: {
+        Args: { p_ledger_id: string; p_user_id: string | null }
+        Returns: Json
+      }
       get_budget_status: {
         Args: {
           p_from: string
@@ -2700,6 +2892,42 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_settlement: {
+        Args: {
+          p_amount: number
+          p_currency?: string
+          p_from_member: string
+          p_ledger_id: string
+          p_note?: string
+          p_sett_date?: string
+          p_to_member: string
+          p_user_id: string | null
+        }
+        Returns: {
+          amount: number
+          created_at: string
+          created_via: string
+          currency: string
+          from_member: string
+          id: string
+          ledger_id: string
+          note: string | null
+          owner_id: string
+          sett_date: string
+          to_member: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "settlements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      remove_ledger_member: {
+        Args: { p_member_id: string; p_user_id: string | null }
+        Returns: boolean
       }
       remove_member: {
         Args: {
@@ -3246,6 +3474,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_transaction_splits: {
+        Args: { p_splits: Json; p_transaction_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       snooze_task: {
         Args: {
           p_task_id: string
@@ -3739,6 +3971,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_ledger_member: {
+        Args: {
+          p_display_name?: string
+          p_member_id: string
+          p_role?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          added_by: string | null
+          created_at: string
+          display_name: string
+          id: string
+          ledger_id: string
+          role: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_note: {
         Args: {
           p_body?: string
@@ -4057,3 +4312,5 @@ export type CategoryRow = PublicTables['categories']['Row']
 export type TransactionRow = PublicTables['transactions']['Row']
 export type BudgetRow = PublicTables['budgets']['Row']
 export type RecurringTransactionRow = PublicTables['recurring_transactions']['Row']
+export type TransactionSplitRow = PublicTables['transaction_splits']['Row']
+export type SettlementRow = PublicTables['settlements']['Row']

@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import {
   ArrowLeftRight,
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   Coins,
+  HandCoins,
   MoreHorizontal,
   Pencil,
   Plus,
   Repeat,
   Trash2,
+  UserPlus,
+  Users,
   Wallet,
 } from 'lucide-react'
 import {
+  useBalances,
   useBudgetStatus,
   useDeleteAccount,
   useDeleteBudget,
@@ -24,12 +30,15 @@ import {
   useLedgerSummary,
   useLedgerTransactions,
   useMonthlyTrend,
+  useRecordSettlement,
+  useRemoveLedgerMember,
   useRunDueRecurring,
   useSetBudget,
 } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
-import type { BudgetStatusItem, LedgerAccount, LedgerCategory, LedgerDetail } from '@/lib/api'
+import type { BudgetStatusItem, LedgerAccount, LedgerCategory, LedgerDetail, MemberBalanceItem } from '@/lib/api'
 import type { TransactionRow } from '@/lib/database.types'
+import { settleUp } from '@shared/settle'
 import { ACCOUNT_TYPE_LABEL, addMonths, fmtMoney, monthRange } from '@/lib/money'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -44,11 +53,14 @@ import { LedgerDialog } from '@/components/galleon/LedgerDialog'
 import { AccountDialog } from '@/components/galleon/AccountDialog'
 import { TransactionDialog } from '@/components/galleon/TransactionDialog'
 import { RecurringDialog } from '@/components/galleon/RecurringDialog'
+import { MemberDialog } from '@/components/galleon/MemberDialog'
+import { SplitExpenseDialog } from '@/components/galleon/SplitExpenseDialog'
 
-type View = 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports'
+type View = 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split'
 const VIEWS: { k: View; en: string; zh: string }[] = [
   { k: 'overview', en: 'Overview', zh: '總覽' },
   { k: 'transactions', en: 'Transactions', zh: '交易' },
+  { k: 'split', en: 'Split', zh: '分帳' },
   { k: 'accounts', en: 'Accounts', zh: '帳戶' },
   { k: 'budgets', en: 'Budgets', zh: '預算' },
   { k: 'reports', en: 'Reports', zh: '報表' },
@@ -65,12 +77,15 @@ export function GalleonScreen() {
   const ledgerId = search.ledger && active.some((l) => l.id === search.ledger) ? search.ledger : active[0]?.id ?? ''
 
   const { data: ledger } = useLedger(ledgerId)
+  const { data: balancesForDialog = [] } = useBalances(ledgerId)
   const deleteLedger = useDeleteLedger()
 
   const [ledgerDialog, setLedgerDialog] = useState<{ open: boolean; edit?: boolean }>({ open: false })
   const [accountDialog, setAccountDialog] = useState<{ open: boolean; account?: LedgerAccount }>({ open: false })
   const [txnDialog, setTxnDialog] = useState<{ open: boolean; txn?: TransactionRow }>({ open: false })
   const [recurringDialog, setRecurringDialog] = useState(false)
+  const [memberDialog, setMemberDialog] = useState<{ open: boolean; member?: MemberBalanceItem }>({ open: false })
+  const [splitDialog, setSplitDialog] = useState(false)
   const runDue = useRunDueRecurring()
 
   // Post any due recurring transactions when a ledger is opened (idempotent).
@@ -223,6 +238,14 @@ export function GalleonScreen() {
             <Budgets ledger={ledger} t={t} />
           ) : view === 'reports' ? (
             <Reports ledger={ledger} t={t} />
+          ) : view === 'split' ? (
+            <Split
+              ledger={ledger}
+              onAddMember={() => setMemberDialog({ open: true })}
+              onEditMember={(member) => setMemberDialog({ open: true, member })}
+              onAddSplit={() => setSplitDialog(true)}
+              t={t}
+            />
           ) : (
             <Transactions ledger={ledger} onEditTxn={(txn) => setTxnDialog({ open: true, txn })} t={t} />
           )}
@@ -251,6 +274,13 @@ export function GalleonScreen() {
             transaction={txnDialog.txn}
           />
           <RecurringDialog open={recurringDialog} onOpenChange={setRecurringDialog} ledger={ledger} />
+          <MemberDialog
+            open={memberDialog.open}
+            onOpenChange={(o) => setMemberDialog((s) => ({ ...s, open: o }))}
+            ledgerId={ledger.id}
+            member={memberDialog.member}
+          />
+          <SplitExpenseDialog open={splitDialog} onOpenChange={setSplitDialog} ledger={ledger} members={balancesForDialog} />
         </>
       ) : null}
     </>
@@ -633,6 +663,152 @@ function Reports({ ledger, t }: { ledger: LedgerDetail; t: Tr }) {
           </div>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function Split({
+  ledger,
+  onAddMember,
+  onEditMember,
+  onAddSplit,
+  t,
+}: {
+  ledger: LedgerDetail
+  onAddMember: () => void
+  onEditMember: (m: MemberBalanceItem) => void
+  onAddSplit: () => void
+  t: Tr
+}) {
+  const { data: members, isLoading } = useBalances(ledger.id)
+  const removeMember = useRemoveLedgerMember()
+  const recordSettlement = useRecordSettlement()
+  const cur = ledger.base_currency
+  const list = members ?? []
+  const suggestions = useMemo(
+    () => settleUp(list.map((m) => ({ member_id: m.member_id, display_name: m.display_name, balance: Number(m.balance) }))),
+    [list],
+  )
+
+  if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card" />
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Button variant="brand" size="sm" onClick={onAddSplit} disabled={list.length < 1}>
+          <HandCoins className="size-4" /> {t('Split an expense', '分帳')}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onAddMember}>
+          <UserPlus className="size-4" /> {t('Add person', '新增成員')}
+        </Button>
+      </div>
+
+      {/* Members + balances */}
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 sm:px-4">
+          <Users className="size-3.5 text-muted-foreground" />
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">{t('People', '成員')}</span>
+        </div>
+        {list.map((m) => {
+          const bal = Number(m.balance)
+          const owed = bal > 0.005
+          const owes = bal < -0.005
+          return (
+            <div key={m.member_id} className="group flex items-center gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-[13px] font-medium uppercase text-muted-foreground">
+                {m.display_name.slice(0, 1)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px]">{m.display_name}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {m.role === 'owner' ? t('Owner', '擁有者') : m.user_id ? t('Collaborator', '協作者') : t('Guest', '掛名')}
+                </p>
+              </div>
+              <span
+                className={`shrink-0 text-right text-[13px] font-medium tabular-nums ${
+                  owed ? 'text-emerald-600 dark:text-emerald-400' : owes ? 'text-red-500' : 'text-muted-foreground'
+                }`}
+              >
+                {owed ? t('gets back', '可收回') : owes ? t('owes', '應付') : t('settled', '已平')}
+                <br />
+                {Math.abs(bal) > 0.005 ? fmtMoney(Math.abs(bal), cur) : '—'}
+              </span>
+              {m.role !== 'owner' ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-foreground group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                      aria-label={t('Options', '選項')}
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => onEditMember(m)}>
+                      <Pencil /> {t('Edit', '編輯')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive [&_svg]:text-destructive"
+                      onSelect={() => {
+                        if (Math.abs(bal) > 0.005) {
+                          toast.error(t('Settle their balance before removing them.', '請先結清餘額再移除。'))
+                          return
+                        }
+                        if (confirm(t(`Remove ${m.display_name}?`, `移除「${m.display_name}」?`))) removeMember.mutate(m.member_id)
+                      }}
+                    >
+                      <Trash2 /> {t('Remove', '移除')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <span className="w-6 shrink-0" />
+              )}
+            </div>
+          )
+        })}
+        {list.length <= 1 ? (
+          <p className="px-4 py-6 text-center text-[12.5px] text-muted-foreground/70">
+            {t('Add the people you share costs with, then split an expense.', '新增一起分攤的成員,就能開始分帳。')}
+          </p>
+        ) : null}
+      </div>
+
+      {/* Settle up */}
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 sm:px-4">
+          <ArrowRight className="size-3.5 text-muted-foreground" />
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">{t('Settle up', '結算')}</span>
+        </div>
+        {suggestions.length ? (
+          suggestions.map((s, i) => (
+            <div key={`${s.from_member}-${s.to_member}-${i}`} className="flex items-center gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
+              <p className="min-w-0 flex-1 text-[13.5px]">
+                <span className="font-medium">{s.from_name}</span>
+                <ArrowRight className="mx-1.5 inline size-3.5 text-muted-foreground" />
+                <span className="font-medium">{s.to_name}</span>
+              </p>
+              <span className="shrink-0 text-[13px] font-medium tabular-nums">{fmtMoney(s.amount, cur)}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={recordSettlement.isPending}
+                onClick={() =>
+                  recordSettlement.mutate(
+                    { ledger_id: ledger.id, from_member: s.from_member, to_member: s.to_member, amount: s.amount },
+                    { onSuccess: () => toast.success(t('Recorded', '已記錄')) },
+                  )
+                }
+              >
+                {t('Mark paid', '標記已付')}
+              </Button>
+            </div>
+          ))
+        ) : (
+          <p className="px-4 py-6 text-center text-[12.5px] text-muted-foreground/70">{t('Everyone is settled up. 🎉', '大家都結清了 🎉')}</p>
+        )}
+      </div>
     </div>
   )
 }
