@@ -57,8 +57,9 @@ export function buildOpenApiSpec(origin: string) {
       description:
         'A personal notes + assistant workspace the user drives with THEIR OWN AI (Mnema hosts no AI itself). ' +
         'Act as a tool. The workspace has several spaces — pick tools by context: Study (Atlas: notes, decks, ' +
-        'flashcards, graph), Travel (Voyage: trips, days, activities, reservations, packing), and Tasks (Tempo: ' +
-        'to-dos, lists, habits, calendar, recurrence, reminders). More spaces may be added over time. ' +
+        'flashcards, graph), Travel (Voyage: trips, days, activities, reservations, packing), Tasks (Tempo: ' +
+        'to-dos, lists, habits, calendar, recurrence, reminders), and Money (Galleon: ledgers, accounts & balances, ' +
+        'budgets, recurring transactions, and Splitwise-style bill-splitting with settle-up). More spaces may be added over time. ' +
         'Authenticate with a Bearer API key minted in the app (Settings → API keys). ' +
         'Add-only keys may only create + read; full keys may also edit/complete/delete. Every write is scoped to the key owner.',
     },

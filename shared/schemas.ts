@@ -682,6 +682,10 @@ export const recordSettlementInput = z.object({
 })
 export type RecordSettlementInput = z.infer<typeof recordSettlementInput>
 export const deleteSettlementInput = z.object({ settlement_id: uuid })
+export const listLedgerMembersInput = z.object({ ledger_id: uuid })
+export const listSettlementsInput = z.object({ ledger_id: uuid })
+export const listRecurringInput = z.object({ ledger_id: uuid })
+export const getTransactionInput = z.object({ transaction_id: uuid })
 
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
@@ -747,7 +751,6 @@ export const toolDescriptions = {
   set_item_location: 'Set or clear an activity’s map coordinates (pass null to clear).',
   set_item_day: 'Move an activity to another day, or to Unscheduled (day_id = null).',
   reorder_items: 'Set the order of activities within a day by passing the item ids in the desired order.',
-  update_itinerary_meta: 'Set a trip’s travelers and/or total budget.',
   create_booking:
     'Add a reservation to a trip — flight, lodging, transport, ticket, car, or document. Returns the new id.',
   update_booking: 'Update a reservation’s fields.',
@@ -804,11 +807,9 @@ export const toolDescriptions = {
   create_account: 'Add an account/wallet to a ledger (cash, bank, credit, ewallet, investment) with an opening balance.',
   update_account: 'Update an account’s name, type, currency, opening balance, or archive it.',
   delete_account: 'Delete an account (its transactions keep but lose the account link).',
-  list_accounts: 'List a ledger’s accounts.',
   create_category: 'Add an income or expense category to a ledger.',
   update_category: 'Update a category’s name, kind, parent, icon, or colour.',
   delete_category: 'Delete a category.',
-  list_categories: 'List a ledger’s categories.',
   create_transaction:
     'Record one transaction — income, expense, or transfer. Pass account_id (the wallet), category_id (not for transfers), amount, and optional payee/note/txn_date/tags. Returns the new id. This is the "log a transaction" tool.',
   create_transactions_bulk: 'Record many transactions in one call (e.g. line items from a receipt).',
@@ -837,4 +838,8 @@ export const toolDescriptions = {
   suggest_settlement: 'Compute the minimal set of who-pays-whom payments that settles everyone up in a shared ledger. Returns current balances plus a list of suggested payments — read-only, records nothing.',
   record_settlement: 'Record that one member paid another to settle up (e.g. a debtor repaid a creditor). Adjusts both balances toward zero.',
   delete_settlement: 'Remove a previously recorded settlement.',
+  list_ledger_members: 'List a shared ledger’s members with their member_id, name, role, and whether they are a real Mnema user or a name-only guest. Use this to get the member_id needed for splitting/settling.',
+  list_settlements: 'List recorded settlements (who paid whom, how much, when) in a ledger — including each settlement_id needed to delete one.',
+  list_recurring: 'List a ledger’s recurring-transaction templates with their recurring_id, amount, rule, and next run date.',
+  get_transaction: 'Get one transaction plus its per-member split breakdown (paid/owed). Read this before editing splits so you do not overwrite other members’ shares.',
 } as const

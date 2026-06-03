@@ -14,6 +14,7 @@ import {
   Plus,
   Repeat,
   Trash2,
+  Undo2,
   UserPlus,
   Users,
   Wallet,
@@ -24,6 +25,7 @@ import {
   useDeleteAccount,
   useDeleteBudget,
   useDeleteLedger,
+  useDeleteSettlement,
   useDeleteTransaction,
   useLedger,
   useLedgers,
@@ -34,12 +36,13 @@ import {
   useRemoveLedgerMember,
   useRunDueRecurring,
   useSetBudget,
+  useSettlements,
 } from '@/lib/hooks'
-import { useT } from '@/lib/i18n'
+import { useI18n, useT } from '@/lib/i18n'
 import type { BudgetStatusItem, LedgerAccount, LedgerCategory, LedgerDetail, MemberBalanceItem } from '@/lib/api'
 import type { TransactionRow } from '@/lib/database.types'
 import { settleUp } from '@shared/settle'
-import { ACCOUNT_TYPE_LABEL, addMonths, fmtMoney, monthRange } from '@/lib/money'
+import { ACCOUNT_TYPE_LABEL, addMonths, fmtLedgerDate, fmtMoney, monthRange } from '@/lib/money'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import {
@@ -79,6 +82,7 @@ export function GalleonScreen() {
   const { data: ledger } = useLedger(ledgerId)
   const { data: balancesForDialog = [] } = useBalances(ledgerId)
   const deleteLedger = useDeleteLedger()
+  const canEdit = !ledger || ledger.my_role !== 'viewer'
 
   const [ledgerDialog, setLedgerDialog] = useState<{ open: boolean; edit?: boolean }>({ open: false })
   const [accountDialog, setAccountDialog] = useState<{ open: boolean; account?: LedgerAccount }>({ open: false })
@@ -174,36 +178,40 @@ export function GalleonScreen() {
         }
         icon={<Coins className="size-4" />}
         actions={
-          <div className="flex items-center gap-1.5">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" aria-label={t('Ledger options', '帳本選項')}>
-                  <MoreHorizontal className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setLedgerDialog({ open: true, edit: true })}>
-                  <Pencil /> {t('Edit ledger', '編輯帳本')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setAccountDialog({ open: true })}>
-                  <Wallet /> {t('New account', '新增帳戶')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setRecurringDialog(true)}>
-                  <Repeat /> {t('Recurring', '定期收支')}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive [&_svg]:text-destructive"
-                  onSelect={() => void deleteLedgerFlow()}
-                >
-                  <Trash2 /> {t('Delete ledger', '刪除帳本')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="brand" size="sm" onClick={() => setTxnDialog({ open: true })} disabled={!ledger}>
-              <Plus className="size-4" /> <span className="hidden sm:inline">{t('Add', '記一筆')}</span>
-            </Button>
-          </div>
+          canEdit ? (
+            <div className="flex items-center gap-1.5">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" aria-label={t('Ledger options', '帳本選項')}>
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setLedgerDialog({ open: true, edit: true })}>
+                    <Pencil /> {t('Edit ledger', '編輯帳本')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setAccountDialog({ open: true })}>
+                    <Wallet /> {t('New account', '新增帳戶')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setRecurringDialog(true)}>
+                    <Repeat /> {t('Recurring', '定期收支')}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive [&_svg]:text-destructive"
+                    onSelect={() => void deleteLedgerFlow()}
+                  >
+                    <Trash2 /> {t('Delete ledger', '刪除帳本')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="brand" size="sm" onClick={() => setTxnDialog({ open: true })} disabled={!ledger}>
+                <Plus className="size-4" /> <span className="hidden sm:inline">{t('Add', '記一筆')}</span>
+              </Button>
+            </div>
+          ) : (
+            <span className="rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">{t('View only', '唯讀')}</span>
+          )
         }
       />
 
@@ -241,6 +249,7 @@ export function GalleonScreen() {
           ) : view === 'split' ? (
             <Split
               ledger={ledger}
+              canEdit={canEdit}
               onAddMember={() => setMemberDialog({ open: true })}
               onEditMember={(member) => setMemberDialog({ open: true, member })}
               onAddSplit={() => setSplitDialog(true)}
@@ -403,6 +412,7 @@ function Overview({ ledger, onEditTxn, onSeeAll, t }: { ledger: LedgerDetail; on
 }
 
 function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTxn: (t: TransactionRow) => void; t: Tr }) {
+  const { lang } = useI18n()
   const { data: txns, isLoading } = useLedgerTransactions({ ledgerId: ledger.id, limit: 300 })
   if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card" />
   if (!(txns ?? []).length) {
@@ -419,7 +429,7 @@ function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTx
     <div className="space-y-3">
       {groups.map((g) => (
         <div key={g.date}>
-          <p className="mb-1 px-1 text-[12px] font-semibold text-muted-foreground">{g.date}</p>
+          <p className="mb-1 px-1 text-[12px] font-semibold text-muted-foreground">{fmtLedgerDate(g.date, lang)}</p>
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
             {g.rows.map((tx) => (
               <TxnRow key={tx.id} tx={tx} ledger={ledger} onEdit={() => onEditTxn(tx)} t={t} withMenu />
@@ -669,22 +679,28 @@ function Reports({ ledger, t }: { ledger: LedgerDetail; t: Tr }) {
 
 function Split({
   ledger,
+  canEdit,
   onAddMember,
   onEditMember,
   onAddSplit,
   t,
 }: {
   ledger: LedgerDetail
+  canEdit: boolean
   onAddMember: () => void
   onEditMember: (m: MemberBalanceItem) => void
   onAddSplit: () => void
   t: Tr
 }) {
+  const { lang } = useI18n()
   const { data: members, isLoading } = useBalances(ledger.id)
+  const { data: settlements } = useSettlements(ledger.id)
   const removeMember = useRemoveLedgerMember()
   const recordSettlement = useRecordSettlement()
+  const delSettlement = useDeleteSettlement()
   const cur = ledger.base_currency
   const list = members ?? []
+  const nameOf = (mid: string) => list.find((m) => m.member_id === mid)?.display_name ?? '—'
   const suggestions = useMemo(
     () => settleUp(list.map((m) => ({ member_id: m.member_id, display_name: m.display_name, balance: Number(m.balance) }))),
     [list],
@@ -694,14 +710,16 @@ function Split({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Button variant="brand" size="sm" onClick={onAddSplit} disabled={list.length < 1}>
-          <HandCoins className="size-4" /> {t('Split an expense', '分帳')}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onAddMember}>
-          <UserPlus className="size-4" /> {t('Add person', '新增成員')}
-        </Button>
-      </div>
+      {canEdit ? (
+        <div className="flex items-center gap-2">
+          <Button variant="brand" size="sm" onClick={onAddSplit} disabled={list.length <= 1}>
+            <HandCoins className="size-4" /> {t('Split an expense', '分帳')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onAddMember}>
+            <UserPlus className="size-4" /> {t('Add person', '新增成員')}
+          </Button>
+        </div>
+      ) : null}
 
       {/* Members + balances */}
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
@@ -733,7 +751,7 @@ function Split({
                 <br />
                 {Math.abs(bal) > 0.005 ? fmtMoney(Math.abs(bal), cur) : '—'}
               </span>
-              {m.role !== 'owner' ? (
+              {canEdit && m.role !== 'owner' ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -790,25 +808,64 @@ function Split({
                 <span className="font-medium">{s.to_name}</span>
               </p>
               <span className="shrink-0 text-[13px] font-medium tabular-nums">{fmtMoney(s.amount, cur)}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={recordSettlement.isPending}
-                onClick={() =>
-                  recordSettlement.mutate(
-                    { ledger_id: ledger.id, from_member: s.from_member, to_member: s.to_member, amount: s.amount },
-                    { onSuccess: () => toast.success(t('Recorded', '已記錄')) },
-                  )
-                }
-              >
-                {t('Mark paid', '標記已付')}
-              </Button>
+              {canEdit ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={recordSettlement.isPending}
+                  onClick={() =>
+                    recordSettlement.mutate(
+                      { ledger_id: ledger.id, from_member: s.from_member, to_member: s.to_member, amount: s.amount },
+                      { onSuccess: () => toast.success(t('Recorded', '已記錄')) },
+                    )
+                  }
+                >
+                  {t('Mark paid', '標記已付')}
+                </Button>
+              ) : null}
             </div>
           ))
         ) : (
           <p className="px-4 py-6 text-center text-[12.5px] text-muted-foreground/70">{t('Everyone is settled up. 🎉', '大家都結清了 🎉')}</p>
         )}
       </div>
+
+      {/* Settlement history */}
+      {(settlements ?? []).length ? (
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 sm:px-4">
+            <Undo2 className="size-3.5 text-muted-foreground" />
+            <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">{t('Recorded settlements', '已記錄的結算')}</span>
+          </div>
+          {(settlements ?? []).map((s) => (
+            <div key={s.id} className="group flex items-center gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13.5px]">
+                  <span className="font-medium">{nameOf(s.from_member)}</span>
+                  <ArrowRight className="mx-1.5 inline size-3.5 text-muted-foreground" />
+                  <span className="font-medium">{nameOf(s.to_member)}</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {fmtLedgerDate(s.sett_date, lang)}
+                  {s.note ? ` · ${s.note}` : ''}
+                </p>
+              </div>
+              <span className="shrink-0 text-[13px] font-medium tabular-nums">{fmtMoney(s.amount, s.currency)}</span>
+              {canEdit ? (
+                <button
+                  onClick={() => {
+                    if (confirm(t('Undo this settlement?', '撤銷這筆結算?'))) delSettlement.mutate(s.id)
+                  }}
+                  className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-destructive group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                  aria-label={t('Undo', '撤銷')}
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

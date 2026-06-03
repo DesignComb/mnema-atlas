@@ -1500,3 +1500,6 @@ export async function deleteSettlement(id: string): Promise<void> {
   const res = await supabase.rpc('delete_settlement', { p_user_id: null, p_settlement_id: id })
   if (res.error) throw new Error(res.error.message)
 }
+export async function listSettlements(ledgerId: string): Promise<SettlementRow[]> {
+  return unwrap(await supabase.from('settlements').select('*').eq('ledger_id', ledgerId).order('sett_date', { ascending: false }))
+}

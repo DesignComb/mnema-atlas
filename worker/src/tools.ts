@@ -96,6 +96,10 @@ import {
   getLedgerInput,
   getLedgerSummaryInput,
   getMonthlyTrendInput,
+  getTransactionInput,
+  listLedgerMembersInput,
+  listRecurringInput,
+  listSettlementsInput,
   listTransactionsInput,
   recordSettlementInput,
   removeLedgerMemberInput,
@@ -1668,6 +1672,7 @@ export const tools: ToolDef[] = [
     description: toolDescriptions.set_budget,
     schema: setBudgetInput,
     readOnly: false,
+    requiresScope: 'edit', // upsert: can overwrite an existing budget, so not add-only
     run: async (ctx, a) => {
       const b = await callRpc(ctx.env, ctx.userId, 'set_budget', {
         p_ledger_id: a.ledger_id,
@@ -1705,6 +1710,7 @@ export const tools: ToolDef[] = [
     description: toolDescriptions.set_recurring_transaction,
     schema: setRecurringTransactionInput,
     readOnly: false,
+    requiresScope: 'edit', // upsert: with recurring_id it updates an existing template
     run: async (ctx, a) => {
       const r = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'set_recurring_transaction', {
         p_ledger_id: a.ledger_id,
@@ -1751,6 +1757,7 @@ export const tools: ToolDef[] = [
     description: toolDescriptions.add_ledger_member,
     schema: addLedgerMemberInput,
     readOnly: false,
+    requiresScope: 'edit', // grants another person read/write on your finances — privileged, not add-only
     run: async (ctx, a) => {
       const m = await callRpc(ctx.env, ctx.userId, 'add_ledger_member', {
         p_ledger_id: a.ledger_id,
@@ -1866,6 +1873,47 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       await callRpc(ctx.env, ctx.userId, 'delete_settlement', { p_settlement_id: a.settlement_id })
       return { summary: 'Settlement removed', data: { ok: true } }
+    },
+  },
+  // ── Galleon read-only: close the create/list/get/delete asymmetry ───────
+  {
+    name: 'list_ledger_members',
+    description: toolDescriptions.list_ledger_members,
+    schema: listLedgerMembersInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const m = await callRpc(ctx.env, ctx.userId, 'list_ledger_members', { p_ledger_id: a.ledger_id })
+      return { summary: 'Ledger members', data: m }
+    },
+  },
+  {
+    name: 'list_settlements',
+    description: toolDescriptions.list_settlements,
+    schema: listSettlementsInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const s = await callRpc(ctx.env, ctx.userId, 'list_settlements', { p_ledger_id: a.ledger_id })
+      return { summary: 'Settlements', data: s }
+    },
+  },
+  {
+    name: 'list_recurring',
+    description: toolDescriptions.list_recurring,
+    schema: listRecurringInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const r = await callRpc(ctx.env, ctx.userId, 'list_recurring', { p_ledger_id: a.ledger_id })
+      return { summary: 'Recurring templates', data: r }
+    },
+  },
+  {
+    name: 'get_transaction',
+    description: toolDescriptions.get_transaction,
+    schema: getTransactionInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const tx = await callRpc(ctx.env, ctx.userId, 'get_transaction', { p_transaction_id: a.transaction_id })
+      return { summary: 'Transaction with splits', data: tx }
     },
   },
 ]

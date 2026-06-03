@@ -2656,6 +2656,10 @@ export type Database = {
         Args: { p_task_id: string; p_user_id: string | null }
         Returns: Json
       }
+      get_transaction: {
+        Args: { p_transaction_id: string; p_user_id: string | null }
+        Returns: Json
+      }
       itinerary_item_json: {
         Args: { i: Database["public"]["Tables"]["itinerary_items"]["Row"] }
         Returns: Json
@@ -2691,6 +2695,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      list_ledger_members: {
+        Args: { p_ledger_id: string; p_user_id: string | null }
+        Returns: Json
+      }
       list_members: {
         Args: { p_itinerary_id: string; p_user_id: string | null }
         Returns: {
@@ -2698,6 +2706,58 @@ export type Database = {
           role: string
           user_id: string
         }[]
+      }
+      list_recurring: {
+        Args: { p_ledger_id: string; p_user_id: string | null }
+        Returns: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_via: string
+          currency: string
+          id: string
+          is_active: boolean
+          last_posted: string | null
+          ledger_id: string
+          next_run: string
+          note: string | null
+          owner_id: string
+          payee: string | null
+          recurrence_rule: string
+          transfer_account_id: string | null
+          type: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "recurring_transactions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      list_settlements: {
+        Args: { p_ledger_id: string; p_user_id: string | null }
+        Returns: {
+          amount: number
+          created_at: string
+          created_via: string
+          currency: string
+          from_member: string
+          id: string
+          ledger_id: string
+          note: string | null
+          owner_id: string
+          sett_date: string
+          to_member: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "settlements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       list_share_links: {
         Args: { p_itinerary_id: string; p_user_id: string | null }

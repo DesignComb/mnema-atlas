@@ -79,6 +79,7 @@ export const qk = {
   recurring: (ledgerId: string) => ['recurring', ledgerId] as const,
   monthlyTrend: (ledgerId: string, months: number) => ['monthly-trend', ledgerId, months] as const,
   balances: (ledgerId: string) => ['ledger-balances', ledgerId] as const,
+  settlements: (ledgerId: string) => ['ledger-settlements', ledgerId] as const,
 }
 
 export function useDecks() {
@@ -615,7 +616,7 @@ export function useRemoveReminder() {
 // ════════════════════ Mnema Galleon (money) ════════════════════
 
 function bumpGalleon(qc: ReturnType<typeof useQueryClient>) {
-  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend', 'ledger-balances']) {
+  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend', 'ledger-balances', 'ledger-settlements']) {
     qc.invalidateQueries({ queryKey: [k] })
   }
 }
@@ -740,6 +741,9 @@ export function useRunDueRecurring() {
 // ── Members + splitting (P3) ──
 export function useBalances(ledgerId: string) {
   return useQuery({ queryKey: qk.balances(ledgerId), queryFn: () => api.getBalances(ledgerId), enabled: !!ledgerId })
+}
+export function useSettlements(ledgerId: string) {
+  return useQuery({ queryKey: qk.settlements(ledgerId), queryFn: () => api.listSettlements(ledgerId), enabled: !!ledgerId })
 }
 export function useAddLedgerMember() {
   const qc = useQueryClient()

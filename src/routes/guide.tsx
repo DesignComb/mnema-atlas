@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   BookOpenCheck,
+  Coins,
   FileText,
   GraduationCap,
   Layers,
@@ -35,8 +36,8 @@ export function GuideScreen() {
 
           {/* Spaces */}
           <section className="space-y-3">
-            <h2 className="font-serif text-xl text-foreground">{t('Three spaces', '三大區塊')}</h2>
-            <div className="grid gap-2.5 sm:grid-cols-3">
+            <h2 className="font-serif text-xl text-foreground">{t('Four spaces', '四大區塊')}</h2>
+            <div className="grid gap-2.5 sm:grid-cols-2">
               <Step
                 icon={<BookOpenCheck />}
                 title={t('Study · Atlas', '讀書 · Atlas')}
@@ -51,6 +52,11 @@ export function GuideScreen() {
                 icon={<ListTodo />}
                 title={t('Tasks · Tempo', '任務 · Tempo')}
                 body={t('To-dos & lists, habits, a calendar, recurrence, and reminders.', '待辦與清單、習慣、行事曆、重複與提醒。')}
+              />
+              <Step
+                icon={<Coins />}
+                title={t('Money · Galleon', '記帳 · Galleon')}
+                body={t('Ledgers, accounts & balances, budgets, and Splitwise-style bill-splitting.', '帳本、帳戶與結餘、預算,以及 Splitwise 式分帳結算。')}
               />
             </div>
             <p className="text-[13px] text-muted-foreground">
@@ -103,8 +109,8 @@ export function GuideScreen() {
                 {t('Yes. Keys are', '安全。金鑰預設為')}{' '}
                 <strong className="text-foreground">{t('add-only', '僅可新增')}</strong>{' '}
                 {t(
-                  "by default — an AI can only add to your spaces, never change, complete, or delete anything, and never see anyone else's. Revoke a key anytime in",
-                  '— AI 只能為你的各個區塊新增內容，無法修改、完成或刪除任何東西,也看不到其他人的資料。你隨時可以在',
+                  'by default — an AI can only add to your spaces and read what you can access, never change, complete, or delete anything. (Reading does include data you share, like a shared ledger.) Revoke a key anytime in',
+                  '— AI 只能為你的各個區塊新增內容,並讀取你有權存取的資料,無法修改、完成或刪除任何東西。(讀取範圍包含你參與分享的資料,例如共享帳本。)你隨時可以在',
                 )}{' '}
                 <Link to="/settings/integrations" className="text-brand hover:underline">{t('Connect an AI', '連接 AI')}</Link>
                 {t('.', ' 撤銷金鑰。')}

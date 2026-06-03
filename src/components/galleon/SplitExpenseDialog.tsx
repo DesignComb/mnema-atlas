@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { useCreateSplitExpense } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import type { LedgerDetail, MemberBalanceItem } from '@/lib/api'
-import { fmtMoney, todayISO } from '@/lib/money'
+import { currencyDecimals, fmtMoney, todayISO } from '@/lib/money'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,14 +12,16 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 
 type Method = 'equally' | 'exact' | 'shares'
 
-/** Distribute `amount` into `n` parts that sum exactly to it, spreading the
- *  leftover cents one-by-one across the first parts (Splitwise does this too). */
-function splitEqually(amount: number, n: number): number[] {
+/** Distribute `amount` into `n` parts that sum exactly to it, in the currency's
+ *  smallest unit (TWD/JPY = whole, others = cents), spreading any leftover unit
+ *  one-by-one across the first parts (Splitwise does this too). */
+function splitEqually(amount: number, n: number, decimals: number): number[] {
   if (n <= 0) return []
-  const cents = Math.round(amount * 100)
-  const base = Math.floor(cents / n)
-  const extra = cents - base * n
-  return Array.from({ length: n }, (_, i) => (base + (i < extra ? 1 : 0)) / 100)
+  const f = Math.pow(10, decimals)
+  const units = Math.round(amount * f)
+  const base = Math.floor(units / n)
+  const extra = units - base * n
+  return Array.from({ length: n }, (_, i) => (base + (i < extra ? 1 : 0)) / f)
 }
 
 export function SplitExpenseDialog({
@@ -66,11 +68,16 @@ export function SplitExpenseDialog({
   const total = Number(amount) || 0
   const includedIds = members.filter((m) => included[m.member_id]).map((m) => m.member_id)
 
+  const cur = ledger.base_currency
+  const dec = currencyDecimals(cur)
+  const f = Math.pow(10, dec)
+  const roundCur = (v: number) => Math.round(v * f) / f
+
   // Resolve each member's owed share from the chosen method.
   const owedById = useMemo(() => {
     const map: Record<string, number> = {}
     if (method === 'equally') {
-      const parts = splitEqually(total, includedIds.length)
+      const parts = splitEqually(total, includedIds.length, dec)
       includedIds.forEach((id, i) => (map[id] = parts[i] ?? 0))
     } else if (method === 'exact') {
       for (const id of includedIds) map[id] = Number(exact[id]) || 0
@@ -78,22 +85,21 @@ export function SplitExpenseDialog({
       const weights = includedIds.map((id) => Math.max(0, Number(shares[id]) || 0))
       const totalShares = weights.reduce((s, w) => s + w, 0)
       if (totalShares > 0) {
-        // distribute by share, then fix rounding drift onto the largest share
+        // distribute by share, then fix rounding drift onto the last share
         let acc = 0
         includedIds.forEach((id, i) => {
-          const v = i === includedIds.length - 1 ? Math.round((total - acc) * 100) / 100 : Math.round(((total * weights[i]) / totalShares) * 100) / 100
+          const v = i === includedIds.length - 1 ? roundCur(total - acc) : roundCur((total * weights[i]) / totalShares)
           map[id] = v
           acc += v
         })
       }
     }
     return map
-  }, [method, total, includedIds, exact, shares])
+  }, [method, total, includedIds, exact, shares, dec])
 
-  const owedSum = Math.round(includedIds.reduce((s, id) => s + (owedById[id] || 0), 0) * 100) / 100
-  const remaining = Math.round((total - owedSum) * 100) / 100
-  const balanced = total > 0 && Math.abs(remaining) < 0.005 && includedIds.length > 0
-  const cur = ledger.base_currency
+  const owedSum = roundCur(includedIds.reduce((s, id) => s + (owedById[id] || 0), 0))
+  const remaining = roundCur(total - owedSum)
+  const balanced = total > 0 && Math.abs(remaining) < 0.5 / f && includedIds.length > 0
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()

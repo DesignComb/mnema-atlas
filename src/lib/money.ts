@@ -17,6 +17,26 @@ export function fmtMoney(amount: number | string | null, currency = 'TWD'): stri
   }
 }
 
+/** Decimal places a currency uses — TWD/JPY are whole-unit (no minor unit). */
+export function currencyDecimals(currency = 'TWD'): number {
+  return currency === 'TWD' || currency === 'JPY' ? 0 : 2
+}
+
+/** Localised day label for a YYYY-MM-DD string (e.g. 「6月3日 週三」 / "Jun 3, Wed"). */
+export function fmtLedgerDate(iso: string, lang: 'en' | 'zh'): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return iso
+  try {
+    return new Date(y, m - 1, d).toLocaleDateString(lang === 'zh' ? 'zh-TW' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+    })
+  } catch {
+    return iso
+  }
+}
+
 export function todayISO(): string {
   const d = new Date()
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
