@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Env } from './env'
+import { RpcError } from './errors'
 
 /**
  * Service-role Supabase client. Uses the secret key → BYPASSES RLS.
@@ -20,7 +21,7 @@ export async function callRpc<T = unknown>(
   args: Record<string, unknown>,
 ): Promise<T> {
   const { data, error } = await serviceClient(env).rpc(name, { p_user_id: userId, ...args })
-  if (error) throw new Error(error.message)
+  if (error) throw new RpcError(error.message, error.code)
   return data as T
 }
 
@@ -32,6 +33,6 @@ export async function ownedSelect<T = unknown>(
   columns: string,
 ): Promise<T[]> {
   const { data, error } = await serviceClient(env).from(table).select(columns).eq('user_id', userId)
-  if (error) throw new Error(error.message)
+  if (error) throw new RpcError(error.message, error.code)
   return (data ?? []) as T[]
 }

@@ -2,6 +2,7 @@
   "name": "mnema-atlas",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "讀書筆記背誦閃卡 — study-notes flashcard app with FSRS spaced repetition, an external MCP server, and an Obsidian-style note graph.",
   "scripts": {
