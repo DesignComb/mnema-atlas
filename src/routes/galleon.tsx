@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   ArrowLeftRight,
@@ -9,20 +9,26 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  Repeat,
   Trash2,
   Wallet,
 } from 'lucide-react'
 import {
+  useBudgetStatus,
   useDeleteAccount,
+  useDeleteBudget,
   useDeleteLedger,
   useDeleteTransaction,
   useLedger,
   useLedgers,
   useLedgerSummary,
   useLedgerTransactions,
+  useMonthlyTrend,
+  useRunDueRecurring,
+  useSetBudget,
 } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
-import type { LedgerAccount, LedgerDetail } from '@/lib/api'
+import type { BudgetStatusItem, LedgerAccount, LedgerCategory, LedgerDetail } from '@/lib/api'
 import type { TransactionRow } from '@/lib/database.types'
 import { ACCOUNT_TYPE_LABEL, addMonths, fmtMoney, monthRange } from '@/lib/money'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
@@ -37,12 +43,15 @@ import {
 import { LedgerDialog } from '@/components/galleon/LedgerDialog'
 import { AccountDialog } from '@/components/galleon/AccountDialog'
 import { TransactionDialog } from '@/components/galleon/TransactionDialog'
+import { RecurringDialog } from '@/components/galleon/RecurringDialog'
 
-type View = 'overview' | 'transactions' | 'accounts'
+type View = 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports'
 const VIEWS: { k: View; en: string; zh: string }[] = [
   { k: 'overview', en: 'Overview', zh: '總覽' },
   { k: 'transactions', en: 'Transactions', zh: '交易' },
   { k: 'accounts', en: 'Accounts', zh: '帳戶' },
+  { k: 'budgets', en: 'Budgets', zh: '預算' },
+  { k: 'reports', en: 'Reports', zh: '報表' },
 ]
 
 export function GalleonScreen() {
@@ -61,6 +70,14 @@ export function GalleonScreen() {
   const [ledgerDialog, setLedgerDialog] = useState<{ open: boolean; edit?: boolean }>({ open: false })
   const [accountDialog, setAccountDialog] = useState<{ open: boolean; account?: LedgerAccount }>({ open: false })
   const [txnDialog, setTxnDialog] = useState<{ open: boolean; txn?: TransactionRow }>({ open: false })
+  const [recurringDialog, setRecurringDialog] = useState(false)
+  const runDue = useRunDueRecurring()
+
+  // Post any due recurring transactions when a ledger is opened (idempotent).
+  useEffect(() => {
+    if (ledgerId) runDue.mutate(ledgerId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ledgerId])
 
   function setSearch(patch: Partial<{ view: View; ledger: string }>) {
     const v = patch.view ?? view
@@ -156,6 +173,9 @@ export function GalleonScreen() {
                 <DropdownMenuItem onSelect={() => setAccountDialog({ open: true })}>
                   <Wallet /> {t('New account', '新增帳戶')}
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setRecurringDialog(true)}>
+                  <Repeat /> {t('Recurring', '定期收支')}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive [&_svg]:text-destructive"
@@ -199,6 +219,10 @@ export function GalleonScreen() {
               onEdit={(account) => setAccountDialog({ open: true, account })}
               t={t}
             />
+          ) : view === 'budgets' ? (
+            <Budgets ledger={ledger} t={t} />
+          ) : view === 'reports' ? (
+            <Reports ledger={ledger} t={t} />
           ) : (
             <Transactions ledger={ledger} onEditTxn={(txn) => setTxnDialog({ open: true, txn })} t={t} />
           )}
@@ -226,6 +250,7 @@ export function GalleonScreen() {
             ledger={ledger}
             transaction={txnDialog.txn}
           />
+          <RecurringDialog open={recurringDialog} onOpenChange={setRecurringDialog} ledger={ledger} />
         </>
       ) : null}
     </>
@@ -478,6 +503,136 @@ function Accounts({ ledger, onNew, onEdit, t }: { ledger: LedgerDetail; onNew: (
           <Plus className="size-4" /> {t('New account', '新增帳戶')}
         </button>
       </div>
+    </div>
+  )
+}
+
+function Budgets({ ledger, t }: { ledger: LedgerDetail; t: Tr }) {
+  const range = monthRange()
+  const { data: status } = useBudgetStatus(ledger.id, range.from, range.to)
+  const expenseCats = ledger.categories.filter((c) => c.kind === 'expense')
+  const byCat = new Map((status ?? []).map((s) => [s.category_id, s]))
+  return (
+    <div className="space-y-2">
+      <p className="px-1 text-[12px] text-muted-foreground">
+        {t('Monthly budgets', '每月預算')} · {range.label}
+      </p>
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+        {expenseCats.map((c) => (
+          <BudgetRow key={c.id} ledgerId={ledger.id} cat={c} status={byCat.get(c.id)} currency={ledger.base_currency} t={t} />
+        ))}
+        {!expenseCats.length ? <p className="px-4 py-6 text-center text-[12.5px] text-muted-foreground/70">{t('No expense categories.', '沒有支出分類。')}</p> : null}
+      </div>
+    </div>
+  )
+}
+
+function BudgetRow({ ledgerId, cat, status, currency, t }: { ledgerId: string; cat: LedgerCategory; status?: BudgetStatusItem; currency: string; t: Tr }) {
+  const setBudget = useSetBudget()
+  const del = useDeleteBudget()
+  const limit = status ? Number(status.amount) : 0
+  const spent = status ? Number(status.spent) : 0
+  const [val, setVal] = useState(limit ? String(limit) : '')
+  const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0
+  const over = limit > 0 && spent > limit
+  function commit() {
+    const amt = Number(val) || 0
+    if (amt <= 0) {
+      if (status) del.mutate(status.budget_id)
+      return
+    }
+    if (amt !== limit) setBudget.mutate({ ledger_id: ledgerId, category_id: cat.id, amount: amt })
+  }
+  return (
+    <div className="border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
+      <div className="flex items-center gap-2">
+        <span className="flex-1 truncate text-[14px]">
+          {cat.icon ? `${cat.icon} ` : ''}
+          {cat.name}
+        </span>
+        {limit > 0 ? <span className={`text-[12px] tabular-nums ${over ? 'text-red-500' : 'text-muted-foreground'}`}>{fmtMoney(spent, currency)}</span> : null}
+        <span className="text-muted-foreground/40">/</span>
+        <input
+          inputMode="decimal"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+          }}
+          placeholder={t('set', '設定')}
+          className="w-20 rounded border border-input bg-card px-2 py-0.5 text-right text-[13px] tabular-nums outline-none focus:border-brand"
+        />
+      </div>
+      {limit > 0 ? (
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div className={`h-full rounded-full ${over ? 'bg-red-500' : 'bg-brand'}`} style={{ width: `${pct}%` }} />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function Reports({ ledger, t }: { ledger: LedgerDetail; t: Tr }) {
+  const { data: trend } = useMonthlyTrend(ledger.id, 6)
+  const range = monthRange()
+  const { data: summary } = useLedgerSummary(ledger.id, range.from, range.to)
+  const cur = ledger.base_currency
+  const max = Math.max(1, ...(trend ?? []).flatMap((m) => [Number(m.income), Number(m.expense)]))
+  const maxCat = Math.max(1, ...(summary?.by_category ?? []).map((c) => Number(c.total)))
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+        <p className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">{t('Income vs expense', '收入 vs 支出')}</p>
+        <div className="space-y-2.5">
+          {(trend ?? []).map((m) => (
+            <div key={m.month}>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>{m.month}</span>
+                <span className="tabular-nums">{fmtMoney(Number(m.income) - Number(m.expense), cur)}</span>
+              </div>
+              <div className="mt-1 flex h-2 gap-1">
+                <div className="h-full rounded-full bg-emerald-500/80" style={{ width: `${(Number(m.income) / max) * 50}%` }} />
+                <div className="h-full rounded-full bg-red-500/80" style={{ width: `${(Number(m.expense) / max) * 50}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex gap-4 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <span className="size-2 rounded-full bg-emerald-500" />
+            {t('Income', '收入')}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="size-2 rounded-full bg-red-500" />
+            {t('Expense', '支出')}
+          </span>
+        </div>
+      </div>
+
+      {(summary?.by_category ?? []).length ? (
+        <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+            {t('This month by category', '本月分類')} · {range.label}
+          </p>
+          <div className="space-y-2">
+            {(summary?.by_category ?? []).slice(0, 10).map((c) => (
+              <div key={c.category_id ?? 'none'}>
+                <div className="flex items-center justify-between text-[12.5px]">
+                  <span>
+                    {c.icon ? `${c.icon} ` : ''}
+                    {c.name ?? t('Uncategorised', '未分類')}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{fmtMoney(c.total, cur)}</span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-brand" style={{ width: `${(Number(c.total) / maxCat) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

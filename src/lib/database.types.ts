@@ -112,6 +112,60 @@ export type Database = {
         }
         Relationships: []
       }
+      budgets: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_via: string
+          id: string
+          ledger_id: string
+          owner_id: string
+          period: string
+          rollover: boolean
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          created_via?: string
+          id?: string
+          ledger_id: string
+          owner_id: string
+          period?: string
+          rollover?: boolean
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          created_via?: string
+          id?: string
+          ledger_id?: string
+          owner_id?: string
+          period?: string
+          rollover?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "ledgers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cards: {
         Row: {
           back: string
@@ -745,6 +799,98 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      recurring_transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_via: string
+          currency: string
+          id: string
+          is_active: boolean
+          last_posted: string | null
+          ledger_id: string
+          next_run: string
+          note: string | null
+          owner_id: string
+          payee: string | null
+          recurrence_rule: string
+          transfer_account_id: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          created_via?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          last_posted?: string | null
+          ledger_id: string
+          next_run: string
+          note?: string | null
+          owner_id: string
+          payee?: string | null
+          recurrence_rule: string
+          transfer_account_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          created_via?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          last_posted?: string | null
+          ledger_id?: string
+          next_run?: string
+          note?: string | null
+          owner_id?: string
+          payee?: string | null
+          recurrence_rule?: string
+          transfer_account_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "ledgers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_transfer_account_id_fkey"
+            columns: ["transfer_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       review_logs: {
         Row: {
@@ -2213,6 +2359,10 @@ export type Database = {
         Args: { p_booking_id: string; p_user_id: string | null }
         Returns: boolean
       }
+      delete_budget: {
+        Args: { p_budget_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       delete_card: {
         Args: { p_card_id: string; p_user_id: string | null }
         Returns: boolean
@@ -2253,6 +2403,10 @@ export type Database = {
         Args: { p_endpoint: string; p_user_id: string | null }
         Returns: boolean
       }
+      delete_recurring_transaction: {
+        Args: { p_recurring_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       delete_task: {
         Args: { p_task_id: string; p_user_id: string | null }
         Returns: boolean
@@ -2266,6 +2420,15 @@ export type Database = {
         Returns: boolean
       }
       due_reminders_for_cron: { Args: never; Returns: Json }
+      get_budget_status: {
+        Args: {
+          p_from: string
+          p_ledger_id: string
+          p_to: string
+          p_user_id: string | null
+        }
+        Returns: Json
+      }
       get_graph: { Args: { p_user_id: string | null }; Returns: Json }
       get_habit: {
         Args: { p_task_id: string; p_user_id: string | null }
@@ -2286,6 +2449,10 @@ export type Database = {
           p_to: string
           p_user_id: string | null
         }
+        Returns: Json
+      }
+      get_monthly_trend: {
+        Args: { p_ledger_id: string; p_months?: number; p_user_id: string | null }
         Returns: Json
       }
       get_shared_itinerary: { Args: { p_token: string }; Returns: Json }
@@ -2570,6 +2737,10 @@ export type Database = {
         Args: { p_id: string; p_user_id: string | null }
         Returns: boolean
       }
+      run_due_recurring: {
+        Args: { p_ledger_id: string; p_user_id: string | null }
+        Returns: number
+      }
       save_push_subscription: {
         Args: {
           p_auth: string
@@ -2732,6 +2903,34 @@ export type Database = {
           to: "transactions"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      set_budget: {
+        Args: {
+          p_amount: number
+          p_category_id: string
+          p_ledger_id: string
+          p_period?: string
+          p_rollover?: boolean
+          p_user_id: string | null
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_via: string
+          id: string
+          ledger_id: string
+          owner_id: string
+          period: string
+          rollover: boolean
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "budgets"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       set_card_tags: {
@@ -2999,6 +3198,50 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_recurring_transaction: {
+        Args: {
+          p_account_id?: string
+          p_amount: number
+          p_category_id?: string
+          p_currency?: string
+          p_is_active?: boolean
+          p_ledger_id: string
+          p_next_run: string
+          p_note?: string
+          p_payee?: string
+          p_recurrence_rule: string
+          p_recurring_id?: string
+          p_transfer_account_id?: string
+          p_type: string
+          p_user_id: string | null
+        }
+        Returns: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_via: string
+          currency: string
+          id: string
+          is_active: boolean
+          last_posted: string | null
+          ledger_id: string
+          next_run: string
+          note: string | null
+          owner_id: string
+          payee: string | null
+          recurrence_rule: string
+          transfer_account_id: string | null
+          type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "recurring_transactions"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -3812,3 +4055,5 @@ export type LedgerMemberRow = PublicTables['ledger_members']['Row']
 export type AccountRow = PublicTables['accounts']['Row']
 export type CategoryRow = PublicTables['categories']['Row']
 export type TransactionRow = PublicTables['transactions']['Row']
+export type BudgetRow = PublicTables['budgets']['Row']
+export type RecurringTransactionRow = PublicTables['recurring_transactions']['Row']

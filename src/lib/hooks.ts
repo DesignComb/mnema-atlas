@@ -41,6 +41,8 @@ import type {
   CreateTransactionInput,
   CreateTransactionsBulkInput,
   CreateTransferInput,
+  SetBudgetInput,
+  SetRecurringTransactionInput,
   UpdateAccountInput,
   UpdateCategoryInput,
   UpdateLedgerInput,
@@ -71,6 +73,9 @@ export const qk = {
   ledger: (id: string) => ['ledger', id] as const,
   ledgerTxns: (ledgerId: string, key?: string) => ['ledger-txns', ledgerId, key ?? 'all'] as const,
   ledgerSummary: (ledgerId: string, key: string) => ['ledger-summary', ledgerId, key] as const,
+  budgetStatus: (ledgerId: string, key: string) => ['budget-status', ledgerId, key] as const,
+  recurring: (ledgerId: string) => ['recurring', ledgerId] as const,
+  monthlyTrend: (ledgerId: string, months: number) => ['monthly-trend', ledgerId, months] as const,
 }
 
 export function useDecks() {
@@ -607,10 +612,9 @@ export function useRemoveReminder() {
 // ════════════════════ Mnema Galleon (money) ════════════════════
 
 function bumpGalleon(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: ['ledgers'] })
-  qc.invalidateQueries({ queryKey: ['ledger'] })
-  qc.invalidateQueries({ queryKey: ['ledger-txns'] })
-  qc.invalidateQueries({ queryKey: ['ledger-summary'] })
+  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend']) {
+    qc.invalidateQueries({ queryKey: [k] })
+  }
 }
 
 export function useLedgers() {
@@ -690,6 +694,44 @@ export function useDeleteTransaction() {
 export function useCreateTransfer() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (input: CreateTransferInput) => api.createTransfer(input), onSuccess: () => bumpGalleon(qc) })
+}
+
+export function useBudgetStatus(ledgerId: string, from: string, to: string) {
+  return useQuery({
+    queryKey: qk.budgetStatus(ledgerId, `${from}_${to}`),
+    queryFn: () => api.getBudgetStatus(ledgerId, from, to),
+    enabled: !!ledgerId,
+  })
+}
+export function useRecurring(ledgerId: string) {
+  return useQuery({ queryKey: qk.recurring(ledgerId), queryFn: () => api.listRecurring(ledgerId), enabled: !!ledgerId })
+}
+export function useMonthlyTrend(ledgerId: string, months = 6) {
+  return useQuery({
+    queryKey: qk.monthlyTrend(ledgerId, months),
+    queryFn: () => api.getMonthlyTrend(ledgerId, months),
+    enabled: !!ledgerId,
+  })
+}
+export function useSetBudget() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: SetBudgetInput) => api.setBudget(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useDeleteBudget() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteBudget(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function useSetRecurringTransaction() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: SetRecurringTransactionInput) => api.setRecurringTransaction(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useDeleteRecurringTransaction() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteRecurringTransaction(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function useRunDueRecurring() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (ledgerId: string) => api.runDueRecurring(ledgerId), onSuccess: () => bumpGalleon(qc) })
 }
 
 // Reminders already surfaced this session (so the poll doesn't re-toast them).

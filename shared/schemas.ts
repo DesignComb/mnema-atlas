@@ -611,6 +611,37 @@ export const listTransactionsInput = z.object({
 export const searchTransactionsInput = z.object({ ledger_id: uuid, query: z.string().trim().min(1), limit: z.number().int().min(1).max(200).default(50) })
 export const getLedgerSummaryInput = z.object({ ledger_id: uuid, from: isoDate, to: isoDate })
 
+// Galleon P2: budgets, recurring, reports
+export const setBudgetInput = z.object({
+  ledger_id: uuid,
+  category_id: uuid.optional(),
+  amount: money,
+  period: z.enum(['monthly', 'weekly']).optional(),
+  rollover: z.boolean().optional(),
+})
+export type SetBudgetInput = z.infer<typeof setBudgetInput>
+export const deleteBudgetInput = z.object({ budget_id: uuid })
+export const getBudgetStatusInput = z.object({ ledger_id: uuid, from: isoDate, to: isoDate })
+export const setRecurringTransactionInput = z.object({
+  ledger_id: uuid,
+  type: txnType,
+  amount: money,
+  recurrence_rule: z.string().trim().min(1).max(1_000),
+  next_run: isoDate,
+  account_id: uuid.optional(),
+  category_id: uuid.optional(),
+  transfer_account_id: uuid.optional(),
+  currency: currency.optional(),
+  payee: z.string().trim().max(200).optional(),
+  note: z.string().max(2_000).optional(),
+  recurring_id: uuid.optional(),
+  is_active: z.boolean().optional(),
+})
+export type SetRecurringTransactionInput = z.infer<typeof setRecurringTransactionInput>
+export const deleteRecurringTransactionInput = z.object({ recurring_id: uuid })
+export const runDueRecurringInput = z.object({ ledger_id: uuid })
+export const getMonthlyTrendInput = z.object({ ledger_id: uuid, months: z.number().int().min(1).max(36).default(6) })
+
 /**
  * Paste-import payload — what a tool-less conversational AI (ChatGPT/Gemini)
  * emits inside a ```mnema fenced block for the in-app Quick Import. Cards link
@@ -747,4 +778,11 @@ export const toolDescriptions = {
   search_transactions: 'Search a ledger’s transactions by payee/note keyword.',
   get_ledger_summary:
     'Totals (income, expense) and spending-by-category for a ledger over a date range — for dashboards/reports.',
+  set_budget: 'Set a monthly budget for a category (omit category_id for an overall budget). Upserts.',
+  delete_budget: 'Remove a budget.',
+  get_budget_status: 'Each budget with its limit and how much has been spent in a date range.',
+  set_recurring_transaction:
+    'Create or update a recurring transaction template (salary, rent, subscriptions). Uses an RRULE + next_run; posted automatically when the ledger is next opened. Pass recurring_id to update.',
+  delete_recurring_transaction: 'Remove a recurring transaction template.',
+  get_monthly_trend: 'Income vs expense per month for the last N months — for trend charts.',
 } as const

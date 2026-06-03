@@ -44,7 +44,14 @@ import type {
   UpdateTaskListInput,
 } from '@shared/schemas'
 import type { TaskListRow, TaskReminderRow, TaskRow } from './database.types'
-import type { AccountRow, CategoryRow, LedgerRow, TransactionRow } from './database.types'
+import type {
+  AccountRow,
+  BudgetRow,
+  CategoryRow,
+  LedgerRow,
+  RecurringTransactionRow,
+  TransactionRow,
+} from './database.types'
 import type {
   CreateAccountInput,
   CreateCategoryInput,
@@ -52,6 +59,8 @@ import type {
   CreateTransactionInput,
   CreateTransactionsBulkInput,
   CreateTransferInput,
+  SetBudgetInput,
+  SetRecurringTransactionInput,
   UpdateAccountInput,
   UpdateCategoryInput,
   UpdateLedgerInput,
@@ -1328,4 +1337,81 @@ export async function createTransfer(input: CreateTransferInput): Promise<Transa
     note: input.note,
     txn_date: input.txn_date,
   })
+}
+
+// ── Budgets / recurring / reports (P2) ──
+export interface BudgetStatusItem {
+  budget_id: string
+  category_id: string | null
+  name: string
+  icon: string | null
+  amount: number
+  rollover: boolean
+  spent: number
+}
+export interface MonthlyTrendItem {
+  month: string
+  income: number
+  expense: number
+}
+
+export async function getBudgetStatus(ledgerId: string, from: string, to: string): Promise<BudgetStatusItem[]> {
+  return unwrap(
+    await supabase.rpc('get_budget_status', { p_user_id: null, p_ledger_id: ledgerId, p_from: from, p_to: to }),
+  ) as unknown as BudgetStatusItem[]
+}
+export async function setBudget(input: SetBudgetInput): Promise<BudgetRow> {
+  return unwrap(
+    await supabase.rpc('set_budget', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      // No SQL default → must pass null explicitly for an overall (category-less) budget.
+      p_category_id: (input.category_id ?? null) as unknown as string,
+      p_amount: input.amount,
+      p_period: input.period ?? undefined,
+      p_rollover: input.rollover ?? undefined,
+    }),
+  )
+}
+export async function deleteBudget(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_budget', { p_user_id: null, p_budget_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function listRecurring(ledgerId: string): Promise<RecurringTransactionRow[]> {
+  return unwrap(
+    await supabase.from('recurring_transactions').select('*').eq('ledger_id', ledgerId).order('next_run', { ascending: true }),
+  )
+}
+export async function setRecurringTransaction(input: SetRecurringTransactionInput): Promise<RecurringTransactionRow> {
+  return unwrap(
+    await supabase.rpc('set_recurring_transaction', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_type: input.type,
+      p_amount: input.amount,
+      p_recurrence_rule: input.recurrence_rule,
+      p_next_run: input.next_run,
+      p_account_id: input.account_id ?? undefined,
+      p_category_id: input.category_id ?? undefined,
+      p_transfer_account_id: input.transfer_account_id ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_payee: input.payee ?? undefined,
+      p_note: input.note ?? undefined,
+      p_recurring_id: input.recurring_id ?? undefined,
+      p_is_active: input.is_active ?? undefined,
+    }),
+  )
+}
+export async function deleteRecurringTransaction(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_recurring_transaction', { p_user_id: null, p_recurring_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function runDueRecurring(ledgerId: string): Promise<number> {
+  return unwrap(await supabase.rpc('run_due_recurring', { p_user_id: null, p_ledger_id: ledgerId })) as unknown as number
+}
+export async function getMonthlyTrend(ledgerId: string, months = 6): Promise<MonthlyTrendItem[]> {
+  return unwrap(
+    await supabase.rpc('get_monthly_trend', { p_user_id: null, p_ledger_id: ledgerId, p_months: months }),
+  ) as unknown as MonthlyTrendItem[]
 }

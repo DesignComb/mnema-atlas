@@ -83,13 +83,19 @@ import {
   createTransactionsBulkInput,
   createTransferInput,
   deleteAccountInput,
+  deleteBudgetInput,
   deleteCategoryInput,
   deleteLedgerInput,
+  deleteRecurringTransactionInput,
   deleteTransactionInput,
+  getBudgetStatusInput,
   getLedgerInput,
   getLedgerSummaryInput,
+  getMonthlyTrendInput,
   listTransactionsInput,
   searchTransactionsInput,
+  setBudgetInput,
+  setRecurringTransactionInput,
   updateAccountInput,
   updateCategoryInput,
   updateLedgerInput,
@@ -1643,6 +1649,90 @@ export const tools: ToolDef[] = [
         p_to: a.to,
       })
       return { summary: 'Summary', data: s }
+    },
+  },
+
+  // ── Mnema Galleon: budgets / recurring / reports ──
+  {
+    name: 'set_budget',
+    description: toolDescriptions.set_budget,
+    schema: setBudgetInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const b = await callRpc(ctx.env, ctx.userId, 'set_budget', {
+        p_ledger_id: a.ledger_id,
+        p_category_id: a.category_id ?? null,
+        p_amount: a.amount,
+        p_period: a.period ?? 'monthly',
+        p_rollover: a.rollover ?? false,
+      })
+      return { summary: 'Budget set', data: b }
+    },
+  },
+  {
+    name: 'delete_budget',
+    description: toolDescriptions.delete_budget,
+    schema: deleteBudgetInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_budget', { p_budget_id: a.budget_id })
+      return { summary: 'Budget removed', data: { ok: true } }
+    },
+  },
+  {
+    name: 'get_budget_status',
+    description: toolDescriptions.get_budget_status,
+    schema: getBudgetStatusInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const s = await callRpc(ctx.env, ctx.userId, 'get_budget_status', { p_ledger_id: a.ledger_id, p_from: a.from, p_to: a.to })
+      return { summary: 'Budget status', data: s }
+    },
+  },
+  {
+    name: 'set_recurring_transaction',
+    description: toolDescriptions.set_recurring_transaction,
+    schema: setRecurringTransactionInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const r = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'set_recurring_transaction', {
+        p_ledger_id: a.ledger_id,
+        p_type: a.type,
+        p_amount: a.amount,
+        p_recurrence_rule: a.recurrence_rule,
+        p_next_run: a.next_run,
+        p_account_id: a.account_id ?? null,
+        p_category_id: a.category_id ?? null,
+        p_transfer_account_id: a.transfer_account_id ?? null,
+        p_currency: a.currency ?? null,
+        p_payee: a.payee ?? null,
+        p_note: a.note ?? null,
+        p_recurring_id: a.recurring_id ?? null,
+        p_is_active: a.is_active ?? null,
+      })
+      return { summary: 'Recurring transaction set', data: r }
+    },
+  },
+  {
+    name: 'delete_recurring_transaction',
+    description: toolDescriptions.delete_recurring_transaction,
+    schema: deleteRecurringTransactionInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_recurring_transaction', { p_recurring_id: a.recurring_id })
+      return { summary: 'Recurring removed', data: { ok: true } }
+    },
+  },
+  {
+    name: 'get_monthly_trend',
+    description: toolDescriptions.get_monthly_trend,
+    schema: getMonthlyTrendInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const trend = await callRpc(ctx.env, ctx.userId, 'get_monthly_trend', { p_ledger_id: a.ledger_id, p_months: a.months ?? 6 })
+      return { summary: 'Monthly trend', data: trend }
     },
   },
 ]
