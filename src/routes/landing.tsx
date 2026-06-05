@@ -21,6 +21,7 @@ import { useT } from '@/lib/i18n'
 import { modKey } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Eyebrow, GithubIcon, GoogleButton, PublicShell, REPO_URL, useGoogleSignIn } from '@/components/public/PublicShell'
+import { LottieMark } from '@/components/public/LottieMark'
 import { FAQ_ITEMS, FaqAccordion } from '@/components/public/faq-data'
 
 /* The three current spaces each own a hue in src/index.css. On the landing we
@@ -111,6 +112,8 @@ export function LandingScreen() {
             className="relative mx-auto w-full max-w-sm lg:mx-0 lg:ml-auto lg:max-w-md"
           >
             <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 bg-dots opacity-40 [mask-image:radial-gradient(ellipse,black,transparent_72%)]" />
+            {/* A calm "living intelligence" pulse — the AI that quietly fills the workspace below. */}
+            <LottieMark className="pointer-events-none absolute -right-7 -top-12 size-36 opacity-60 sm:-right-10 sm:size-44" />
 
             <div className="relative rounded-2xl rounded-bl-md border border-border bg-card p-4 shadow-soft">
               <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
