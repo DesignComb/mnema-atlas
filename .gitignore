@@ -47,6 +47,10 @@ worker/dist/
 
 # Test / coverage
 coverage/
+test-results/
+playwright-report/
+playwright/.cache/
+.last-run.json
 
 # wrangler files
 .wrangler
