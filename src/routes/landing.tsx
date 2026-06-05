@@ -24,6 +24,7 @@ import heroFlow from '@/assets/lottie/hero-flow.json'
 import stepKey from '@/assets/lottie/step-key.json'
 import stepConnect from '@/assets/lottie/step-connect.json'
 import stepAsk from '@/assets/lottie/step-ask.json'
+import flowLink from '@/assets/lottie/flow-link.json'
 import { FAQ_ITEMS, FaqAccordion } from '@/components/public/faq-data'
 
 /* The three current spaces each own a hue in src/index.css. On the landing we
@@ -125,7 +126,8 @@ export function LandingScreen() {
       </section>
 
       {/* ── The idea + three pillars ───────────────────────────────────── */}
-      <section className="border-t border-border/60 bg-secondary/30">
+      <section className="relative border-t border-border/60 bg-secondary/30">
+        <SectionFlow />
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
           <motion.div {...reveal} className="max-w-2xl">
             <Eyebrow>{t('The idea', '理念')}</Eyebrow>
@@ -170,7 +172,8 @@ export function LandingScreen() {
       </section>
 
       {/* ── How your AI connects (the write path) ──────────────────────── */}
-      <section id="how" className="scroll-mt-16 border-t border-border/60">
+      <section id="how" className="relative scroll-mt-16 border-t border-border/60">
+        <SectionFlow />
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
           <motion.div {...reveal} className="max-w-2xl">
             <Eyebrow>{t('How your AI connects', '你的 AI 如何連接')}</Eyebrow>
@@ -224,7 +227,8 @@ export function LandingScreen() {
       </section>
 
       {/* ── Trust: add-only by default ─────────────────────────────────── */}
-      <section className="border-t border-border/60 bg-secondary/30">
+      <section className="relative border-t border-border/60 bg-secondary/30">
+        <SectionFlow />
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
           <motion.div
             {...reveal}
@@ -268,7 +272,8 @@ export function LandingScreen() {
       </section>
 
       {/* ── What's here today — and it keeps growing ───────────────────── */}
-      <section className="border-t border-border/60">
+      <section className="relative border-t border-border/60">
+        <SectionFlow />
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
           <motion.div {...reveal} className="max-w-2xl">
             <Eyebrow>{t("What's here today", '目前已有的')}</Eyebrow>
@@ -299,7 +304,8 @@ export function LandingScreen() {
       </section>
 
       {/* ── Durable memory + craft ─────────────────────────────────────── */}
-      <section className="border-t border-border/60 bg-secondary/30">
+      <section className="relative border-t border-border/60 bg-secondary/30">
+        <SectionFlow />
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
           <motion.div {...reveal} className="mx-auto max-w-2xl text-center">
             <MiniGraph />
@@ -326,7 +332,8 @@ export function LandingScreen() {
       </section>
 
       {/* ── FAQ teaser ─────────────────────────────────────────────────── */}
-      <section className="border-t border-border/60">
+      <section className="relative border-t border-border/60">
+        <SectionFlow />
         <div className="mx-auto max-w-3xl px-5 py-20 sm:px-8 lg:py-28">
           <motion.div {...reveal} className="max-w-2xl">
             <Eyebrow>{t('Questions & answers', '問與答')}</Eyebrow>
@@ -344,7 +351,8 @@ export function LandingScreen() {
       </section>
 
       {/* ── Open source / self-host teaser ─────────────────────────────── */}
-      <section className="border-t border-border/60 bg-secondary/30">
+      <section className="relative border-t border-border/60 bg-secondary/30">
+        <SectionFlow />
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
           <motion.div
             {...reveal}
@@ -378,6 +386,7 @@ export function LandingScreen() {
 
       {/* ── Closing CTA ────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-t border-border/60">
+        <SectionFlow />
         <div className="pointer-events-none absolute inset-0 bg-dots opacity-50 [mask-image:radial-gradient(ellipse_at_bottom,black,transparent_72%)]" />
         <div className="relative mx-auto max-w-3xl px-5 py-24 text-center sm:px-8 lg:py-32">
           <motion.div {...reveal}>
@@ -400,6 +409,18 @@ export function LandingScreen() {
         </div>
       </section>
     </PublicShell>
+  )
+}
+
+// A subtle vertical pulse that straddles a section's top border, so the page reads
+// as one continuous spine — quiet flow + connection between every section.
+function SectionFlow() {
+  return (
+    <LottieArt
+      data={flowLink}
+      staticFrame={0}
+      className="pointer-events-none absolute left-1/2 top-0 z-10 h-16 w-6 -translate-x-1/2 -translate-y-1/2 opacity-45"
+    />
   )
 }
 
