@@ -56,6 +56,12 @@ import {
   createTaskInput,
   createTaskListInput,
   createTasksBulkInput,
+  createCaptureInput,
+  listCapturesInput,
+  resolveCaptureInput,
+  dismissCaptureInput,
+  reopenCaptureInput,
+  deleteCaptureInput,
   deleteTaskInput,
   deleteTaskListInput,
   getHabitInput,
@@ -1030,6 +1036,7 @@ export const tools: ToolDef[] = [
         p_tz: a.tz ?? null,
         p_sort_order: a.sort_order ?? 0,
         p_created_via: ctx.via,
+        p_reset_time: a.reset_time ?? null,
       })
       return { summary: `Created task “${task.title}” (${task.id})`, data: task }
     },
@@ -1062,6 +1069,7 @@ export const tools: ToolDef[] = [
         p_due_time: a.due_time ?? null,
         p_status: a.status ?? null,
         p_sort_order: a.sort_order ?? null,
+        p_reset_time: a.reset_time ?? null,
       })
       return { summary: `Updated task “${task.title}”`, data: task }
     },
@@ -1347,6 +1355,81 @@ export const tools: ToolDef[] = [
         p_min_count: a.min_count ?? 3,
       })
       return { summary: `${clusters.length} suggestion(s)`, data: clusters }
+    },
+  },
+
+  // ── Captures: quick-capture inbox (暫存區) ──
+  {
+    name: 'create_capture',
+    description: toolDescriptions.create_capture,
+    // Provenance (source) is the channel, not caller-settable — the worker stamps ctx.via.
+    schema: createCaptureInput.omit({ source: true }),
+    readOnly: false,
+    run: async (ctx, a) => {
+      const c = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'create_capture', {
+        p_raw_text: a.raw_text,
+        p_source: ctx.via,
+      })
+      return { summary: `Captured (${c.id})`, data: c }
+    },
+  },
+  {
+    name: 'list_captures',
+    description: toolDescriptions.list_captures,
+    schema: listCapturesInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_captures', {
+        p_status: a.status ?? 'pending',
+        p_limit: a.limit ?? 100,
+      })
+      return { summary: `${rows.length} capture(s)`, data: rows }
+    },
+  },
+  {
+    name: 'resolve_capture',
+    description: toolDescriptions.resolve_capture,
+    schema: resolveCaptureInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const c = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'resolve_capture', {
+        p_capture_id: a.capture_id,
+        p_resolved_kind: a.resolved_kind ?? null,
+        p_resolved_ref: a.resolved_ref ?? null,
+        p_note: a.note ?? null,
+      })
+      return { summary: 'Capture resolved', data: c }
+    },
+  },
+  {
+    name: 'dismiss_capture',
+    description: toolDescriptions.dismiss_capture,
+    schema: dismissCaptureInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const c = await callRpc(ctx.env, ctx.userId, 'dismiss_capture', { p_capture_id: a.capture_id })
+      return { summary: 'Capture dismissed', data: c }
+    },
+  },
+  {
+    name: 'reopen_capture',
+    description: toolDescriptions.reopen_capture,
+    schema: reopenCaptureInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const c = await callRpc(ctx.env, ctx.userId, 'reopen_capture', { p_capture_id: a.capture_id })
+      return { summary: 'Capture reopened', data: c }
+    },
+  },
+  {
+    name: 'delete_capture',
+    description: toolDescriptions.delete_capture,
+    schema: deleteCaptureInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_capture', { p_capture_id: a.capture_id })
+      return { summary: 'Capture deleted', data: { ok: true } }
     },
   },
 

@@ -27,7 +27,7 @@ import {
 } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import type { TaskListRow, TaskRow } from '@/lib/database.types'
-import { computeOccurrence, shortRecurrenceLabel } from '@/lib/recurrence'
+import { computeOccurrence, habitTodayISO, shortRecurrenceLabel } from '@/lib/recurrence'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import {
@@ -41,8 +41,9 @@ import { TaskDialog } from '@/components/tempo/TaskDialog'
 import { ListDialog } from '@/components/tempo/ListDialog'
 import { HabitCard } from '@/components/tempo/HabitCard'
 import { CalendarView } from '@/components/tempo/CalendarView'
+import { CaptureInbox } from '@/components/tempo/CaptureInbox'
 
-type ViewKey = 'all' | 'today' | 'upcoming' | 'habits' | 'calendar'
+type ViewKey = 'all' | 'today' | 'upcoming' | 'habits' | 'calendar' | 'capture'
 
 const VIEW_LABEL: Record<ViewKey, [string, string]> = {
   all: ['All tasks', '所有任務'],
@@ -50,6 +51,7 @@ const VIEW_LABEL: Record<ViewKey, [string, string]> = {
   upcoming: ['Upcoming', '即將'],
   habits: ['Habits', '習慣'],
   calendar: ['Calendar', '行事曆'],
+  capture: ['Capture', '暫存區'],
 }
 
 const PRIO_COLOR: Record<number, string> = {
@@ -73,8 +75,9 @@ function cmpDate(a: string | null, b: string | null): number {
 export function TempoScreen() {
   const t = useT()
   const navigate = useNavigate()
-  const search = useSearch({ strict: false }) as { view?: ViewKey; list?: string; new?: 'list' }
-  const view: ViewKey = search.view ?? 'all'
+  const search = useSearch({ strict: false }) as { view?: ViewKey; list?: string; new?: 'list'; capture?: string }
+  // A shared-in capture (?capture=…) always lands in the Capture view so it gets filed.
+  const view: ViewKey = search.capture ? 'capture' : search.view ?? 'all'
   const listSel = search.list ?? 'all'
 
   const { data: lists } = useTaskLists()
@@ -145,7 +148,11 @@ export function TempoScreen() {
 
   async function toggle(task: TaskRow) {
     if (task.kind === 'habit') {
-      checkIn.mutate({ taskId: task.id }, { onSuccess: () => toast.success(t('Checked in', '已打卡')) })
+      // Use the habit's reset-aware "today" so a 04:00/14:00 cutoff counts for the right day.
+      checkIn.mutate(
+        { taskId: task.id, date: habitTodayISO(task.reset_time, task.tz) },
+        { onSuccess: () => toast.success(t('Checked in', '已打卡')) },
+      )
       return
     }
     if (task.status === 'done') {
@@ -217,7 +224,12 @@ export function TempoScreen() {
         }
       />
 
-      {view === 'calendar' ? (
+      {view === 'capture' ? (
+        <CaptureInbox
+          sharedText={search.capture}
+          onConsumeShared={() => navigate({ to: '/tempo', search: (p) => ({ ...p, capture: undefined }), replace: true })}
+        />
+      ) : view === 'calendar' ? (
         <div className="flex min-h-0 flex-1 flex-col px-2.5 pb-2.5 pt-2.5 sm:px-5 sm:pb-4">
           <CalendarView tasks={tasks ?? []} onEdit={(task) => setTaskDialog({ open: true, task })} />
         </div>
@@ -273,7 +285,7 @@ export function TempoScreen() {
                     <HabitCard
                       key={habit.id}
                       habit={habit}
-                      today={today}
+                      today={habitTodayISO(habit.reset_time, habit.tz)}
                       onEdit={() => setTaskDialog({ open: true, task: habit })}
                       onDelete={() => del.mutate(habit.id)}
                     />

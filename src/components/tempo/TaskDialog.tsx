@@ -69,6 +69,7 @@ export function TaskDialog({
   const [listId, setListId] = useState<string>(INBOX)
   const [priority, setPriority] = useState(0)
   const [kind, setKind] = useState<'task' | 'habit'>('task')
+  const [resetTime, setResetTime] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
   const [labels, setLabels] = useState<string[]>([])
@@ -89,6 +90,7 @@ export function TaskDialog({
     setListId(task?.list_id ?? defaultListId ?? INBOX)
     setPriority(task?.priority ?? 0)
     setKind((task?.kind as 'task' | 'habit') ?? 'task')
+    setResetTime(task?.reset_time ? task.reset_time.slice(0, 5) : '')
     setDueDate(task?.due_date ?? '')
     setDueTime(task?.due_time ? task.due_time.slice(0, 5) : '')
     setLabels(task?.labels ?? [])
@@ -144,6 +146,7 @@ export function TaskDialog({
           labels,
           due_date: dueDate || undefined,
           due_time: dueTime || undefined,
+          reset_time: kind === 'habit' && resetTime ? resetTime : undefined,
         })
         // Apply recurrence changes (or clear it) via the dedicated RPC.
         if (rule || task.recurrence_rule) {
@@ -165,6 +168,8 @@ export function TaskDialog({
           kind,
           due_date: dueDate || undefined,
           due_time: dueTime || undefined,
+          reset_time: kind === 'habit' && resetTime ? resetTime : undefined,
+          tz: kind === 'habit' && resetTime ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined,
           recurrence_rule: rule ?? undefined,
           recurrence_after_completion: rule ? afterCompletion : undefined,
           recurrence_anchor: rule ? anchor : undefined,
@@ -366,6 +371,25 @@ export function TaskDialog({
                   </button>
                 ))}
               </div>
+            </div>
+          ) : null}
+
+          {kind === 'habit' ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="habit-reset">{t('Reset time', '重置時間')}</Label>
+              <Input
+                id="habit-reset"
+                type="time"
+                value={resetTime}
+                onChange={(e) => setResetTime(e.target.value)}
+                className="w-40"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {t(
+                  'When this habit’s day rolls over — e.g. a game daily that resets at 04:00 or 14:00. Blank = midnight.',
+                  '這個習慣每天幾點換日 —— 例如遊戲日常 04:00 或 14:00 重置。留空 = 午夜。',
+                )}
+              </p>
             </div>
           ) : null}
 

@@ -62,6 +62,7 @@ const TEMPO_VIEWS = [
   { key: 'all', en: 'All tasks', zh: '所有任務', icon: ListTodo },
   { key: 'habits', en: 'Habits', zh: '習慣', icon: Flame },
   { key: 'calendar', en: 'Calendar', zh: '行事曆', icon: CalendarDays },
+  { key: 'capture', en: 'Capture', zh: '暫存區', icon: Sparkles },
 ] as const
 const TRIP_SECTIONS = [
   { key: 'itinerary', en: 'Itinerary', zh: '行程', icon: CalendarRange },

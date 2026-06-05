@@ -394,6 +394,9 @@ const taskFields = {
   recurrence_anchor: isoDate.optional(),
   next_occurrence: isoDate.optional(),
   tz: tzName.optional(),
+  // Habit day-boundary: wall-clock time (in tz) the day rolls over, e.g. "04:00".
+  // Null/omitted = midnight. Used to decide which day a check-in belongs to.
+  reset_time: clockTime.optional(),
   sort_order: z.number().int().optional(),
 }
 export const createTaskInput = z.object({ ...taskFields })
@@ -412,6 +415,7 @@ export const updateTaskInput = z.object({
   due_date: isoDate.optional(),
   due_time: clockTime.optional(),
   status: taskStatus.optional(),
+  reset_time: clockTime.optional(),
   sort_order: z.number().int().optional(),
 })
 export type UpdateTaskInput = z.infer<typeof updateTaskInput>
@@ -478,6 +482,33 @@ export const suggestRecurringTasksInput = z.object({
   lookback_days: z.number().int().min(1).max(365).default(90),
   min_count: z.number().int().min(2).max(50).default(3),
 })
+
+// ── Captures (quick-capture inbox / 暫存區) ──
+export const captureSource = z.enum(['ui', 'share', 'rest', 'mcp'])
+export const captureStatus = z.enum(['pending', 'processed', 'dismissed'])
+export const createCaptureInput = z.object({
+  raw_text: z.string().trim().min(1).max(5_000),
+  source: captureSource.optional(),
+})
+export type CreateCaptureInput = z.infer<typeof createCaptureInput>
+export const listCapturesInput = z.object({
+  status: z.union([captureStatus, z.literal('all')]).optional(),
+  limit: z.number().int().min(1).max(500).default(100),
+})
+export const resolveCaptureInput = z.object({
+  capture_id: uuid,
+  // What it became + a back-link to the created item.
+  resolved_kind: z.string().trim().min(1).max(40).optional(),
+  resolved_ref: z
+    .object({ id: z.string().optional(), title: z.string().optional(), space: z.string().optional() })
+    .passthrough()
+    .optional(),
+  note: z.string().max(2_000).optional(),
+})
+export type ResolveCaptureInput = z.infer<typeof resolveCaptureInput>
+export const dismissCaptureInput = z.object({ capture_id: uuid })
+export const reopenCaptureInput = z.object({ capture_id: uuid })
+export const deleteCaptureInput = z.object({ capture_id: uuid })
 
 // ── Mnema Galleon: money (ledgers / accounts / categories / transactions) ──
 export const accountType = z.enum(['cash', 'bank', 'credit', 'ewallet', 'investment'])
@@ -774,7 +805,7 @@ export const toolDescriptions = {
   reorder_task_lists: 'Set the order of lists by passing their ids in the desired order.',
   list_task_lists: 'List the user’s task lists.',
   create_task:
-    'Create a todo. Optional: list, parent (subtask), priority (0–4), labels, scheduled/due date+time, duration (for time-blocking), recurrence (RRULE), or make it a habit (kind="habit"). Returns the new task id.',
+    'Create a todo. Optional: list, parent (subtask), priority (0–4), labels, scheduled/due date+time, duration (for time-blocking), recurrence (RRULE), or make it a habit (kind="habit"). For a habit whose day rolls over at a non-midnight cutoff — e.g. a game daily that resets at 04:00 or 14:00 — set reset_time ("HH:MM", in the task’s tz) so a check-in counts for the right day. Returns the new task id.',
   create_tasks_bulk: 'Create many tasks in one call (each may carry its own list/labels/schedule/recurrence).',
   update_task: 'Update a task’s title, notes, list, priority, labels, due date, or status (only fields you pass change).',
   complete_task:
@@ -799,6 +830,16 @@ export const toolDescriptions = {
   get_streak: 'Get a habit’s current streak, longest streak, and check-in calendar.',
   suggest_recurring_tasks:
     'Find clusters of repeatedly-added non-recurring tasks (with an inferred cadence) so you can propose turning them into recurring tasks.',
+  // Captures (quick-capture inbox / 暫存區)
+  create_capture:
+    'Drop a raw quick-capture line into the user’s inbox (暫存區) — an unstructured thought to triage later, not yet filed anywhere. Use this when the user is jotting on the go (e.g. “記一下:原神深淵 6/16”), not when they want something filed now. Returns the capture id.',
+  list_captures:
+    'List the user’s captures (default status=pending) — the quick-capture inbox (暫存區) to triage. When the user asks to process their inbox (“處理我的暫存區 / process my inbox”), for EACH pending capture: (1) interpret the raw text into the right space — a Tempo task or habit, a note, a trip item, or a money transaction; (2) auto-categorise using the user’s OWN lists — call list_task_lists first and match (e.g. “原神/星鐵/寶可夢” → a 遊戲/Games list); (3) ask only the few things you genuinely need (a specific time? repeat/recurring? which list? for a game daily, the reset time?) — be conversational, do not silently dump; (4) create the item with create_task/create_note/etc., then call resolve_capture with its id. Confirm what you filed.',
+  resolve_capture:
+    'Mark a capture as processed once you have filed it into a real item. Pass resolved_kind ("task"/"note"/"transaction"/"itinerary") and resolved_ref ({id,title}) so the capture links back to what it became. Call this right after the create_* succeeds.',
+  dismiss_capture: 'Mark a capture as dismissed (not worth keeping) without filing it anywhere.',
+  reopen_capture: 'Move a processed or dismissed capture back to pending (undo a triage).',
+  delete_capture: 'Permanently delete a capture from the inbox.',
   // Mnema Galleon (money)
   create_ledger: 'Create a money ledger (帳本). Seeds default categories. Returns the new ledger id.',
   update_ledger: 'Rename a ledger, change its base currency, icon, colour, or archive it.',

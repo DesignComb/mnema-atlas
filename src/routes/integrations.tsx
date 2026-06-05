@@ -23,6 +23,7 @@ const SETUP_TABS = [
   { id: 'claude', label: 'Claude Code' },
   { id: 'cursor', label: 'Cursor' },
   { id: 'chatgpt', label: 'ChatGPT' },
+  { id: 'lechat', label: 'Le Chat' },
   { id: 'curl', label: 'curl / REST' },
 ] as const
 type TabId = (typeof SETUP_TABS)[number]['id']
@@ -242,6 +243,22 @@ export function IntegrationsScreen() {
                 <ol className="list-decimal space-y-1 pl-4 text-[13px] leading-relaxed text-muted-foreground sm:pl-5">
                   <li>New GPT → Configure → <strong className="text-foreground">Create new action</strong> → Import from URL → {t('paste the URL above.', '貼上上方的網址。')}</li>
                   <li>Authentication → <strong className="text-foreground">API Key</strong> → <strong className="text-foreground">Bearer</strong> → {t('paste your key.', '貼上你的金鑰。')}</li>
+                  <li>{t('In chat: ', '在對話中輸入：')}"save this as flashcards in Mnema".</li>
+                </ol>
+              </div>
+            )}
+            {tab === 'lechat' && (
+              <div className="space-y-2">
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
+                  {t('Le Chat (Mistral) supports custom MCP connectors free — on web ', 'Le Chat（Mistral）免費支援自訂 MCP 連接器 —— 網頁 ')}
+                  <strong className="text-foreground">{t('and the iPhone/Android app', '與 iPhone／Android App')}</strong>
+                  {t(', so your phone can use Mnema with no computer running.', '都能用，手機就能操作 Mnema，不用開電腦。')}
+                </p>
+                <CopyBlock code={MCP_URL} />
+                <ol className="list-decimal space-y-1 pl-4 text-[13px] leading-relaxed text-muted-foreground sm:pl-5">
+                  <li>{t('In Le Chat: ', '在 Le Chat 中：')}<strong className="text-foreground">{t('Connectors', '連接器')}</strong> → <strong className="text-foreground">{t('Add Connector', '新增連接器')}</strong> → <strong className="text-foreground">{t('Custom MCP Connector', '自訂 MCP 連接器')}</strong>.</li>
+                  <li>{t('Server URL → paste the URL above; name it “mnema-atlas”.', '伺服器網址 → 貼上上方網址；命名為「mnema-atlas」。')}</li>
+                  <li>{t('Connect → choose ', '連接 → 選擇 ')}<strong className="text-foreground">HTTP Bearer Token</strong>{t(' → paste your key: ', ' → 貼上你的金鑰：')}<code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">{key}</code></li>
                   <li>{t('In chat: ', '在對話中輸入：')}"save this as flashcards in Mnema".</li>
                 </ol>
               </div>

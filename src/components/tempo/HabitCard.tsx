@@ -2,7 +2,7 @@ import { CheckCircle2, Circle, Flame, MoreHorizontal, Pencil, Trash2 } from 'luc
 import { useCheckIn, useStreak, useUncheckIn } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import type { TaskRow } from '@/lib/database.types'
-import { shortRecurrenceLabel } from '@/lib/recurrence'
+import { formatResetTime, shortRecurrenceLabel } from '@/lib/recurrence'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +53,7 @@ export function HabitCard({
   }
 
   const recur = shortRecurrenceLabel(habit.recurrence_rule, t)
+  const reset = formatResetTime(habit.reset_time)
 
   return (
     <div className="rounded-xl border border-border bg-card p-3.5 shadow-soft sm:p-4">
@@ -69,6 +70,12 @@ export function HabitCard({
               <>
                 <span>·</span>
                 <span>{recur}</span>
+              </>
+            ) : null}
+            {reset ? (
+              <>
+                <span>·</span>
+                <span>{t(`resets ${reset}`, `重置 ${reset}`)}</span>
               </>
             ) : null}
           </p>

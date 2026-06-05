@@ -34,6 +34,8 @@ import type {
 } from '@shared/schemas'
 import type {
   AddReminderInput,
+  CreateCaptureInput,
+  ResolveCaptureInput,
   CreateTaskInput,
   CreateTaskListInput,
   CreateTasksBulkInput,
@@ -43,7 +45,7 @@ import type {
   UpdateTaskInput,
   UpdateTaskListInput,
 } from '@shared/schemas'
-import type { TaskListRow, TaskReminderRow, TaskRow } from './database.types'
+import type { CaptureRow, TaskListRow, TaskReminderRow, TaskRow } from './database.types'
 import type {
   AccountRow,
   BudgetRow,
@@ -969,6 +971,7 @@ export async function createTask(input: CreateTaskInput): Promise<TaskRow> {
       p_tz: input.tz ?? undefined,
       p_sort_order: input.sort_order ?? undefined,
       p_created_via: 'ui',
+      p_reset_time: input.reset_time ?? undefined,
     }),
   )
 }
@@ -989,6 +992,7 @@ export async function updateTask(input: UpdateTaskInput): Promise<TaskRow> {
       p_due_time: input.due_time ?? undefined,
       p_status: input.status ?? undefined,
       p_sort_order: input.sort_order ?? undefined,
+      p_reset_time: input.reset_time ?? undefined,
     }),
   )
 }
@@ -1090,6 +1094,44 @@ export async function addReminder(input: AddReminderInput): Promise<TaskReminder
 }
 export async function removeReminder(reminderId: string): Promise<void> {
   const res = await supabase.rpc('remove_reminder', { p_user_id: null, p_reminder_id: reminderId })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ── Captures (quick-capture inbox / 暫存區) ──
+export type CaptureStatus = 'pending' | 'processed' | 'dismissed'
+export async function listCaptures(status: CaptureStatus | 'all' = 'pending'): Promise<CaptureRow[]> {
+  const base = supabase.from('captures').select('*').order('created_at', { ascending: false })
+  const q = status === 'all' ? base : base.eq('status', status)
+  return unwrap(await q)
+}
+export async function createCapture(input: CreateCaptureInput): Promise<CaptureRow> {
+  return unwrap(
+    await supabase.rpc('create_capture', {
+      p_user_id: null,
+      p_raw_text: input.raw_text,
+      p_source: input.source ?? 'ui',
+    }),
+  )
+}
+export async function resolveCapture(input: ResolveCaptureInput): Promise<CaptureRow> {
+  return unwrap(
+    await supabase.rpc('resolve_capture', {
+      p_user_id: null,
+      p_capture_id: input.capture_id,
+      p_resolved_kind: input.resolved_kind ?? undefined,
+      p_resolved_ref: (input.resolved_ref ?? undefined) as unknown as Json | undefined,
+      p_note: input.note ?? undefined,
+    }),
+  )
+}
+export async function dismissCapture(captureId: string): Promise<CaptureRow> {
+  return unwrap(await supabase.rpc('dismiss_capture', { p_user_id: null, p_capture_id: captureId }))
+}
+export async function reopenCapture(captureId: string): Promise<CaptureRow> {
+  return unwrap(await supabase.rpc('reopen_capture', { p_user_id: null, p_capture_id: captureId }))
+}
+export async function deleteCapture(captureId: string): Promise<void> {
+  const res = await supabase.rpc('delete_capture', { p_user_id: null, p_capture_id: captureId })
   if (res.error) throw new Error(res.error.message)
 }
 

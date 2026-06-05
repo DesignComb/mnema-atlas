@@ -10,6 +10,11 @@
   "theme_color": "#5b7cfa",
   "lang": "zh-Hant",
   "categories": ["education", "productivity"],
+  "share_target": {
+    "action": "/tempo",
+    "method": "GET",
+    "params": { "title": "title", "text": "capture", "url": "link" }
+  },
   "icons": [
     { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
     { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },

@@ -25,6 +25,8 @@ import type {
 } from '@shared/schemas'
 import type {
   AddReminderInput,
+  CreateCaptureInput,
+  ResolveCaptureInput,
   CreateTaskInput,
   CreateTaskListInput,
   CreateTasksBulkInput,
@@ -70,6 +72,7 @@ export const qk = {
   habit: (id: string) => ['habit', id] as const,
   streak: (id: string) => ['streak', id] as const,
   recurringSuggestions: ['recurring-suggestions'] as const,
+  captures: (status?: string) => ['captures', status ?? 'pending'] as const,
   // Mnema Galleon
   ledgers: ['ledgers'] as const,
   ledger: (id: string) => ['ledger', id] as const,
@@ -612,6 +615,34 @@ export function useAddReminder() {
 export function useRemoveReminder() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (reminderId: string) => api.removeReminder(reminderId), onSuccess: () => bumpTasks(qc) })
+}
+
+// ── Captures (quick-capture inbox / 暫存區) ──
+function bumpCaptures(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['captures'] })
+}
+export function useCaptures(status: api.CaptureStatus | 'all' = 'pending') {
+  return useQuery({ queryKey: qk.captures(status), queryFn: () => api.listCaptures(status) })
+}
+export function useCreateCapture() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateCaptureInput) => api.createCapture(input), onSuccess: () => bumpCaptures(qc) })
+}
+export function useResolveCapture() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: ResolveCaptureInput) => api.resolveCapture(input), onSuccess: () => bumpCaptures(qc) })
+}
+export function useDismissCapture() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.dismissCapture(id), onSuccess: () => bumpCaptures(qc) })
+}
+export function useReopenCapture() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.reopenCapture(id), onSuccess: () => bumpCaptures(qc) })
+}
+export function useDeleteCapture() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteCapture(id), onSuccess: () => bumpCaptures(qc) })
 }
 
 // ════════════════════ Mnema Galleon (money) ════════════════════

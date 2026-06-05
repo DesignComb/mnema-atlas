@@ -1189,6 +1189,48 @@ export type Database = {
           },
         ]
       }
+      captures: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          processed_at: string | null
+          raw_text: string
+          resolved_kind: string | null
+          resolved_ref: Json | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          processed_at?: string | null
+          raw_text: string
+          resolved_kind?: string | null
+          resolved_ref?: Json | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          processed_at?: string | null
+          raw_text?: string
+          resolved_kind?: string | null
+          resolved_ref?: Json | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           completed_at: string | null
@@ -1210,6 +1252,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -1243,6 +1286,7 @@ export type Database = {
           scheduled_time?: string | null
           sort_order?: number
           status?: string
+          reset_time?: string | null
           title: string
           tz?: string | null
           updated_at?: string
@@ -1272,6 +1316,7 @@ export type Database = {
           scheduled_time?: string | null
           sort_order?: number
           status?: string
+          reset_time?: string | null
           title?: string
           tz?: string | null
           updated_at?: string
@@ -1579,6 +1624,102 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_capture: {
+        Args: { p_raw_text: string; p_source?: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          id: string
+          note: string | null
+          processed_at: string | null
+          raw_text: string
+          resolved_kind: string | null
+          resolved_ref: Json | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+      }
+      list_captures: {
+        Args: { p_limit?: number; p_status?: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          id: string
+          note: string | null
+          processed_at: string | null
+          raw_text: string
+          resolved_kind: string | null
+          resolved_ref: Json | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "captures"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      resolve_capture: {
+        Args: {
+          p_capture_id: string
+          p_note?: string
+          p_resolved_kind?: string
+          p_resolved_ref?: Json
+          p_user_id: string | null
+        }
+        Returns: {
+          created_at: string
+          id: string
+          note: string | null
+          processed_at: string | null
+          raw_text: string
+          resolved_kind: string | null
+          resolved_ref: Json | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+      }
+      dismiss_capture: {
+        Args: { p_capture_id: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          id: string
+          note: string | null
+          processed_at: string | null
+          raw_text: string
+          resolved_kind: string | null
+          resolved_ref: Json | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+      }
+      reopen_capture: {
+        Args: { p_capture_id: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          id: string
+          note: string | null
+          processed_at: string | null
+          raw_text: string
+          resolved_kind: string | null
+          resolved_ref: Json | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+      }
+      delete_capture: {
+        Args: { p_capture_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       add_ledger_member: {
         Args: {
           p_display_name: string
@@ -1679,6 +1820,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -1722,6 +1864,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -2344,6 +2487,7 @@ export type Database = {
           p_recurrence_after_completion?: boolean
           p_recurrence_anchor?: string
           p_recurrence_rule?: string
+          p_reset_time?: string
           p_scheduled_date?: string
           p_scheduled_time?: string
           p_sort_order?: number
@@ -2371,6 +2515,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -2439,6 +2584,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -2819,6 +2965,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -2905,6 +3052,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -3092,6 +3240,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -3150,6 +3299,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -3482,6 +3632,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -3573,6 +3724,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -3619,6 +3771,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -3657,6 +3810,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -4096,6 +4250,7 @@ export type Database = {
           p_labels?: string[]
           p_list_id?: string
           p_priority?: number
+          p_reset_time?: string
           p_sort_order?: number
           p_status?: string
           p_task_id: string
@@ -4122,6 +4277,7 @@ export type Database = {
           recurrence_after_completion: boolean
           recurrence_anchor: string | null
           recurrence_rule: string | null
+          reset_time: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           sort_order: number
@@ -4368,6 +4524,7 @@ export type TripBookingRow = PublicTables['trip_bookings']['Row']
 export type TripChecklistRow = PublicTables['trip_checklist']['Row']
 export type TaskListRow = PublicTables['task_lists']['Row']
 export type TaskRow = PublicTables['tasks']['Row']
+export type CaptureRow = PublicTables['captures']['Row']
 export type TaskCheckinRow = PublicTables['task_checkins']['Row']
 export type TaskReminderRow = PublicTables['task_reminders']['Row']
 export type PushSubscriptionRow = PublicTables['push_subscriptions']['Row']
