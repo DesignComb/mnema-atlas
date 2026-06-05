@@ -4,10 +4,8 @@ import { motion } from 'motion/react'
 import {
   ArrowRight,
   Check,
-  FileText,
   GraduationCap,
   KeyRound,
-  Layers,
   ListTodo,
   Map as MapIcon,
   Plug,
@@ -21,7 +19,11 @@ import { useT } from '@/lib/i18n'
 import { modKey } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Eyebrow, GithubIcon, GoogleButton, PublicShell, REPO_URL, useGoogleSignIn } from '@/components/public/PublicShell'
-import { LottieMark } from '@/components/public/LottieMark'
+import { LottieArt } from '@/components/public/LottieArt'
+import heroFlow from '@/assets/lottie/hero-flow.json'
+import stepKey from '@/assets/lottie/step-key.json'
+import stepConnect from '@/assets/lottie/step-connect.json'
+import stepAsk from '@/assets/lottie/step-ask.json'
 import { FAQ_ITEMS, FaqAccordion } from '@/components/public/faq-data'
 
 /* The three current spaces each own a hue in src/index.css. On the landing we
@@ -111,35 +113,13 @@ export function LandingScreen() {
             transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="relative mx-auto w-full max-w-sm lg:mx-0 lg:ml-auto lg:max-w-md"
           >
-            <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 bg-dots opacity-40 [mask-image:radial-gradient(ellipse,black,transparent_72%)]" />
-            {/* A calm "living intelligence" pulse — the AI that quietly fills the workspace below. */}
-            <LottieMark className="pointer-events-none absolute -right-7 -top-12 size-36 opacity-60 sm:-right-10 sm:size-44" />
-
-            <div className="relative rounded-2xl rounded-bl-md border border-border bg-card p-4 shadow-soft">
-              <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                <Sparkles aria-hidden className="size-3.5 text-brand" /> {t('you → your AI', '你 → 你的 AI')}
-              </div>
-              <p className="mt-2 font-serif text-[15px] leading-snug text-foreground">
-                {t('“Plan my Kyoto trip, and turn these five kanji into flashcards.”', '「幫我安排京都行程，再把這五個漢字做成字卡。」')}
-              </p>
-            </div>
-
-            <div className="relative mx-auto my-2 h-9 w-px">
-              <div className="absolute inset-0 border-l border-dashed border-border" />
-              <span className="landing-travel-dot absolute -left-[3px] top-0 size-1.5 rounded-full bg-brand" />
-            </div>
-
-            <div className="relative rounded-2xl border border-border bg-card/85 p-2.5 shadow-soft backdrop-blur-sm">
-              <div className="flex items-center justify-between px-2 pb-1.5 pt-1">
-                <span className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{t('your workspace', '你的工作區')}</span>
-                <span className="text-[10.5px] text-muted-foreground">{t('just now', '剛剛')}</span>
-              </div>
-              <div className="space-y-1.5">
-                <ResultRow dot={ATLAS} icon={<FileText />} title={t('Kyoto temples — notes', '京都寺院 — 筆記')} meta={t('note', '筆記')} />
-                <ResultRow dot={ATLAS} icon={<Layers />} title={t('5 kanji → flashcards', '5 個漢字 → 字卡')} meta={t('due in 3d', '3 天後到期')} />
-                <ResultRow dot={VOYAGE} icon={<MapIcon />} title={t('Day 1 · Kyoto', '第 1 天 · 京都')} meta={t('trip', '行程')} />
-              </div>
-            </div>
+            <div className="pointer-events-none absolute -inset-x-6 -inset-y-8 bg-dots opacity-40 [mask-image:radial-gradient(ellipse,black,transparent_72%)]" />
+            {/* The story, animated: your message flows down the spine and your workspace fills itself. */}
+            <LottieArt
+              data={heroFlow}
+              staticFrame={134}
+              className="relative mx-auto aspect-[44/52] w-full max-w-[360px]"
+            />
           </motion.div>
         </div>
       </section>
@@ -209,6 +189,7 @@ export function LandingScreen() {
             <Step
               n="01"
               delay={0}
+              art={stepKey}
               icon={<KeyRound />}
               title={t('Create a key', '建立一把金鑰')}
               body={t(
@@ -219,6 +200,7 @@ export function LandingScreen() {
             <Step
               n="02"
               delay={0.08}
+              art={stepConnect}
               icon={<Plug />}
               title={t('Connect once', '連接一次')}
               body={t(
@@ -229,6 +211,7 @@ export function LandingScreen() {
             <Step
               n="03"
               delay={0.16}
+              art={stepAsk}
               icon={<Sparkles />}
               title={t('Just ask', '直接開口')}
               body={t(
@@ -420,17 +403,6 @@ export function LandingScreen() {
   )
 }
 
-function ResultRow({ dot, icon, title, meta }: { dot: string; icon: ReactNode; title: string; meta: string }) {
-  return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-background/70 px-2.5 py-2">
-      <span className="size-1.5 shrink-0 rounded-full" style={{ background: dot }} />
-      <span className="shrink-0 text-muted-foreground [&_svg]:size-3.5">{icon}</span>
-      <span className="min-w-0 flex-1 truncate text-[12.5px] text-foreground">{title}</span>
-      <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{meta}</span>
-    </div>
-  )
-}
-
 function Pillar({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
   return (
     <div className="border-t border-border pt-5">
@@ -441,7 +413,7 @@ function Pillar({ icon, title, body }: { icon: ReactNode; title: string; body: s
   )
 }
 
-function Step({ n, icon, title, body, delay }: { n: string; icon: ReactNode; title: string; body: string; delay: number }) {
+function Step({ n, icon, title, body, delay, art }: { n: string; icon: ReactNode; title: string; body: string; delay: number; art?: unknown }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -451,7 +423,11 @@ function Step({ n, icon, title, body, delay }: { n: string; icon: ReactNode; tit
       className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-soft"
     >
       <span className="pointer-events-none absolute -right-1 -top-3 select-none font-serif text-[5.5rem] font-semibold leading-none text-brand/[0.06]">{n}</span>
-      <span className="relative inline-flex size-10 items-center justify-center rounded-xl bg-brand-muted text-brand [&_svg]:size-5">{icon}</span>
+      {art ? (
+        <LottieArt data={art} staticFrame={118} className="relative -ml-2 size-16" />
+      ) : (
+        <span className="relative inline-flex size-10 items-center justify-center rounded-xl bg-brand-muted text-brand [&_svg]:size-5">{icon}</span>
+      )}
       <h3 className="relative mt-4 font-serif text-[1.05rem] font-semibold text-foreground">{title}</h3>
       <p className="relative mt-1.5 text-[14px] leading-relaxed text-muted-foreground">{body}</p>
     </motion.div>
