@@ -1,33 +1,39 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import pulseData from '@/assets/lottie/pulse.json'
-
-// lottie-web is heavy, so the player is code-split into its own async chunk —
-// it never touches the initial landing bundle.
-const LottiePlayer = lazy(() => import('lottie-react'))
 
 /**
  * A purely decorative, calm "living intelligence" pulse for the landing hero.
- * Honours prefers-reduced-motion (renders nothing — the page stays still), and
- * is aria-hidden since it carries no information.
+ * lottie-web is loaded via dynamic import (its own async chunk — never in the
+ * initial bundle) and driven imperatively, so there's no React.lazy interop to
+ * trip over. Honours prefers-reduced-motion (never loads or renders) and is
+ * aria-hidden since it carries no information.
  */
 export function LottieMark({ className }: { className?: string }) {
-  const [play, setPlay] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setPlay(!mq.matches)
-    const on = () => setPlay(!mq.matches)
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const el = ref.current
+    if (!el) return
+
+    let cancelled = false
+    let anim: { destroy: () => void } | undefined
+    void import('lottie-web').then(({ default: lottie }) => {
+      if (cancelled || !ref.current) return
+      anim = lottie.loadAnimation({
+        container: ref.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        animationData: pulseData as object,
+      })
+    })
+
+    return () => {
+      cancelled = true
+      anim?.destroy()
+    }
   }, [])
 
-  if (!play) return null
-
-  return (
-    <div className={className} aria-hidden="true">
-      <Suspense fallback={null}>
-        <LottiePlayer animationData={pulseData} loop className="size-full" />
-      </Suspense>
-    </div>
-  )
+  return <div ref={ref} className={className} aria-hidden="true" />
 }
