@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { TagInput } from '@/components/editor/TagInput'
+import { ImageUpload } from './ImageUpload'
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ export function NewCardDialog({
   const [back, setBack] = useState('')
   const [deckSel, setDeckSel] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState(false)
   const createCard = useCreateCard()
   const updateCard = useUpdateCard()
@@ -59,6 +61,7 @@ export function NewCardDialog({
       setDeckSel(card?.deck_id ?? deckId ?? '')
       // New cards inherit their source note's tags as a sensible default.
       setTags(card?.tags ?? (noteId ? notesRef.current?.find((n) => n.id === noteId)?.tags ?? [] : []))
+      setImageUrl(card?.image_url ?? null)
       setConfirmDel(false)
     }
   }, [open, card, deckId, noteId])
@@ -70,7 +73,7 @@ export function NewCardDialog({
       if (editing && card) {
         await updateCard.mutateAsync({
           id: card.id,
-          patch: { front: front.trim(), back: back.trim(), deck_id: deckSel || null },
+          patch: { front: front.trim(), back: back.trim(), deck_id: deckSel || null, image_url: imageUrl ?? '' },
         })
         await setCardTags.mutateAsync({ cardId: card.id, tags })
         toast.success(t('Flashcard updated', '已更新字卡'))
@@ -80,6 +83,7 @@ export function NewCardDialog({
           back: back.trim(),
           note_id: noteId,
           deck_id: deckSel || undefined,
+          image_url: imageUrl ?? undefined,
         })
         if (tags.length) await setCardTags.mutateAsync({ cardId: created.id, tags })
         toast.success(t('Flashcard added — due now', '已新增字卡 — 立即到期'))
@@ -142,6 +146,10 @@ export function NewCardDialog({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="card-back">{t('Back', '背面')}</Label>
             <Textarea id="card-back" value={back} onChange={(e) => setBack(e.target.value)} placeholder={t('Answer', '答案')} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>{t('Image', '圖片')}</Label>
+            <ImageUpload value={imageUrl} onChange={setImageUrl} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>{t('Tags', '標籤')}</Label>

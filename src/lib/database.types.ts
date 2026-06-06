@@ -177,6 +177,7 @@ export type Database = {
           elapsed_days: number
           front: string
           id: string
+          image_url: string | null
           lapses: number
           last_review: string | null
           learning_steps: number
@@ -199,6 +200,7 @@ export type Database = {
           elapsed_days?: number
           front: string
           id?: string
+          image_url?: string | null
           lapses?: number
           last_review?: string | null
           learning_steps?: number
@@ -221,6 +223,7 @@ export type Database = {
           elapsed_days?: number
           front?: string
           id?: string
+          image_url?: string | null
           lapses?: number
           last_review?: string | null
           learning_steps?: number
@@ -2010,6 +2013,7 @@ export type Database = {
           p_created_via?: string
           p_deck_id?: string
           p_front: string
+          p_image_url?: string
           p_note_id?: string
           p_user_id: string | null
         }
@@ -2023,6 +2027,7 @@ export type Database = {
           elapsed_days: number
           front: string
           id: string
+          image_url: string | null
           lapses: number
           last_review: string | null
           learning_steps: number
@@ -2199,6 +2204,7 @@ export type Database = {
           elapsed_days: number
           front: string
           id: string
+          image_url: string | null
           lapses: number
           last_review: string | null
           learning_steps: number
@@ -3090,6 +3096,7 @@ export type Database = {
           elapsed_days: number
           front: string
           id: string
+          image_url: string | null
           lapses: number
           last_review: string | null
           learning_steps: number
@@ -3391,6 +3398,7 @@ export type Database = {
           elapsed_days: number
           front: string
           id: string
+          image_url: string | null
           lapses: number
           last_review: string | null
           learning_steps: number
@@ -3920,6 +3928,7 @@ export type Database = {
           p_card_id: string
           p_deck_id?: string
           p_front?: string
+          p_image_url?: string
           p_note_id?: string
           p_user_id: string | null
         }
@@ -3933,6 +3942,7 @@ export type Database = {
           elapsed_days: number
           front: string
           id: string
+          image_url: string | null
           lapses: number
           last_review: string | null
           learning_steps: number

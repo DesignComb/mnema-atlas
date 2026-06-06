@@ -238,6 +238,7 @@ export async function createCard(input: CreateFlashcardInput): Promise<CardRow> 
       p_note_id: input.note_id ?? undefined,
       p_deck_id: input.deck_id ?? undefined,
       p_created_via: 'ui',
+      p_image_url: input.image_url ?? undefined,
     }),
   )
 }
@@ -320,7 +321,7 @@ export async function recordReviewSafe(
 
 export async function updateCard(
   cardId: string,
-  patch: { front?: string; back?: string; deck_id?: string | null; note_id?: string | null },
+  patch: { front?: string; back?: string; deck_id?: string | null; note_id?: string | null; image_url?: string | null },
 ): Promise<CardRow> {
   return unwrap(
     await supabase.rpc('update_card', {
@@ -330,6 +331,8 @@ export async function updateCard(
       p_back: patch.back ?? undefined,
       p_deck_id: patch.deck_id ?? undefined,
       p_note_id: patch.note_id ?? undefined,
+      // '' clears the image, a URL sets it, undefined leaves it unchanged
+      p_image_url: patch.image_url ?? undefined,
     }),
   )
 }

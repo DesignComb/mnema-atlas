@@ -18,8 +18,15 @@ teardown('clean up test-account data', async () => {
   }
   if (!uid) return
 
-  // tasks cascade to checkins/reminders; also clear lists + captures.
-  await admin.from('tasks').delete().eq('user_id', uid)
+  // Wipe everything the authed specs create so the account is fresh next run.
+  await admin.from('cards').delete().eq('user_id', uid)
+  await admin.from('notes').delete().eq('user_id', uid)
+  await admin.from('decks').delete().eq('user_id', uid)
+  await admin.from('tasks').delete().eq('user_id', uid) // cascades checkins/reminders
   await admin.from('task_lists').delete().eq('user_id', uid)
   await admin.from('captures').delete().eq('user_id', uid)
+
+  // Remove uploaded images from Storage (the user's own folder).
+  const { data: files } = await admin.storage.from('uploads').list(uid)
+  if (files?.length) await admin.storage.from('uploads').remove(files.map((f) => `${uid}/${f.name}`))
 })

@@ -252,6 +252,7 @@ export const tools: ToolDef[] = [
         p_note_id: a.note_id ?? null,
         p_deck_id: a.deck_id ?? null,
         p_created_via: ctx.via,
+        p_image_url: a.image_url ?? null,
       })
       if (Array.isArray(a.tags) && a.tags.length) {
         await callRpc(ctx.env, ctx.userId, 'set_card_tags', { p_card_id: card.id, p_tags: a.tags })
@@ -350,6 +351,7 @@ export const tools: ToolDef[] = [
         p_back: a.back ?? null,
         p_deck_id: a.deck_id ?? null,
         p_note_id: a.note_id ?? null,
+        p_image_url: a.image_url ?? null,
       })
       if (a.tags !== undefined) {
         await callRpc(ctx.env, ctx.userId, 'set_card_tags', { p_card_id: a.card_id, p_tags: a.tags ?? [] })

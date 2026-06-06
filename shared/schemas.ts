@@ -50,12 +50,14 @@ export type CreateDeckInput = z.infer<typeof createDeckInput>
 
 const flashcardFace = z.string().trim().min(1).max(8_000)
 
+const imageUrl = z.string().url().max(2_000)
 export const createFlashcardInput = z.object({
   front: flashcardFace,
   back: flashcardFace,
   note_id: uuid.optional(),
   deck_id: uuid.optional(),
   tags: tagArray.optional(),
+  image_url: imageUrl.optional(),
 })
 export type CreateFlashcardInput = z.infer<typeof createFlashcardInput>
 
@@ -103,6 +105,8 @@ export const updateCardInput = z.object({
   deck_id: uuid.optional(),
   note_id: uuid.optional(),
   tags: tagArray.optional(),
+  // a full URL sets the image; an empty string clears it; omit to leave unchanged
+  image_url: z.string().max(2_000).optional(),
 })
 export const deleteCardInput = z.object({ card_id: uuid })
 export const deleteNoteInput = z.object({ note_id: uuid })
@@ -749,12 +753,13 @@ export const toolDescriptions = {
   search_notes: 'Full-text search the user’s notes by keyword.',
   create_deck: 'Create a deck (folder) to organise notes and flashcards.',
   list_decks: 'List the user’s decks.',
-  create_flashcard: 'Create one spaced-repetition flashcard (front/back, optional tags). Schedulable immediately.',
+  create_flashcard:
+    'Create one spaced-repetition flashcard (front/back, optional tags). Optionally attach an image via image_url (a public URL — e.g. one already uploaded to the app). Schedulable immediately.',
   create_flashcards_bulk: 'Create many flashcards in one call (each may carry its own tags).',
   link_notes: 'Create a typed link between two notes (feeds the knowledge graph).',
   list_notes: 'List the user’s notes (optionally filtered by deck). Returns ids + titles.',
   list_cards: 'List the user’s flashcards (optionally by deck or tag). Returns ids + front/back.',
-  update_card: 'Edit an existing flashcard’s front/back, tags, or move it to another deck/note.',
+  update_card: 'Edit an existing flashcard’s front/back, tags, image (image_url; "" clears it), or move it to another deck/note.',
   delete_card: 'Delete a flashcard.',
   delete_note: 'Delete a note (its flashcards are kept, just unlinked from the note).',
   update_deck: 'Rename a deck or change its description.',

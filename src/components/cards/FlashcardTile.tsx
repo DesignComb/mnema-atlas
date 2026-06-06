@@ -33,6 +33,9 @@ export function FlashcardTile({ card, noteTitle }: { card: CardRow; noteTitle?: 
       </button>
       <p className="line-clamp-2 pr-7 font-serif text-sm font-medium text-foreground">{card.front}</p>
       <p className="mt-1 line-clamp-2 font-serif text-[13px] text-muted-foreground">{card.back}</p>
+      {card.image_url ? (
+        <img src={card.image_url} alt="" loading="lazy" className="mt-2 max-h-24 rounded-md border border-border object-contain" />
+      ) : null}
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${meta.cls}`}>{t(meta.label, meta.zh)}</span>
         <span className="text-[11px] text-muted-foreground/80">{t('due', '到期')} {relativeDue(card.due, undefined, lang)}</span>

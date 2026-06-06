@@ -238,9 +238,12 @@ export function StudyScreen() {
                 {/* Front */}
                 <button
                   onClick={() => !flipped && setFlipped(true)}
-                  className="flex min-h-40 w-full items-center justify-center px-6 py-8 text-center sm:min-h-44 sm:px-8 sm:py-10"
+                  className="flex min-h-40 w-full flex-col items-center justify-center gap-4 px-6 py-8 text-center sm:min-h-44 sm:px-8 sm:py-10"
                 >
                   <p className="font-serif text-xl leading-snug text-foreground sm:text-2xl">{current.front}</p>
+                  {current.image_url ? (
+                    <img src={current.image_url} alt="" className="max-h-56 rounded-lg border border-border object-contain" />
+                  ) : null}
                 </button>
 
                 {/* Back */}

@@ -30,6 +30,24 @@ test('global Capture front door writes to the inbox', async ({ page }) => {
   await expect(page.getByText(stamp)).toBeVisible()
 })
 
+test('create an image flashcard and the image shows up', async ({ page }) => {
+  await page.goto('/today')
+  await page.getByRole('button', { name: /Write a note|寫一則筆記/ }).click()
+  await expect(page).toHaveURL(/\/notes\//)
+
+  await page.getByRole('button', { name: /Add flashcard|新增字卡/ }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel(/^Front|正面/).fill(`e2e img ${Date.now()}`)
+  await dialog.getByLabel(/^Back|背面/).fill('e2e back')
+  await dialog.locator('input[type="file"]').setInputFiles('e2e/fixtures/pixel.png')
+  await expect(dialog.locator('img')).toBeVisible({ timeout: 15_000 }) // upload finished → preview
+  await dialog.getByRole('button', { name: /^Add card$|^新增字卡$/ }).click()
+  await expect(dialog).toBeHidden()
+
+  // the new card's tile (with the uploaded image) renders on the note page
+  await expect(page.locator('img[src*="/storage/v1/object/public/uploads/"]').first()).toBeVisible({ timeout: 10_000 })
+})
+
 test('habit check-in toggles, then undoes a misclick', async ({ page }) => {
   await page.goto('/tempo?view=habits')
   const title = `e2e habit ${Date.now()}`
