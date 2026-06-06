@@ -7,6 +7,7 @@ import {
   redirect,
 } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
+import { getLastRoute } from '@/lib/last-route'
 import { AppLayout } from '@/components/app-shell/AppLayout'
 import { LandingScreen } from '@/routes/landing'
 import { HomeScreen } from '@/routes/home'
@@ -22,7 +23,8 @@ const indexRoute = createRoute({
   path: '/',
   async beforeLoad() {
     const { data } = await supabase.auth.getSession()
-    if (data.session) throw redirect({ to: '/today' })
+    // Resume where the user last was (space + view); fall back to /today.
+    if (data.session) throw redirect({ href: getLastRoute() ?? '/today' })
   },
   component: LandingScreen,
 })

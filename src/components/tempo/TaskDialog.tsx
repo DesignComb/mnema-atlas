@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useAddReminder, useCreateTask, useSetRecurrence, useUpdateTask } from '@/lib/hooks'
-import { useT } from '@/lib/i18n'
+import { useI18n } from '@/lib/i18n'
 import type { TaskListRow, TaskRow } from '@/lib/database.types'
 import { buildRRule, computeOccurrence, parseRRule, WEEKDAYS, type Freq } from '@/lib/recurrence'
 import { TagInput } from '@/components/editor/TagInput'
@@ -58,7 +58,7 @@ export function TaskDialog({
   task?: TaskRow
   labelSuggestions?: string[]
 }) {
-  const t = useT()
+  const { t, lang } = useI18n()
   const editing = Boolean(task)
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
@@ -344,7 +344,12 @@ export function TaskDialog({
               </p>
             ) : remindPreview ? (
               <p className="text-[11px] text-muted-foreground">
-                {t('Reminds at', '提醒於')} {new Date(remindPreview).toLocaleString()}
+                {t('Reminds at', '提醒於')}{' '}
+                {new Date(remindPreview).toLocaleString(lang === 'zh' ? 'zh-TW' : 'en-GB', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                  hour12: false,
+                })}
               </p>
             ) : null}
             {reminderPreset ? (

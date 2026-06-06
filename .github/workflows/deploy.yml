@@ -24,8 +24,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Forkers: override these via repo Variables (Settings → Secrets and variables →
+# Actions → Variables) — CLOUDFLARE_ACCOUNT_ID, CF_PAGES_PROJECT, VITE_SUPABASE_URL,
+# VITE_SUPABASE_PUBLISHABLE_KEY, VITE_MCP_URL, VITE_REST_URL. Unset → the defaults
+# below (the maintainer's instance). Also edit worker/wrangler.toml (name + route).
 env:
-  CLOUDFLARE_ACCOUNT_ID: 95a418e79390090ee72a97d77fac66fe
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || '95a418e79390090ee72a97d77fac66fe' }}
 
 jobs:
   worker:
@@ -59,14 +63,14 @@ jobs:
       - run: npm install --no-audit --no-fund
       - name: Build
         env:
-          VITE_SUPABASE_URL: https://enfiuplmzpsmfgrykmxg.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_plbnYoh6H64YutUeTd8muA_lHXl00Vz
-          VITE_MCP_URL: https://mnema-ai.dco.tw/mcp
-          VITE_REST_URL: https://mnema-ai.dco.tw/rest
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://enfiuplmzpsmfgrykmxg.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_plbnYoh6H64YutUeTd8muA_lHXl00Vz' }}
+          VITE_MCP_URL: ${{ vars.VITE_MCP_URL || 'https://mnema-ai.dco.tw/mcp' }}
+          VITE_REST_URL: ${{ vars.VITE_REST_URL || 'https://mnema-ai.dco.tw/rest' }}
         run: npm run build
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name mnema-atlas --branch main
+          command: pages deploy dist --project-name ${{ vars.CF_PAGES_PROJECT || 'mnema-atlas' }} --branch main

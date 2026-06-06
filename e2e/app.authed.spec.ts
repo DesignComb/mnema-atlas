@@ -19,6 +19,13 @@ test('the space rail switches spaces in one tap', async ({ page }) => {
   await expect(page).toHaveURL(/\/trips/)
 })
 
+test('resumes on the last route on re-entry', async ({ page }) => {
+  await page.goto('/tempo')
+  await expect(page).toHaveURL(/\/tempo/)
+  await page.goto('/') // "entering" the app again
+  await expect(page).toHaveURL(/\/tempo/) // resumed here, not bounced to /today
+})
+
 test('global Capture front door writes to the inbox', async ({ page }) => {
   await page.goto('/today')
   const stamp = `e2e capture ${Date.now()}`

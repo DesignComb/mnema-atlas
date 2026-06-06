@@ -6,6 +6,7 @@ import { useCreateNote, useDueReminders } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 import { MobileNavContext } from '@/lib/mobile-nav'
+import { saveLastRoute } from '@/lib/last-route'
 import { AppSidebar } from './AppSidebar'
 import { SpaceRail } from './SpaceRail'
 import { BottomTabs } from './BottomTabs'
@@ -24,8 +25,14 @@ export function AppLayout() {
   const createNote = useCreateNote()
   const t = useT()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const fullPath = useRouterState({ select: (s) => s.location.pathname + s.location.searchStr })
   const closeNavRef = useRef<HTMLButtonElement>(null)
   useDueReminders()
+
+  // Remember where the user is so opening the app resumes here (see router index).
+  useEffect(() => {
+    saveLastRoute(fullPath)
+  }, [fullPath])
 
   // Close the mobile nav drawer whenever the route changes (e.g. tapping a deck).
   useEffect(() => {

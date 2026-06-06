@@ -7,6 +7,11 @@ compatibility_flags = ["nodejs_compat"]
 # dco.tw is on Cloudflare, so deploy auto-creates the DNS record + SSL cert.
 # This is the URL external AIs connect to:  https://mnema-ai.dco.tw/{mcp,rest}
 # NOTE: top-level keys (routes) MUST precede any [table] sections below.
+#
+# SELF-HOST: change `name` above to your own, then EITHER point this route at a
+# domain on YOUR Cloudflare account, OR delete this whole `routes` block to use
+# the free https://<name>.<your-subdomain>.workers.dev URL. Set VITE_MCP_URL /
+# VITE_REST_URL (deploy.yml / repo Variables) to whichever you pick. See docs/SELF_HOST.md.
 routes = [
   { pattern = "mnema-ai.dco.tw", custom_domain = true }
 ]
