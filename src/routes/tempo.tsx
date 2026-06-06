@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   CalendarDays,
@@ -21,6 +21,7 @@ import {
   useCreateTask,
   useDeleteTask,
   useDeleteTaskList,
+  useReorderTasks,
   useTaskLists,
   useTasks,
   useUncompleteTask,
@@ -40,6 +41,7 @@ import {
 import { TaskDialog } from '@/components/tempo/TaskDialog'
 import { ListDialog } from '@/components/tempo/ListDialog'
 import { HabitCard } from '@/components/tempo/HabitCard'
+import { SortableList } from '@/components/common/SortableList'
 import { HabitCheckButton } from '@/components/tempo/HabitCheckButton'
 import { CalendarView } from '@/components/tempo/CalendarView'
 import { CaptureInbox } from '@/components/tempo/CaptureInbox'
@@ -94,6 +96,7 @@ export function TempoScreen() {
   const del = useDeleteTask()
   const checkIn = useCheckIn()
   const delList = useDeleteTaskList()
+  const reorder = useReorderTasks()
 
   const activeLists = (lists ?? []).filter((l) => !l.is_archived)
   const labelSuggestions = Array.from(new Set((tasks ?? []).flatMap((x) => x.labels ?? [])))
@@ -116,9 +119,16 @@ export function TempoScreen() {
     if (view === 'upcoming') return task.due_date != null && task.due_date > today
     return true
   })
-  const sorted = [...filtered].sort(
-    (a, b) => b.priority - a.priority || cmpDate(a.due_date, b.due_date) || a.sort_order - b.sort_order,
-  )
+  // Drag-to-reorder is meaningful only within a single bucket (one list or the
+  // Inbox) where sort_order is the order shown — not in cross-list/date views
+  // (Today/Upcoming/All lists), where priority + due date drive the sort.
+  const reorderListId = listSel === 'inbox' ? null : listSel
+  const canReorder = listSel !== 'all' && view === 'all' && !showDone
+  const sorted = canReorder
+    ? [...filtered].sort((a, b) => a.sort_order - b.sort_order)
+    : [...filtered].sort(
+        (a, b) => b.priority - a.priority || cmpDate(a.due_date, b.due_date) || a.sort_order - b.sort_order,
+      )
 
   // Heading reflects the focused list (if any), else the active view.
   const heading =
@@ -292,6 +302,24 @@ export function TempoScreen() {
                     />
                   ))}
                 </div>
+              ) : canReorder ? (
+                <SortableList
+                  items={sorted}
+                  onReorder={(ids) => reorder.mutate({ listId: reorderListId, taskIds: ids })}
+                  className="overflow-hidden rounded-xl border border-border bg-card shadow-soft"
+                  itemClassName="bg-card"
+                  renderItem={(task, handle) => (
+                    <TaskRowItem
+                      task={task}
+                      onToggle={() => toggle(task)}
+                      onEdit={() => setTaskDialog({ open: true, task })}
+                      onDelete={() => del.mutate(task.id)}
+                      t={t}
+                      today={today}
+                      dragHandle={handle}
+                    />
+                  )}
+                />
               ) : (
                 <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
                   {sorted.map((task) => (
@@ -345,6 +373,7 @@ function TaskRowItem({
   onDelete,
   t,
   today,
+  dragHandle,
 }: {
   task: TaskRow
   onToggle: () => void
@@ -352,6 +381,7 @@ function TaskRowItem({
   onDelete: () => void
   t: (en: string, zh: string) => string
   today: string
+  dragHandle?: ReactNode
 }) {
   const done = task.status === 'done'
   const isHabit = task.kind === 'habit'
@@ -359,6 +389,7 @@ function TaskRowItem({
 
   return (
     <div className="group flex items-start gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
+      {dragHandle ? <div className="-ml-1 mt-0.5">{dragHandle}</div> : null}
       {isHabit ? (
         <div className="mt-0.5">
           <HabitCheckButton habitId={task.id} today={today} iconClassName="size-5" />

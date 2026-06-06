@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
   ArrowUpRight,
@@ -37,6 +37,7 @@ import type { ItineraryDay, ItineraryItem } from '@/lib/api'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { TripDialog } from '@/components/trips/TripDialog'
 import { DayDialog } from '@/components/trips/DayDialog'
+import { SortableList } from '@/components/common/SortableList'
 import { ItemDialog } from '@/components/trips/ItemDialog'
 import { ShareDialog } from '@/components/trips/ShareDialog'
 import { MembersDialog } from '@/components/trips/MembersDialog'
@@ -88,6 +89,9 @@ export function TripScreen() {
   const [view, setView] = useState<ItinView>('timeline')
   const [hiddenCats, setHiddenCats] = useState<Set<Category>>(new Set())
   const [hiddenStatuses, setHiddenStatuses] = useState<Set<ItemStatus>>(new Set())
+  // Drag-to-reorder needs every row present; with a filter on, some are hidden,
+  // so fall back to the ⋯ "move up/down" menu (which is always available).
+  const filtering = hiddenCats.size > 0 || hiddenStatuses.size > 0
   const [tripDialog, setTripDialog] = useState(false)
   const [shareDialog, setShareDialog] = useState(false)
   const [membersDialog, setMembersDialog] = useState(false)
@@ -351,24 +355,57 @@ export function TripScreen() {
           {view === 'timeline' ? (
             <>
           {/* Days */}
-          {trip.days.map((day, dayIndex) => (
-            <DaySection
-              key={day.id}
-              day={day}
-              dayIndex={dayIndex}
-              dayCount={trip.days.length}
-              canEdit={canEdit}
-              match={matchItem}
-              t={t}
-              onAddItem={() => setItemDialog({ open: true, dayId: day.id })}
-              onEditDay={() => setDayDialog({ open: true, day })}
-              onDeleteDay={() => removeDay(day)}
-              onMoveDay={(dir) => moveDay(dayIndex, dir)}
-              onEditItem={(item) => setItemDialog({ open: true, item, dayId: day.id })}
-              onDeleteItem={removeItem}
-              onMoveItem={(index, dir) => moveItem(day.items, day.id, index, dir)}
+          {canEdit && !filtering && trip.days.length > 1 ? (
+            <SortableList
+              items={trip.days}
+              onReorder={(ids) => reorderDays.mutate({ itineraryId: trip.id, dayIds: ids })}
+              className="space-y-4"
+              renderItem={(day, handle) => {
+                const dayIndex = trip.days.findIndex((d) => d.id === day.id)
+                return (
+                  <DaySection
+                    day={day}
+                    dayIndex={dayIndex}
+                    dayCount={trip.days.length}
+                    canEdit={canEdit}
+                    canDragItems={!filtering}
+                    match={matchItem}
+                    t={t}
+                    dragHandle={handle}
+                    onAddItem={() => setItemDialog({ open: true, dayId: day.id })}
+                    onEditDay={() => setDayDialog({ open: true, day })}
+                    onDeleteDay={() => removeDay(day)}
+                    onMoveDay={(dir) => moveDay(dayIndex, dir)}
+                    onEditItem={(item) => setItemDialog({ open: true, item, dayId: day.id })}
+                    onDeleteItem={removeItem}
+                    onMoveItem={(index, dir) => moveItem(day.items, day.id, index, dir)}
+                    onReorderItems={(ids) => reorderItems.mutate({ dayId: day.id, itemIds: ids })}
+                  />
+                )
+              }}
             />
-          ))}
+          ) : (
+            trip.days.map((day, dayIndex) => (
+              <DaySection
+                key={day.id}
+                day={day}
+                dayIndex={dayIndex}
+                dayCount={trip.days.length}
+                canEdit={canEdit}
+                canDragItems={canEdit && !filtering}
+                match={matchItem}
+                t={t}
+                onAddItem={() => setItemDialog({ open: true, dayId: day.id })}
+                onEditDay={() => setDayDialog({ open: true, day })}
+                onDeleteDay={() => removeDay(day)}
+                onMoveDay={(dir) => moveDay(dayIndex, dir)}
+                onEditItem={(item) => setItemDialog({ open: true, item, dayId: day.id })}
+                onDeleteItem={removeItem}
+                onMoveItem={(index, dir) => moveItem(day.items, day.id, index, dir)}
+                onReorderItems={(ids) => reorderItems.mutate({ dayId: day.id, itemIds: ids })}
+              />
+            ))
+          )}
 
           {/* Unscheduled bucket */}
           {trip.unscheduled.length ? (
@@ -381,23 +418,45 @@ export function TripScreen() {
                   </Button>
                 ) : null}
               </div>
-              <div className="space-y-1.5">
-                {trip.unscheduled.map((item, index) =>
-                  matchItem(item) ? (
+              {canEdit && !filtering && trip.unscheduled.length > 1 ? (
+                <SortableList
+                  items={trip.unscheduled}
+                  onReorder={(ids) => reorderItems.mutate({ dayId: null, itemIds: ids })}
+                  className="space-y-1.5"
+                  itemClassName="rounded-lg bg-card"
+                  renderItem={(item, handle) => (
                     <ItemRow
-                      key={item.id}
                       item={item}
-                      index={index}
+                      index={trip.unscheduled.findIndex((i) => i.id === item.id)}
                       count={trip.unscheduled.length}
                       canEdit={canEdit}
                       t={t}
+                      dragHandle={handle}
                       onEdit={() => setItemDialog({ open: true, item, dayId: null })}
                       onDelete={() => removeItem(item)}
-                      onMove={(dir) => moveItem(trip.unscheduled, null, index, dir)}
+                      onMove={(dir) => moveItem(trip.unscheduled, null, trip.unscheduled.findIndex((i) => i.id === item.id), dir)}
                     />
-                  ) : null,
-                )}
-              </div>
+                  )}
+                />
+              ) : (
+                <div className="space-y-1.5">
+                  {trip.unscheduled.map((item, index) =>
+                    matchItem(item) ? (
+                      <ItemRow
+                        key={item.id}
+                        item={item}
+                        index={index}
+                        count={trip.unscheduled.length}
+                        canEdit={canEdit}
+                        t={t}
+                        onEdit={() => setItemDialog({ open: true, item, dayId: null })}
+                        onDelete={() => removeItem(item)}
+                        onMove={(dir) => moveItem(trip.unscheduled, null, index, dir)}
+                      />
+                    ) : null,
+                  )}
+                </div>
+              )}
             </section>
           ) : null}
 
@@ -577,6 +636,8 @@ function DaySection({
   dayIndex,
   dayCount,
   canEdit,
+  canDragItems,
+  dragHandle,
   match,
   t,
   onAddItem,
@@ -586,11 +647,14 @@ function DaySection({
   onEditItem,
   onDeleteItem,
   onMoveItem,
+  onReorderItems,
 }: {
   day: ItineraryDay
   dayIndex: number
   dayCount: number
   canEdit: boolean
+  canDragItems: boolean
+  dragHandle?: ReactNode
   match: (item: ItineraryItem) => boolean
   t: Tr
   onAddItem: () => void
@@ -598,6 +662,7 @@ function DaySection({
   onDeleteDay: () => void
   onMoveDay: (dir: -1 | 1) => void
   onEditItem: (item: ItineraryItem) => void
+  onReorderItems: (ids: string[]) => void
   onDeleteItem: (item: ItineraryItem) => void
   onMoveItem: (index: number, dir: -1 | 1) => void
 }) {
@@ -613,7 +678,8 @@ function DaySection({
   const rollup = `${day.items.length} ${t('stops', '站')}${costStr ? ' · ' + costStr : ''}`
   return (
     <section className="rounded-xl border border-border bg-card shadow-soft">
-      <div className="flex items-center gap-2.5 border-b border-border px-3 py-2.5 sm:px-4">
+      <div className="group flex items-center gap-2.5 border-b border-border px-3 py-2.5 sm:px-4">
+        {dragHandle}
         <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-muted text-[11px] font-semibold text-brand">
           {dayIndex + 1}
         </span>
@@ -658,6 +724,26 @@ function DaySection({
           <p className="px-2 py-3 text-center text-[12.5px] text-muted-foreground/70">
             {t('No activities yet.', '還沒有活動。')}
           </p>
+        ) : canDragItems ? (
+          <SortableList
+            items={day.items}
+            onReorder={onReorderItems}
+            className="space-y-1.5"
+            itemClassName="rounded-lg bg-card"
+            renderItem={(item, handle) => (
+              <ItemRow
+                item={item}
+                index={day.items.findIndex((i) => i.id === item.id)}
+                count={day.items.length}
+                canEdit={canEdit}
+                t={t}
+                dragHandle={handle}
+                onEdit={() => onEditItem(item)}
+                onDelete={() => onDeleteItem(item)}
+                onMove={(dir) => onMoveItem(day.items.findIndex((i) => i.id === item.id), dir)}
+              />
+            )}
+          />
         ) : day.items.some(match) ? (
           // Render only matching items, but keep the FULL index so reorder is correct.
           day.items.map((item, index) =>
@@ -699,6 +785,7 @@ function ItemRow({
   onEdit,
   onDelete,
   onMove,
+  dragHandle,
 }: {
   item: ItineraryItem
   index: number
@@ -708,6 +795,7 @@ function ItemRow({
   onEdit: () => void
   onDelete: () => void
   onMove: (dir: -1 | 1) => void
+  dragHandle?: ReactNode
 }) {
   const cat = CATEGORY_META[categoryOf(item.category)]
   const st = STATUS_META[statusOf(item.status)]
@@ -728,6 +816,8 @@ function ItemRow({
         aria-hidden
         className={`pointer-events-none absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full ${cat.dot}`}
       />
+
+      {dragHandle ? <div className="-ml-2 flex shrink-0 items-center self-center">{dragHandle}</div> : null}
 
       {/* COLUMN 1 · time / place / people / labels (same two-column logic on mobile) */}
       <div className="w-[5.5rem] shrink-0 space-y-1 sm:w-44">

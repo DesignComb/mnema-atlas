@@ -31,9 +31,10 @@ import {
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
-import { useDecks, useTaskLists } from '@/lib/hooks'
+import { useDecks, useReorderTaskLists, useTaskLists } from '@/lib/hooks'
 import { cn, modKey } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { SortableList } from '@/components/common/SortableList'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -90,6 +91,7 @@ export function AppSidebar({
   const { t, lang, setLang } = useI18n()
   const { data: decks } = useDecks()
   const { data: taskLists } = useTaskLists()
+  const reorderLists = useReorderTaskLists()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
 
@@ -317,29 +319,36 @@ export function AppSidebar({
             <Inbox className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{t('Inbox', '收件匣')}</span>
           </Link>
-          {tempoLists.map((list) => {
-            const active = tempoList === list.id
-            return (
-              <Link
-                key={list.id}
-                to="/tempo"
-                search={(prev) => ({ ...prev, list: list.id })}
-                className={cn(
-                  'group flex items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
-                  active
-                    ? 'bg-sidebar-accent text-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
-                )}
-              >
-                {list.icon ? (
-                  <span className="shrink-0 text-[13px] leading-none">{list.icon}</span>
-                ) : (
-                  <span className="size-1.5 shrink-0 rounded-full bg-brand/50" />
-                )}
-                <span className="truncate">{list.name}</span>
-              </Link>
-            )
-          })}
+          <SortableList
+            items={tempoLists}
+            onReorder={(ids) => reorderLists.mutate(ids)}
+            itemClassName="rounded-md bg-sidebar"
+            renderItem={(list, handle) => {
+              const active = tempoList === list.id
+              return (
+                <div className="group flex items-center">
+                  {handle}
+                  <Link
+                    to="/tempo"
+                    search={(prev) => ({ ...prev, list: list.id })}
+                    className={cn(
+                      'flex min-w-0 flex-1 items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
+                      active
+                        ? 'bg-sidebar-accent text-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+                    )}
+                  >
+                    {list.icon ? (
+                      <span className="shrink-0 text-[13px] leading-none">{list.icon}</span>
+                    ) : (
+                      <span className="size-1.5 shrink-0 rounded-full bg-brand/50" />
+                    )}
+                    <span className="truncate">{list.name}</span>
+                  </Link>
+                </div>
+              )
+            }}
+          />
         </div>
       </ScrollArea>
       </>

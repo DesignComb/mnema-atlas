@@ -810,8 +810,9 @@ export const toolDescriptions = {
   reorder_task_lists: 'Set the order of lists by passing their ids in the desired order.',
   list_task_lists: 'List the user’s task lists.',
   create_task:
-    'Create a todo. Optional: list, parent (subtask), priority (0–4), labels, scheduled/due date+time, duration (for time-blocking), recurrence (RRULE), or make it a habit (kind="habit"). For a habit whose day rolls over at a non-midnight cutoff — e.g. a game daily that resets at 04:00 or 14:00 — set reset_time ("HH:MM", in the task’s tz) so a check-in counts for the right day. Returns the new task id.',
-  create_tasks_bulk: 'Create many tasks in one call (each may carry its own list/labels/schedule/recurrence).',
+    'Create a todo. Optional: list, parent (subtask), priority (0–4), labels, scheduled/due date+time, duration (for time-blocking), recurrence (RRULE), or make it a habit (kind="habit"). For a habit whose day rolls over at a non-midnight cutoff — e.g. a game daily that resets at 04:00 or 14:00 — set reset_time ("HH:MM", in the task’s tz) so a check-in counts for the right day. CATEGORISE IT: if the user didn’t say where it belongs, read the labels already in use (via list_tasks) and reuse one — keep categories COARSE/life-area level (e.g. 遊戲 / 日常 / 學習), not per-item. Propose the best fit and confirm (e.g. "貼上 日常 分類?"); only invent a new category if nothing fits. Returns the new task id.',
+  create_tasks_bulk:
+    'Create many tasks in one call (each may carry its own list/labels/schedule/recurrence). Categorise each the way create_task describes — match the user’s existing lists/labels and confirm the grouping.',
   update_task: 'Update a task’s title, notes, list, priority, labels, due date, or status (only fields you pass change).',
   complete_task:
     'Mark a task done. A recurring task advances to its next occurrence; a habit records today’s check-in and bumps its streak. Pass next_occurrence (computed from the RRULE) to advance precisely.',
