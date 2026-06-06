@@ -6,8 +6,6 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarRange,
-  Check,
-  ChevronsUpDown,
   Coins,
   FileText,
   Flame,
@@ -117,69 +115,30 @@ export function AppSidebar({
 
   return (
     <aside className={cn('h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar', className)}>
-      {/* Brand + space switcher (dropdown) */}
+      {/* Current space — switching now lives in the rail (desktop) / bottom tabs (mobile) */}
       <div className={cn('px-3 pt-3 pb-2', inDrawer && 'pr-12')}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition hover:bg-sidebar-accent">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
-                {space === 'travel' ? (
-                  <MapIcon className="size-4" />
-                ) : space === 'tempo' ? (
-                  <ListTodo className="size-4" />
-                ) : space === 'galleon' ? (
-                  <Coins className="size-4" />
-                ) : (
-                  <BookOpenCheck className="size-4" />
-                )}
-              </span>
-              <span className="min-w-0 flex-1 truncate font-serif text-[16px] font-semibold tracking-tight text-foreground">
-                {space === 'travel'
-                  ? 'Mnema Voyage'
-                  : space === 'tempo'
-                    ? 'Mnema Tempo'
-                    : space === 'galleon'
-                      ? 'Mnema Galleon'
-                      : 'Mnema Atlas'}
-              </span>
-              <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-[14.5rem]">
-            <DropdownMenuItem asChild>
-              <Link to="/today">
-                <BookOpenCheck className="text-brand" />
-                <span className="flex-1">Mnema Atlas</span>
-                <span className="text-[11px] text-muted-foreground">{t('Study', '讀書')}</span>
-                {space === 'study' ? <Check className="ml-1 size-4 text-brand" /> : null}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/trips">
-                <MapIcon className="text-brand" />
-                <span className="flex-1">Mnema Voyage</span>
-                <span className="text-[11px] text-muted-foreground">{t('Voyage', '旅遊')}</span>
-                {space === 'travel' ? <Check className="ml-1 size-4 text-brand" /> : null}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/tempo">
-                <ListTodo className="text-brand" />
-                <span className="flex-1">Mnema Tempo</span>
-                <span className="text-[11px] text-muted-foreground">{t('Tempo', '節奏')}</span>
-                {space === 'tempo' ? <Check className="ml-1 size-4 text-brand" /> : null}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/galleon">
-                <Coins className="text-brand" />
-                <span className="flex-1">Mnema Galleon</span>
-                <span className="text-[11px] text-muted-foreground">{t('Money', '記帳')}</span>
-                {space === 'galleon' ? <Check className="ml-1 size-4 text-brand" /> : null}
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
+            {space === 'travel' ? (
+              <MapIcon className="size-4" />
+            ) : space === 'tempo' ? (
+              <ListTodo className="size-4" />
+            ) : space === 'galleon' ? (
+              <Coins className="size-4" />
+            ) : (
+              <BookOpenCheck className="size-4" />
+            )}
+          </span>
+          <span className="min-w-0 flex-1 truncate font-serif text-[16px] font-semibold tracking-tight text-foreground">
+            {space === 'travel'
+              ? 'Mnema Voyage'
+              : space === 'tempo'
+                ? 'Mnema Tempo'
+                : space === 'galleon'
+                  ? 'Mnema Galleon'
+                  : 'Mnema Atlas'}
+          </span>
+        </div>
       </div>
 
       {/* Search / Cmd-K */}

@@ -7,6 +7,9 @@ import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 import { MobileNavContext } from '@/lib/mobile-nav'
 import { AppSidebar } from './AppSidebar'
+import { SpaceRail } from './SpaceRail'
+import { BottomTabs } from './BottomTabs'
+import { CaptureDialog } from './CaptureDialog'
 import { CommandPalette } from './CommandPalette'
 import { NewDeckDialog } from './NewDeckDialog'
 import { QuickImportDialog } from '@/components/cards/QuickImportDialog'
@@ -16,6 +19,7 @@ export function AppLayout() {
   const [deckOpen, setDeckOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
+  const [captureOpen, setCaptureOpen] = useState(false)
   const navigate = useNavigate()
   const createNote = useCreateNote()
   const t = useT()
@@ -75,8 +79,9 @@ export function AppLayout() {
           pathname.startsWith('/galleon') && 'theme-galleon',
         )}
       >
-        {/* Desktop: persistent sidebar (lg+). */}
-        <AppSidebar className="hidden w-64 lg:flex" {...sidebarProps} />
+        {/* Desktop: far-left space rail (1-tap switch) + the contextual sidebar (lg+). */}
+        <SpaceRail onCapture={() => setCaptureOpen(true)} />
+        <AppSidebar className="hidden w-60 lg:flex" {...sidebarProps} />
 
         {/* Mobile: slide-in drawer + dim overlay (below lg). */}
         <div
@@ -108,10 +113,14 @@ export function AppLayout() {
           </button>
         </div>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-16 lg:pb-0">
           <Outlet />
         </main>
 
+        {/* Mobile: bottom tab bar for the 4 spaces + Capture (below lg). */}
+        <BottomTabs onCapture={() => setCaptureOpen(true)} />
+
+        <CaptureDialog open={captureOpen} onOpenChange={setCaptureOpen} />
         <CommandPalette
           open={cmdOpen}
           onOpenChange={setCmdOpen}
