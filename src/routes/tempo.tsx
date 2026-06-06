@@ -40,6 +40,7 @@ import {
 import { TaskDialog } from '@/components/tempo/TaskDialog'
 import { ListDialog } from '@/components/tempo/ListDialog'
 import { HabitCard } from '@/components/tempo/HabitCard'
+import { HabitCheckButton } from '@/components/tempo/HabitCheckButton'
 import { CalendarView } from '@/components/tempo/CalendarView'
 import { CaptureInbox } from '@/components/tempo/CaptureInbox'
 
@@ -358,19 +359,19 @@ function TaskRowItem({
 
   return (
     <div className="group flex items-start gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
-      <button
-        onClick={onToggle}
-        className="mt-0.5 shrink-0 text-muted-foreground transition hover:text-brand"
-        aria-label={isHabit ? t('Check in', '打卡') : done ? t('Reopen', '重新開啟') : t('Complete', '完成')}
-      >
-        {isHabit ? (
-          <Flame className="size-5 text-orange-500/80" />
-        ) : done ? (
-          <CheckCircle2 className="size-5 text-brand" />
-        ) : (
-          <Circle className="size-5" />
-        )}
-      </button>
+      {isHabit ? (
+        <div className="mt-0.5">
+          <HabitCheckButton habitId={task.id} today={today} iconClassName="size-5" />
+        </div>
+      ) : (
+        <button
+          onClick={onToggle}
+          className="mt-0.5 shrink-0 text-muted-foreground transition hover:text-brand"
+          aria-label={done ? t('Reopen', '重新開啟') : t('Complete', '完成')}
+        >
+          {done ? <CheckCircle2 className="size-5 text-brand" /> : <Circle className="size-5" />}
+        </button>
+      )}
 
       <button onClick={onEdit} className="min-w-0 flex-1 text-left">
         <div className="flex items-center gap-2">

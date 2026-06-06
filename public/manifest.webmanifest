@@ -15,6 +15,29 @@
     "method": "GET",
     "params": { "title": "title", "text": "capture", "url": "link" }
   },
+  "shortcuts": [
+    {
+      "name": "Habits",
+      "short_name": "Habits",
+      "description": "Check in your daily habits",
+      "url": "/tempo?view=habits",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Quick capture",
+      "short_name": "Capture",
+      "description": "Jot something for your AI to file later",
+      "url": "/tempo?view=capture",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Today",
+      "short_name": "Today",
+      "description": "Your day at a glance",
+      "url": "/today",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
     { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },

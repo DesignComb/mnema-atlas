@@ -1,8 +1,10 @@
-import { CheckCircle2, Circle, Flame, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { useCheckIn, useStreak, useUncheckIn } from '@/lib/hooks'
+import { useEffect, useState } from 'react'
+import { CheckCircle2, Flame, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { useStreak } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import type { TaskRow } from '@/lib/database.types'
 import { formatResetTime, shortRecurrenceLabel } from '@/lib/recurrence'
+import { HabitCheckButton } from './HabitCheckButton'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,30 +39,39 @@ export function HabitCard({
 }) {
   const t = useT()
   const { data: streak } = useStreak(habit.id)
-  const checkIn = useCheckIn()
-  const uncheckIn = useUncheckIn()
-
   const done = new Set(streak?.calendar ?? [])
-  const checkedToday = done.has(today)
+  // `shown` mirrors the check button's optimistic state so the card tint + today
+  // cell flip instantly too; it clears once the streak refetches.
+  const [shown, setShown] = useState<boolean | null>(null)
+  const checkedToday = shown ?? done.has(today)
+  useEffect(() => setShown(null), [streak?.calendar])
+
   const current = streak?.current_streak ?? habit.current_streak
   const longest = streak?.longest_streak ?? habit.longest_streak
   // Last 14 days, oldest → newest, for the don't-break-the-chain strip.
   const days = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13))
 
-  function toggle() {
-    if (checkedToday) uncheckIn.mutate({ taskId: habit.id, date: today })
-    else checkIn.mutate({ taskId: habit.id, date: today })
-  }
-
   const recur = shortRecurrenceLabel(habit.recurrence_rule, t)
   const reset = formatResetTime(habit.reset_time)
 
   return (
-    <div className="rounded-xl border border-border bg-card p-3.5 shadow-soft sm:p-4">
+    <div
+      className={`rounded-xl border p-3.5 shadow-soft transition-colors sm:p-4 ${
+        checkedToday ? 'border-brand/40 bg-brand-muted/25' : 'border-border bg-card'
+      }`}
+    >
       <div className="flex items-start justify-between gap-2">
         <button onClick={onEdit} className="min-w-0 flex-1 text-left">
           <p className="truncate font-medium text-foreground">{habit.title}</p>
-          <p className="mt-0.5 flex items-center gap-2 text-[12px] text-muted-foreground">
+          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
+            {checkedToday ? (
+              <>
+                <span className="inline-flex items-center gap-1 font-medium text-brand">
+                  <CheckCircle2 className="size-3.5" /> {t('done today', '今天已完成')}
+                </span>
+                <span>·</span>
+              </>
+            ) : null}
             <span className="inline-flex items-center gap-1 text-orange-500">
               <Flame className="size-3.5" /> {current}
             </span>
@@ -80,17 +91,7 @@ export function HabitCard({
             ) : null}
           </p>
         </button>
-        <button
-          onClick={toggle}
-          className="shrink-0 transition hover:scale-105"
-          aria-label={checkedToday ? t('Undo today', '取消今天') : t('Check in', '打卡')}
-        >
-          {checkedToday ? (
-            <CheckCircle2 className="size-8 text-brand" />
-          ) : (
-            <Circle className="size-8 text-muted-foreground/50 hover:text-brand" />
-          )}
-        </button>
+        <HabitCheckButton habitId={habit.id} today={today} iconClassName="size-8" onChange={setShown} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="shrink-0 rounded p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t('Habit options', '習慣選項')}>
@@ -114,7 +115,7 @@ export function HabitCard({
 
       <div className="mt-3 flex items-end justify-between gap-0.5">
         {days.map((d) => {
-          const on = done.has(d)
+          const on = d === today ? checkedToday : done.has(d)
           const isToday = d === today
           return (
             <div key={d} className="flex flex-1 flex-col items-center gap-1">
