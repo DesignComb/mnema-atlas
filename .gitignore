@@ -51,6 +51,7 @@ test-results/
 playwright-report/
 playwright/.cache/
 .last-run.json
+e2e/.auth/
 
 # wrangler files
 .wrangler
