@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import {
@@ -34,6 +34,8 @@ import {
   useMonthlyTrend,
   useRecordSettlement,
   useRemoveLedgerMember,
+  useReorderAccounts,
+  useReorderCategories,
   useRunDueRecurring,
   useSetBudget,
   useSettlements,
@@ -59,6 +61,7 @@ import { TransactionDialog } from '@/components/galleon/TransactionDialog'
 import { RecurringDialog } from '@/components/galleon/RecurringDialog'
 import { MemberDialog } from '@/components/galleon/MemberDialog'
 import { SplitExpenseDialog } from '@/components/galleon/SplitExpenseDialog'
+import { SortableList } from '@/components/common/SortableList'
 
 type View = 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split'
 const VIEWS: { k: View; en: string; zh: string }[] = [
@@ -240,12 +243,13 @@ export function GalleonScreen() {
           ) : view === 'accounts' ? (
             <Accounts
               ledger={ledger}
+              canEdit={canEdit}
               onNew={() => setAccountDialog({ open: true })}
               onEdit={(account) => setAccountDialog({ open: true, account })}
               t={t}
             />
           ) : view === 'budgets' ? (
-            <Budgets ledger={ledger} t={t} />
+            <Budgets ledger={ledger} canEdit={canEdit} t={t} />
           ) : view === 'reports' ? (
             <Reports ledger={ledger} t={t} />
           ) : view === 'split' ? (
@@ -499,76 +503,109 @@ function TxnRow({ tx, ledger, onEdit, t, withMenu, isSplit }: { tx: TransactionR
   )
 }
 
-function Accounts({ ledger, onNew, onEdit, t }: { ledger: LedgerDetail; onNew: () => void; onEdit: (a: LedgerAccount) => void; t: Tr }) {
+function Accounts({
+  ledger,
+  canEdit,
+  onNew,
+  onEdit,
+  t,
+}: {
+  ledger: LedgerDetail
+  canEdit: boolean
+  onNew: () => void
+  onEdit: (a: LedgerAccount) => void
+  t: Tr
+}) {
   const del = useDeleteAccount()
+  const reorder = useReorderAccounts()
   const accounts = ledger.accounts
   const netWorth = accounts.filter((a) => !a.is_archived).reduce((s, a) => s + Number(a.balance), 0)
+  const renderCard = (a: LedgerAccount, handle?: ReactNode) => (
+    <div className={`group rounded-xl border border-border bg-card p-3.5 shadow-soft ${a.is_archived ? 'opacity-50' : ''}`}>
+      <div className="flex items-start justify-between gap-2">
+        {handle ? <div className="-ml-1.5 -mt-0.5">{handle}</div> : null}
+        <button onClick={() => onEdit(a)} className="min-w-0 flex-1 text-left">
+          <p className="flex items-center gap-1.5 truncate font-medium">
+            {a.icon ? <span>{a.icon}</span> : <Wallet className="size-4 text-muted-foreground" />} {a.name}
+          </p>
+          <p className="text-[12px] text-muted-foreground">{t(...(ACCOUNT_TYPE_LABEL[a.type] ?? ['', '']))}</p>
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t('Options', '選項')}>
+              <MoreHorizontal className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onEdit(a)}>
+              <Pencil /> {t('Edit', '編輯')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive [&_svg]:text-destructive"
+              onSelect={() => {
+                const other = accounts.find((x) => x.id !== a.id && !x.is_archived)
+                const n = a.txn_count ?? 0
+                if (n > 0) {
+                  if (!confirm(t(`Delete “${a.name}”? Its ${n} transaction(s) will lose their account link.`, `刪除「${a.name}」?此帳戶的 ${n} 筆交易將失去帳戶歸屬。`))) return
+                  if (other && confirm(t(`Reassign those ${n} transaction(s) to “${other.name}”? Cancel keeps them unassigned.`, `把這 ${n} 筆交易改派到「${other.name}」?取消則維持無歸屬。`))) {
+                    del.mutate({ id: a.id, reassignTo: other.id })
+                    return
+                  }
+                  del.mutate({ id: a.id })
+                  return
+                }
+                if (confirm(t(`Delete account “${a.name}”?`, `刪除帳戶「${a.name}」?`))) del.mutate({ id: a.id })
+              }}
+            >
+              <Trash2 /> {t('Delete', '刪除')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <p className="mt-2 text-[18px] font-semibold tabular-nums">{fmtMoney(a.balance, a.currency)}</p>
+    </div>
+  )
+  const newBtn = (
+    <button
+      onClick={onNew}
+      className="flex min-h-[3.5rem] w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-[13px] text-muted-foreground transition hover:border-brand/40 hover:text-foreground"
+    >
+      <Plus className="size-4" /> {t('New account', '新增帳戶')}
+    </button>
+  )
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-soft">
         <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">{t('Net worth', '淨資產')}</span>
         <span className="text-[16px] font-semibold tabular-nums">{fmtMoney(netWorth, ledger.base_currency)}</span>
       </div>
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {accounts.map((a) => (
-          <div key={a.id} className={`group rounded-xl border border-border bg-card p-3.5 shadow-soft ${a.is_archived ? 'opacity-50' : ''}`}>
-            <div className="flex items-start justify-between gap-2">
-              <button onClick={() => onEdit(a)} className="min-w-0 flex-1 text-left">
-                <p className="flex items-center gap-1.5 truncate font-medium">
-                  {a.icon ? <span>{a.icon}</span> : <Wallet className="size-4 text-muted-foreground" />} {a.name}
-                </p>
-                <p className="text-[12px] text-muted-foreground">{t(...(ACCOUNT_TYPE_LABEL[a.type] ?? ['', '']))}</p>
-              </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="rounded p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t('Options', '選項')}>
-                    <MoreHorizontal className="size-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => onEdit(a)}>
-                    <Pencil /> {t('Edit', '編輯')}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive [&_svg]:text-destructive"
-                    onSelect={() => {
-                      const other = accounts.find((x) => x.id !== a.id && !x.is_archived)
-                      const n = a.txn_count ?? 0
-                      if (n > 0) {
-                        if (!confirm(t(`Delete “${a.name}”? Its ${n} transaction(s) will lose their account link.`, `刪除「${a.name}」?此帳戶的 ${n} 筆交易將失去帳戶歸屬。`))) return
-                        if (other && confirm(t(`Reassign those ${n} transaction(s) to “${other.name}”? Cancel keeps them unassigned.`, `把這 ${n} 筆交易改派到「${other.name}」?取消則維持無歸屬。`))) {
-                          del.mutate({ id: a.id, reassignTo: other.id })
-                          return
-                        }
-                        del.mutate({ id: a.id })
-                        return
-                      }
-                      if (confirm(t(`Delete account “${a.name}”?`, `刪除帳戶「${a.name}」?`))) del.mutate({ id: a.id })
-                    }}
-                  >
-                    <Trash2 /> {t('Delete', '刪除')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <p className="mt-2 text-[18px] font-semibold tabular-nums">{fmtMoney(a.balance, a.currency)}</p>
-          </div>
-        ))}
-        <button
-          onClick={onNew}
-          className="flex min-h-[5rem] items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-[13px] text-muted-foreground transition hover:border-brand/40 hover:text-foreground"
-        >
-          <Plus className="size-4" /> {t('New account', '新增帳戶')}
-        </button>
-      </div>
+      {canEdit && accounts.length > 1 ? (
+        <div className="space-y-2.5">
+          <SortableList
+            items={accounts}
+            onReorder={(ids) => reorder.mutate({ ledgerId: ledger.id, accountIds: ids })}
+            className="space-y-2.5"
+            renderItem={(a, handle) => renderCard(a, handle)}
+          />
+          {newBtn}
+        </div>
+      ) : (
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          {accounts.map((a) => (
+            <div key={a.id}>{renderCard(a)}</div>
+          ))}
+          {newBtn}
+        </div>
+      )}
     </div>
   )
 }
 
-function Budgets({ ledger, t }: { ledger: LedgerDetail; t: Tr }) {
+function Budgets({ ledger, canEdit, t }: { ledger: LedgerDetail; canEdit: boolean; t: Tr }) {
   const range = monthRange()
   const { data: status } = useBudgetStatus(ledger.id, range.from, range.to)
+  const reorder = useReorderCategories()
   const expenseCats = ledger.categories.filter((c) => c.kind === 'expense')
   const byCat = new Map((status ?? []).map((s) => [s.category_id, s]))
   return (
@@ -577,16 +614,41 @@ function Budgets({ ledger, t }: { ledger: LedgerDetail; t: Tr }) {
         {t('Monthly budgets', '每月預算')} · {range.label}
       </p>
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
-        {expenseCats.map((c) => (
-          <BudgetRow key={c.id} ledgerId={ledger.id} cat={c} status={byCat.get(c.id)} currency={ledger.base_currency} t={t} />
-        ))}
+        {canEdit && expenseCats.length > 1 ? (
+          <SortableList
+            items={expenseCats}
+            onReorder={(ids) => reorder.mutate({ ledgerId: ledger.id, categoryIds: ids })}
+            itemClassName="bg-card"
+            renderItem={(c, handle) => (
+              <BudgetRow ledgerId={ledger.id} cat={c} status={byCat.get(c.id)} currency={ledger.base_currency} t={t} dragHandle={handle} />
+            )}
+          />
+        ) : (
+          expenseCats.map((c) => (
+            <BudgetRow key={c.id} ledgerId={ledger.id} cat={c} status={byCat.get(c.id)} currency={ledger.base_currency} t={t} />
+          ))
+        )}
         {!expenseCats.length ? <p className="px-4 py-6 text-center text-[12.5px] text-muted-foreground/70">{t('No expense categories.', '沒有支出分類。')}</p> : null}
       </div>
     </div>
   )
 }
 
-function BudgetRow({ ledgerId, cat, status, currency, t }: { ledgerId: string; cat: LedgerCategory; status?: BudgetStatusItem; currency: string; t: Tr }) {
+function BudgetRow({
+  ledgerId,
+  cat,
+  status,
+  currency,
+  t,
+  dragHandle,
+}: {
+  ledgerId: string
+  cat: LedgerCategory
+  status?: BudgetStatusItem
+  currency: string
+  t: Tr
+  dragHandle?: ReactNode
+}) {
   const setBudget = useSetBudget()
   const del = useDeleteBudget()
   const limit = status ? Number(status.amount) : 0
@@ -603,8 +665,9 @@ function BudgetRow({ ledgerId, cat, status, currency, t }: { ledgerId: string; c
     if (amt !== limit) setBudget.mutate({ ledger_id: ledgerId, category_id: cat.id, amount: amt })
   }
   return (
-    <div className="border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
+    <div className="group border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
       <div className="flex items-center gap-2">
+        {dragHandle ? <div className="-ml-1.5">{dragHandle}</div> : null}
         <span className="flex-1 truncate text-[14px]">
           {cat.icon ? `${cat.icon} ` : ''}
           {cat.name}

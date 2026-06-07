@@ -121,6 +121,13 @@ export function useCreateDeck() {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.decks }),
   })
 }
+export function useReorderDecks() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: string[]) => api.reorderDecks(ids),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.decks }),
+  })
+}
 
 export function useCreateNote() {
   const qc = useQueryClient()
@@ -714,6 +721,20 @@ export function useUpdateCategory() {
 export function useDeleteCategory() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (id: string) => api.deleteCategory(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function useReorderAccounts() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { ledgerId: string; accountIds: string[] }) => api.reorderAccounts(v.ledgerId, v.accountIds),
+    onSuccess: () => bumpGalleon(qc),
+  })
+}
+export function useReorderCategories() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { ledgerId: string; categoryIds: string[] }) => api.reorderCategories(v.ledgerId, v.categoryIds),
+    onSuccess: () => bumpGalleon(qc),
+  })
 }
 export function useCreateTransaction() {
   const qc = useQueryClient()

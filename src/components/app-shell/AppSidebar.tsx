@@ -31,7 +31,7 @@ import {
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
-import { useDecks, useReorderTaskLists, useTaskLists } from '@/lib/hooks'
+import { useDecks, useReorderDecks, useReorderTaskLists, useTaskLists } from '@/lib/hooks'
 import { cn, modKey } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SortableList } from '@/components/common/SortableList'
@@ -92,6 +92,7 @@ export function AppSidebar({
   const { data: decks } = useDecks()
   const { data: taskLists } = useTaskLists()
   const reorderLists = useReorderTaskLists()
+  const reorderDecks = useReorderDecks()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
 
@@ -248,25 +249,32 @@ export function AppSidebar({
       <ScrollArea className="flex-1 px-3">
         <div className="flex flex-col gap-0.5 pb-4">
           {decks?.length ? (
-            decks.map((deck) => {
-              const active = pathname === `/decks/${deck.id}`
-              return (
-                <Link
-                  key={deck.id}
-                  to="/decks/$deckId"
-                  params={{ deckId: deck.id }}
-                  className={cn(
-                    'group flex items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
-                    active
-                      ? 'bg-sidebar-accent text-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
-                  )}
-                >
-                  <span className="size-1.5 shrink-0 rounded-full bg-brand/50" />
-                  <span className="truncate">{deck.name}</span>
-                </Link>
-              )
-            })
+            <SortableList
+              items={decks}
+              onReorder={(ids) => reorderDecks.mutate(ids)}
+              itemClassName="rounded-md bg-sidebar"
+              renderItem={(deck, handle) => {
+                const active = pathname === `/decks/${deck.id}`
+                return (
+                  <div className="group flex items-center">
+                    {handle}
+                    <Link
+                      to="/decks/$deckId"
+                      params={{ deckId: deck.id }}
+                      className={cn(
+                        'flex min-w-0 flex-1 items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
+                        active
+                          ? 'bg-sidebar-accent text-foreground'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+                      )}
+                    >
+                      <span className="size-1.5 shrink-0 rounded-full bg-brand/50" />
+                      <span className="truncate">{deck.name}</span>
+                    </Link>
+                  </div>
+                )
+              }}
+            />
           ) : (
             <p className="px-2.5 py-2 text-[12.5px] leading-relaxed text-muted-foreground/70">
               {t('No decks yet. Create one, or let a connected AI add content.', '還沒有牌組。建立一個,或讓連接的 AI 幫你新增。')}

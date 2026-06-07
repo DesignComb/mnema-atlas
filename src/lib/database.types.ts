@@ -320,6 +320,7 @@ export type Database = {
           id: string
           name: string
           parent_deck_id: string | null
+          sort_order: number
           updated_at: string
           user_id: string
         }
@@ -329,6 +330,7 @@ export type Database = {
           id?: string
           name: string
           parent_deck_id?: string | null
+          sort_order?: number
           updated_at?: string
           user_id: string
         }
@@ -338,6 +340,7 @@ export type Database = {
           id?: string
           name?: string
           parent_deck_id?: string | null
+          sort_order?: number
           updated_at?: string
           user_id?: string
         }
@@ -2177,6 +2180,7 @@ export type Database = {
           id: string
           name: string
           parent_deck_id: string | null
+          sort_order: number
           updated_at: string
           user_id: string
         }
@@ -3172,6 +3176,18 @@ export type Database = {
         Args: { p_day_id: string; p_item_ids: Json; p_user_id: string | null }
         Returns: boolean
       }
+      reorder_accounts: {
+        Args: { p_account_ids: string[]; p_ledger_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      reorder_categories: {
+        Args: { p_category_ids: string[]; p_ledger_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      reorder_decks: {
+        Args: { p_deck_ids: string[]; p_user_id: string | null }
+        Returns: boolean
+      }
       reorder_task_lists: {
         Args: { p_list_ids: string[]; p_user_id: string | null }
         Returns: boolean
@@ -4066,6 +4082,7 @@ export type Database = {
           id: string
           name: string
           parent_deck_id: string | null
+          sort_order: number
           updated_at: string
           user_id: string
         }

@@ -89,7 +89,14 @@ function unwrap<T>(res: { data: T | null; error: { message: string } | null }): 
 
 // ── Reads (RLS-scoped) ────────────────────────────────────────────
 export async function listDecks(): Promise<DeckRow[]> {
-  return unwrap(await supabase.from('decks').select('*').order('name', { ascending: true }))
+  return unwrap(
+    await supabase.from('decks').select('*').order('sort_order', { ascending: true }).order('name', { ascending: true }),
+  )
+}
+
+export async function reorderDecks(deckIds: string[]): Promise<void> {
+  const res = await supabase.rpc('reorder_decks', { p_user_id: null, p_deck_ids: deckIds })
+  if (res.error) throw new Error(res.error.message)
 }
 
 export async function listNotes(deckId?: string): Promise<NoteRow[]> {
@@ -1288,6 +1295,10 @@ export async function deleteAccount(id: string, reassignTo?: string): Promise<vo
   const res = await supabase.rpc('delete_account', { p_user_id: null, p_account_id: id, p_reassign_to_account_id: reassignTo ?? undefined })
   if (res.error) throw new Error(res.error.message)
 }
+export async function reorderAccounts(ledgerId: string, accountIds: string[]): Promise<void> {
+  const res = await supabase.rpc('reorder_accounts', { p_user_id: null, p_ledger_id: ledgerId, p_account_ids: accountIds })
+  if (res.error) throw new Error(res.error.message)
+}
 
 // ── Category writes ──
 export async function createCategory(input: CreateCategoryInput): Promise<CategoryRow> {
@@ -1321,6 +1332,10 @@ export async function updateCategory(input: UpdateCategoryInput): Promise<Catego
 }
 export async function deleteCategory(id: string): Promise<void> {
   const res = await supabase.rpc('delete_category', { p_user_id: null, p_category_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function reorderCategories(ledgerId: string, categoryIds: string[]): Promise<void> {
+  const res = await supabase.rpc('reorder_categories', { p_user_id: null, p_ledger_id: ledgerId, p_category_ids: categoryIds })
   if (res.error) throw new Error(res.error.message)
 }
 
