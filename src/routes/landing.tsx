@@ -1,4 +1,5 @@
 import { type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import {
@@ -26,6 +27,7 @@ import stepConnect from '@/assets/lottie/step-connect.json'
 import stepAsk from '@/assets/lottie/step-ask.json'
 import flowLink from '@/assets/lottie/flow-link.json'
 import { FAQ_ITEMS, FaqAccordion } from '@/components/public/faq-data'
+import { NativeLogin } from '@/components/NativeLogin'
 
 /* The three current spaces each own a hue in src/index.css. On the landing we
    ration them to a single dot per card so colour stays a whisper, never a
@@ -49,6 +51,12 @@ const heroItem = {
 }
 
 export function LandingScreen() {
+  // Inside the native app the marketing page is dead weight — go straight to sign-in.
+  if (Capacitor.isNativePlatform()) return <NativeLogin />
+  return <LandingMarketing />
+}
+
+function LandingMarketing() {
   const t = useT()
   const { google, busy } = useGoogleSignIn()
 
