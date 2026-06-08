@@ -21,6 +21,14 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    // Self-hosted OTA (Capgo manual mode): the app checks our Supabase Storage
+    // manifest and, on the user's tap, downloads + swaps the web bundle. No cloud
+    // account — see src/lib/ota.ts + scripts/ota-publish.mjs. autoUpdate off so
+    // updates only apply when the user opts in; notifyAppReady() guards rollback.
+    CapacitorUpdater: {
+      autoUpdate: false,
+      appReadyTimeout: 10000,
+    },
   },
 }
 

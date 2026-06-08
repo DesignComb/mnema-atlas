@@ -10,3 +10,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** Build version (YYYYMMDDHHmm) baked in by scripts/_build-web.mjs; "dev" locally. */
+declare const __BUILD_VERSION__: string

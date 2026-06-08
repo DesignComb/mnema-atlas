@@ -10,6 +10,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { queryClient } from '@/lib/queryClient'
 import { router } from '@/router'
 import { WidgetSync } from '@/components/WidgetSync'
+import { OtaUpdater } from '@/components/OtaUpdater'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
             <TooltipProvider delayDuration={200}>
               <RouterProvider router={router} />
               <WidgetSync />
+              <OtaUpdater />
               <Toaster position="bottom-right" toastOptions={{ className: 'font-sans' }} richColors />
             </TooltipProvider>
           </AuthProvider>
