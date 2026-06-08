@@ -60,3 +60,6 @@ e2e/.auth/
 
 # Claude Code local settings — may contain tokens. NEVER commit.
 .claude/settings.local.json
+
+# Capacitor native project — never ship stray local Claude settings inside it
+android/.claude/

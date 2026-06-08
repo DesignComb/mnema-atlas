@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mnema</string>
+    <string name="title_activity_main">Mnema</string>
+    <string name="package_name">tw.dco.mnema</string>
+    <string name="custom_url_scheme">tw.dco.mnema</string>
+</resources>

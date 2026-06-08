@@ -29,7 +29,11 @@ createRoot(document.getElementById('root')!).render(
 )
 
 // Register the PWA service worker (production only — avoids dev caching pain).
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+// Skipped inside the Capacitor native shell: the app is served from bundled
+// assets, so the web SW would only add a stale-cache layer and isn't needed for
+// install/push (native uses its own plugins). Capacitor injects a global flag.
+const isNative = Boolean((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.())
+if (import.meta.env.PROD && !isNative && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {})
   })
