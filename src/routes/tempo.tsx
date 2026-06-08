@@ -99,6 +99,15 @@ export function TempoScreen() {
   const delList = useDeleteTaskList()
   const reorder = useReorderTasks()
 
+  // Re-render each minute so a habit's day rolls over live at its reset_time —
+  // e.g. a 14:00 reset flips the card back to unchecked the moment it passes,
+  // without a manual reload (habitTodayISO is otherwise computed once per render).
+  const [, setMinuteTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setMinuteTick((n) => n + 1), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   const activeLists = (lists ?? []).filter((l) => !l.is_archived)
   const labelSuggestions = Array.from(new Set((tasks ?? []).flatMap((x) => x.labels ?? [])))
   const today = localToday()
