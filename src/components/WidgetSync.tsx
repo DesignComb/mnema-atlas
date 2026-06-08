@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { App as CapApp } from '@capacitor/app'
 import { useAuth } from '@/lib/auth'
 import { useTasks } from '@/lib/hooks'
-import { pushTodayWidget, type TodaySnapshot } from '@/lib/widget'
+import { router } from '@/router'
+import { pushTodayWidget, pushWidgetAuth, type TodaySnapshot } from '@/lib/widget'
 
 /** Local YYYY-MM-DD — mirrors localToday() in routes/tempo.tsx. */
 function localToday(): string {
@@ -17,20 +19,37 @@ function cmpDate(a: string | null, b: string | null): number {
 }
 
 /**
- * Keeps the Android home-screen widget's "today" snapshot in sync with the
- * user's open tasks. Renders nothing. Only does work in the native shell while
- * signed in — on web (and signed-out) it's a no-op, so it never fetches.
+ * Keeps the Android home-screen widget in sync: today's task snapshot, the auth
+ * blob it needs to complete a task live, and the quick-add deep link. Renders
+ * nothing. Native + signed-in only — a no-op on web and signed out.
  */
 export function WidgetSync() {
   const { session } = useAuth()
   if (!Capacitor.isNativePlatform() || !session) return null
-  return <WidgetSyncInner />
+  return <WidgetSyncInner token={session.access_token} />
 }
 
-function WidgetSyncInner() {
+function WidgetSyncInner({ token }: { token: string }) {
   // Shares the query cache with the Tempo screen (same key) — no extra fetch there.
   const { data: tasks } = useTasks({ status: 'todo', limit: 500 })
   const lastRef = useRef('')
+
+  // Give the widget the current access token (refreshed while the app is open).
+  useEffect(() => {
+    void pushWidgetAuth(token)
+  }, [token])
+
+  // The widget's "+" opens tw.dco.mnema://add — land on the Tempo add screen.
+  useEffect(() => {
+    const handle = CapApp.addListener('appUrlOpen', ({ url }) => {
+      if (url.startsWith('tw.dco.mnema://add')) {
+        void router.navigate({ to: '/tempo' })
+      }
+    })
+    return () => {
+      handle.then((h) => h.remove()).catch(() => {})
+    }
+  }, [])
 
   useEffect(() => {
     if (!tasks) return
@@ -48,10 +67,9 @@ function WidgetSyncInner() {
     const snap: TodaySnapshot = {
       date: today,
       count: todays.length,
-      items: todays.slice(0, 5).map((t) => ({ title: t.title, sub: sub(t) })),
+      items: todays.slice(0, 5).map((t) => ({ id: t.id, title: t.title, sub: sub(t) })),
     }
 
-    // Skip redundant writes (react-query refetches return fresh arrays often).
     const key = JSON.stringify(snap)
     if (key === lastRef.current) return
     lastRef.current = key

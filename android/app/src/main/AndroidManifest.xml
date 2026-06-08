@@ -31,6 +31,14 @@
                 <data android:scheme="tw.dco.mnema" android:host="login-callback" />
             </intent-filter>
 
+            <!-- Quick-add deep link from the widget's "+" → lands on the Tempo add screen. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tw.dco.mnema" android:host="add" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -55,6 +63,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/today_widget_info" />
         </receiver>
+
+        <!-- Handles widget checkbox taps → completes the task against Supabase. -->
+        <receiver
+            android:name=".TaskActionReceiver"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->

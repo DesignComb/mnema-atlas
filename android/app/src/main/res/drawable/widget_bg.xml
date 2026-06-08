@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Dark "glass" card: deep slate at ~90% alpha so the wallpaper faintly shows,
+     with a hairline light edge. RemoteViews can't blur the wallpaper, so the
+     translucency + edge is what sells the glass feel. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#FDFDFB" />
-    <corners android:radius="22dp" />
-    <stroke android:width="1dp" android:color="#1A2A2A28" />
+    <solid android:color="#E6191A22" />
+    <corners android:radius="26dp" />
+    <stroke android:width="1dp" android:color="#26FFFFFF" />
 </shape>
