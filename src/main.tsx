@@ -9,6 +9,7 @@ import { I18nProvider } from '@/lib/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { queryClient } from '@/lib/queryClient'
 import { router } from '@/router'
+import { WidgetSync } from '@/components/WidgetSync'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <TooltipProvider delayDuration={200}>
               <RouterProvider router={router} />
+              <WidgetSync />
               <Toaster position="bottom-right" toastOptions={{ className: 'font-sans' }} richColors />
             </TooltipProvider>
           </AuthProvider>

@@ -4,4 +4,5 @@
     <string name="title_activity_main">Mnema</string>
     <string name="package_name">tw.dco.mnema</string>
     <string name="custom_url_scheme">tw.dco.mnema</string>
+    <string name="widget_today_desc">今日待辦</string>
 </resources>
