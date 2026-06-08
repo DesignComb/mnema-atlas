@@ -6,10 +6,12 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarRange,
+  ChefHat,
   Coins,
   FileText,
   Flame,
   GraduationCap,
+  HeartPulse,
   HelpCircle,
   Home,
   Inbox,
@@ -27,7 +29,9 @@ import {
   Sun,
   Ticket,
   Wallet,
+  type LucideIcon,
 } from 'lucide-react'
+import { activeSpace, type SpaceKey } from './spaces'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
@@ -54,6 +58,20 @@ const NAV_STUDY = [
 const NAV_TRAVEL = [{ to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false }] as const
 const NAV_TEMPO = [{ to: '/tempo', label: 'Tasks', zh: '任務', icon: ListTodo, exact: false }] as const
 const NAV_GALLEON = [{ to: '/galleon', label: 'Money', zh: '記帳', icon: Coins, exact: false }] as const
+const NAV_HEALTH = [{ to: '/health', label: 'Health', zh: '健康', icon: HeartPulse, exact: false }] as const
+const NAV_KITCHEN = [{ to: '/kitchen', label: 'Kitchen', zh: '廚房', icon: ChefHat, exact: false }] as const
+
+type NavItem = { to: string; label: string; zh: string; icon: LucideIcon; exact: boolean }
+/** Per-space sidebar header + primary nav. A Record<SpaceKey, …> so adding a
+ *  space to spaces.ts forces a matching entry here (no silent mislabel). */
+const SPACE_SIDEBAR: Record<SpaceKey, { brandIcon: LucideIcon; brandTitle: string; nav: readonly NavItem[] }> = {
+  study: { brandIcon: BookOpenCheck, brandTitle: 'Mnema Atlas', nav: NAV_STUDY },
+  travel: { brandIcon: MapIcon, brandTitle: 'Mnema Voyage', nav: NAV_TRAVEL },
+  tempo: { brandIcon: ListTodo, brandTitle: 'Mnema Tempo', nav: NAV_TEMPO },
+  galleon: { brandIcon: Coins, brandTitle: 'Mnema Galleon', nav: NAV_GALLEON },
+  health: { brandIcon: HeartPulse, brandTitle: 'Mnema Vitals', nav: NAV_HEALTH },
+  kitchen: { brandIcon: ChefHat, brandTitle: 'Mnema Kitchen', nav: NAV_KITCHEN },
+}
 // In the Tempo space the rail shows views (by ?view=) + the user's lists (by ?list=).
 const TEMPO_VIEWS = [
   { key: 'today', en: 'Today', zh: '今天', icon: CalendarCheck },
@@ -96,16 +114,9 @@ export function AppSidebar({
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
 
-  // Top-level space: Study / Travel / Tempo / Galleon. The pathname flips the rail.
-  const space: 'study' | 'travel' | 'tempo' | 'galleon' = pathname.startsWith('/trips')
-    ? 'travel'
-    : pathname.startsWith('/tempo')
-      ? 'tempo'
-      : pathname.startsWith('/galleon')
-        ? 'galleon'
-        : 'study'
-  const nav =
-    space === 'travel' ? NAV_TRAVEL : space === 'tempo' ? NAV_TEMPO : space === 'galleon' ? NAV_GALLEON : NAV_STUDY
+  // Top-level space — the pathname flips the rail. Single source of truth in spaces.ts.
+  const space = activeSpace(pathname)
+  const { brandIcon: BrandIcon, brandTitle, nav } = SPACE_SIDEBAR[space]
   // On a trip detail page the rail shows that trip's sections instead of the Trips link.
   const tripMatch = pathname.match(/^\/trips\/([0-9a-fA-F-]{36})$/)
   const tripId = tripMatch ? tripMatch[1] : null
@@ -122,24 +133,10 @@ export function AppSidebar({
       <div className={cn('px-3 pt-3 pb-2', inDrawer && 'pr-12')}>
         <div className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
-            {space === 'travel' ? (
-              <MapIcon className="size-4" />
-            ) : space === 'tempo' ? (
-              <ListTodo className="size-4" />
-            ) : space === 'galleon' ? (
-              <Coins className="size-4" />
-            ) : (
-              <BookOpenCheck className="size-4" />
-            )}
+            <BrandIcon className="size-4" />
           </span>
           <span className="min-w-0 flex-1 truncate font-serif text-[16px] font-semibold tracking-tight text-foreground">
-            {space === 'travel'
-              ? 'Mnema Voyage'
-              : space === 'tempo'
-                ? 'Mnema Tempo'
-                : space === 'galleon'
-                  ? 'Mnema Galleon'
-                  : 'Mnema Atlas'}
+            {brandTitle}
           </span>
         </div>
       </div>

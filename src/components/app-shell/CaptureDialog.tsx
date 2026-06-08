@@ -63,7 +63,7 @@ export function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               void save()
             }
           }}
-          placeholder={t('原神 深淵 6/16 · buy coffee beans · ask Alex about the weekend…', '原神 深淵 6/16 · 買咖啡豆 · 問 Alex 週末…')}
+          placeholder={t('buy milk · book a dentist appointment · gym at 19:00…', '買牛奶 · 預約看牙 · 19:00 健身…')}
         />
         <DialogFooter>
           <Link

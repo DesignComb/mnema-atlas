@@ -187,6 +187,36 @@
   --ring: oklch(0.72 0.12 84);
 }
 
+/* Vitals (health) space — a calm wellness green, distinct from every other hue
+   (study blue 250, voyage teal 195, tempo violet 300, galleon gold 83). */
+.theme-health {
+  --brand: oklch(0.58 0.12 150);
+  --brand-foreground: oklch(0.99 0.003 95);
+  --brand-muted: oklch(0.94 0.04 150);
+  --ring: oklch(0.6 0.1 150);
+}
+.dark .theme-health {
+  --brand: oklch(0.72 0.13 150);
+  --brand-foreground: oklch(0.2 0.02 150);
+  --brand-muted: oklch(0.33 0.06 150);
+  --ring: oklch(0.64 0.12 150);
+}
+
+/* Kitchen space — a warm terracotta/orange (hue 50), the colour of cooking;
+   kept clear of galleon's gold (83) and the destructive red (24). */
+.theme-kitchen {
+  --brand: oklch(0.64 0.14 50);
+  --brand-foreground: oklch(0.99 0.003 95);
+  --brand-muted: oklch(0.94 0.05 55);
+  --ring: oklch(0.66 0.12 50);
+}
+.dark .theme-kitchen {
+  --brand: oklch(0.74 0.14 52);
+  --brand-foreground: oklch(0.22 0.04 50);
+  --brand-muted: oklch(0.36 0.07 52);
+  --ring: oklch(0.68 0.12 52);
+}
+
 @layer base {
   * {
     border-color: var(--border);

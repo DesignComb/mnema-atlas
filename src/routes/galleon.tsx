@@ -10,6 +10,7 @@ import {
   Coins,
   HandCoins,
   MoreHorizontal,
+  CalendarClock,
   Pencil,
   Plus,
   Repeat,
@@ -40,12 +41,16 @@ import {
   useSetBudget,
   useSettlements,
   useSplitTxnIds,
+  useSubscriptions,
+  useDeleteSubscription,
+  usePostDueSubscriptions,
 } from '@/lib/hooks'
 import { useI18n, useT } from '@/lib/i18n'
 import type { BudgetStatusItem, LedgerAccount, LedgerCategory, LedgerDetail, MemberBalanceItem } from '@/lib/api'
-import type { TransactionRow } from '@/lib/database.types'
+import type { TransactionRow, SubscriptionRow } from '@/lib/database.types'
 import { settleUp } from '@shared/settle'
 import { ACCOUNT_TYPE_LABEL, addMonths, fmtLedgerDate, fmtMoney, monthRange } from '@/lib/money'
+import { shortRecurrenceLabel } from '@/lib/recurrence'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import {
@@ -61,13 +66,15 @@ import { TransactionDialog } from '@/components/galleon/TransactionDialog'
 import { RecurringDialog } from '@/components/galleon/RecurringDialog'
 import { MemberDialog } from '@/components/galleon/MemberDialog'
 import { SplitExpenseDialog } from '@/components/galleon/SplitExpenseDialog'
+import { SubscriptionDialog } from '@/components/galleon/SubscriptionDialog'
 import { SortableList } from '@/components/common/SortableList'
 
-type View = 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split'
+type View = 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split' | 'subscriptions'
 const VIEWS: { k: View; en: string; zh: string }[] = [
   { k: 'overview', en: 'Overview', zh: '總覽' },
   { k: 'transactions', en: 'Transactions', zh: '交易' },
   { k: 'split', en: 'Split', zh: '分帳' },
+  { k: 'subscriptions', en: 'Subscriptions', zh: '訂閱' },
   { k: 'accounts', en: 'Accounts', zh: '帳戶' },
   { k: 'budgets', en: 'Budgets', zh: '預算' },
   { k: 'reports', en: 'Reports', zh: '報表' },
@@ -95,11 +102,16 @@ export function GalleonScreen() {
   const [recurringDialog, setRecurringDialog] = useState(false)
   const [memberDialog, setMemberDialog] = useState<{ open: boolean; member?: MemberBalanceItem }>({ open: false })
   const [splitDialog, setSplitDialog] = useState(false)
+  const [subDialog, setSubDialog] = useState<{ open: boolean; subscription?: SubscriptionRow }>({ open: false })
   const runDue = useRunDueRecurring()
+  const postSubs = usePostDueSubscriptions()
 
-  // Post any due recurring transactions when a ledger is opened (idempotent).
+  // Post any due recurring transactions + subscriptions when a ledger opens (idempotent).
   useEffect(() => {
-    if (ledgerId) runDue.mutate(ledgerId)
+    if (ledgerId) {
+      runDue.mutate(ledgerId)
+      postSubs.mutate(ledgerId)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ledgerId])
 
@@ -261,6 +273,14 @@ export function GalleonScreen() {
               onAddSplit={() => setSplitDialog(true)}
               t={t}
             />
+          ) : view === 'subscriptions' ? (
+            <Subscriptions
+              ledger={ledger}
+              canEdit={canEdit}
+              onNew={() => setSubDialog({ open: true })}
+              onEdit={(subscription) => setSubDialog({ open: true, subscription })}
+              t={t}
+            />
           ) : (
             <Transactions ledger={ledger} onEditTxn={(txn) => setTxnDialog({ open: true, txn })} t={t} />
           )}
@@ -297,6 +317,12 @@ export function GalleonScreen() {
             member={memberDialog.member}
           />
           <SplitExpenseDialog open={splitDialog} onOpenChange={setSplitDialog} ledger={ledger} members={balancesForDialog} />
+          <SubscriptionDialog
+            open={subDialog.open}
+            onOpenChange={(o) => setSubDialog((s) => ({ ...s, open: o }))}
+            ledger={ledger}
+            subscription={subDialog.subscription}
+          />
         </>
       ) : null}
     </>
@@ -948,6 +974,91 @@ function Split({
           ))}
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function Subscriptions({
+  ledger,
+  canEdit,
+  onNew,
+  onEdit,
+  t,
+}: {
+  ledger: LedgerDetail
+  canEdit: boolean
+  onNew: () => void
+  onEdit: (s: SubscriptionRow) => void
+  t: Tr
+}) {
+  const { lang } = useI18n()
+  const { data: subs = [] } = useSubscriptions(ledger.id)
+  const del = useDeleteSubscription()
+
+  // Rough monthly cost across active subs (yearly /12, weekly ×52/12).
+  const monthly = subs
+    .filter((s) => s.is_active)
+    .reduce((sum, s) => {
+      const rule = s.recurrence_rule.toUpperCase()
+      const f = rule.includes('YEARLY') ? Number(s.amount) / 12 : rule.includes('WEEKLY') ? (Number(s.amount) * 52) / 12 : Number(s.amount)
+      return sum + f
+    }, 0)
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  function daysUntil(d: string): number {
+    return Math.round((new Date(d).getTime() - new Date(todayStr).getTime()) / 86_400_000)
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[13px] text-muted-foreground">{t('Est. monthly', '預估每月')}</p>
+          <p className="text-xl font-semibold tabular-nums text-foreground">{fmtMoney(monthly, ledger.base_currency)}</p>
+        </div>
+        {canEdit ? (
+          <Button variant="brand" size="sm" onClick={onNew}>
+            <Plus className="size-4" /> {t('Subscription', '訂閱')}
+          </Button>
+        ) : null}
+      </div>
+
+      {subs.length ? (
+        <div className="space-y-1.5">
+          {subs.map((s) => {
+            const dleft = daysUntil(s.renewal_date)
+            const soon = s.is_active && dleft >= 0 && dleft <= s.cancel_reminder_days
+            return (
+              <div key={s.id} className="group flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
+                <CalendarClock className={`size-4 shrink-0 ${s.is_active ? 'text-brand' : 'text-muted-foreground/50'}`} />
+                <button onClick={() => canEdit && onEdit(s)} className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[13.5px] font-medium text-foreground">
+                    {s.name}
+                    {!s.is_active ? <span className="ml-2 text-[11px] text-muted-foreground">{t('paused', '已暫停')}</span> : null}
+                  </p>
+                  <p className="truncate text-[12px] text-muted-foreground">
+                    {shortRecurrenceLabel(s.recurrence_rule, t)} · {t('renews', '續訂')} {fmtLedgerDate(s.renewal_date, lang)}
+                    {soon ? <span className="ml-1 text-brand">· {t(`in ${dleft}d`, `還有 ${dleft} 天`)}</span> : null}
+                  </p>
+                </button>
+                <span className="shrink-0 text-[13px] font-medium tabular-nums text-foreground">{fmtMoney(Number(s.amount), s.currency)}</span>
+                {canEdit ? (
+                  <button onClick={() => del.mutate(s.id)} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-destructive group-hover:opacity-100" aria-label={t('Delete', '刪除')}>
+                    <Trash2 className="size-4" />
+                  </button>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          icon={<CalendarClock className="size-5" />}
+          title={t('No subscriptions yet', '還沒有訂閱')}
+          description={t('Track recurring services — they auto-post an expense on each renewal.', '追蹤定期服務 —— 每次續訂會自動記一筆支出。')}
+          action={canEdit ? <Button variant="brand" size="sm" onClick={onNew}><Plus className="size-4" /> {t('New subscription', '新增訂閱')}</Button> : undefined}
+        />
+      )}
     </div>
   )
 }

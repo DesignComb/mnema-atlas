@@ -1,12 +1,14 @@
-import type { ReactNode } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link, useSearch } from '@tanstack/react-router'
 import { motion } from 'motion/react'
-import { ArrowRight, FilePlus2, FileText, GraduationCap, Layers, Sparkles } from 'lucide-react'
-import { useDecks, useDueCards, useNewNote, useNotes, useSeedSample } from '@/lib/hooks'
+import { ArrowRight, FilePlus2, FileText, GraduationCap, Layers, NotebookPen, Sparkles } from 'lucide-react'
+import { useDecks, useDueCards, useJournalEntries, useNewNote, useNotes, useSeedSample } from '@/lib/hooks'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
 import { fmtLocalDate, modKey, relativeDue } from '@/lib/utils'
+import { localTodayISO, MOOD_FACES } from '@/lib/health'
+import { JournalDialog } from '@/components/health/JournalDialog'
 
 export function HomeScreen() {
   const { t, lang } = useI18n()
@@ -15,16 +17,69 @@ export function HomeScreen() {
   const { data: decks } = useDecks()
   const seed = useSeedSample()
   const newNote = useNewNote()
+  const search = useSearch({ strict: false }) as { review?: string }
 
   const dueCount = due?.length ?? 0
   const isNew = (decks?.length ?? 0) === 0 && (notes?.length ?? 0) === 0
   const today = fmtLocalDate(new Date(), lang, { weekday: 'long', month: 'long', day: 'numeric' })
+
+  // End-of-day review card: nudge to journal when today has no entry (and offer
+  // to back-fill yesterday — the catch-up). The push deep-links with ?review=1.
+  const todayISO = localTodayISO()
+  const { data: recentJournal = [] } = useJournalEntries()
+  const todayEntry = recentJournal.find((j) => j.entry_date === todayISO)
+  const yIso = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })()
+  const missedYesterday = !recentJournal.some((j) => j.entry_date === yIso)
+  const [journalDialog, setJournalDialog] = useState<{ open: boolean; date?: string }>({ open: false })
+
+  // Open the journal automatically when arrived from the review push.
+  useEffect(() => {
+    if (search.review && !todayEntry) setJournalDialog({ open: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.review])
 
   return (
     <>
       <PageHeader title={t('Today', '今天')} subtitle={today} />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
+          {!todayEntry ? (
+            <section className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
+              <span className="text-2xl">📝</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">{t('How was today?', '今天如何?')}</p>
+                <p className="truncate text-[13px] text-muted-foreground">
+                  {t('Log your mood and a few words about today.', '記下今天的心情與幾句話。')}
+                  {missedYesterday ? (
+                    <>
+                      {' · '}
+                      <button onClick={() => setJournalDialog({ open: true, date: yIso })} className="font-medium text-brand hover:underline">
+                        {t('back-fill yesterday', '補記昨天')}
+                      </button>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+              <Button variant="brand" size="sm" onClick={() => setJournalDialog({ open: true })}>
+                <NotebookPen className="size-4" /> {t('Reflect', '回顧')}
+              </Button>
+            </section>
+          ) : (
+            <section className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
+              <span className="text-2xl">{todayEntry.mood ? MOOD_FACES[todayEntry.mood - 1] : '🌿'}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">{t('Today logged', '今天已記錄')}</p>
+                <p className="truncate text-[13px] text-muted-foreground">{todayEntry.body || t('Tap to add more', '點一下補充')}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setJournalDialog({ open: true })}>
+                {t('Edit', '編輯')}
+              </Button>
+            </section>
+          )}
           {isNew ? (
             <motion.section
               initial={{ opacity: 0, y: 10 }}
@@ -127,6 +182,13 @@ export function HomeScreen() {
           </section>
         </div>
       </div>
+
+      <JournalDialog
+        open={journalDialog.open}
+        onOpenChange={(v) => setJournalDialog((s) => ({ ...s, open: v }))}
+        entry={(journalDialog.date ?? todayISO) === todayISO ? todayEntry : recentJournal.find((j) => j.entry_date === journalDialog.date)}
+        defaultDate={journalDialog.date ?? todayISO}
+      />
     </>
   )
 }

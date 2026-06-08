@@ -47,6 +47,26 @@ import type {
 } from '@shared/schemas'
 import type { CaptureRow, TaskListRow, TaskReminderRow, TaskRow } from './database.types'
 import type {
+  SetHealthSettingsInput,
+  LogHealthInput,
+  UpdateHealthLogInput,
+  SetJournalEntryInput,
+  CreateMedicationInput,
+  UpdateMedicationInput,
+  HealthLogKind,
+} from '@shared/schemas'
+import type { HealthSettingsRow, HealthLogRow, JournalEntryRow, MedicationRow, ReviewPrefsRow } from './database.types'
+import type {
+  CreateRecipeInput,
+  UpdateRecipeInput,
+  AddPantryItemInput,
+  UpdatePantryItemInput,
+  AddShoppingItemsInput,
+  UpdateShoppingItemInput,
+  SetMealPlanInput,
+} from '@shared/schemas'
+import type { RecipeRow, PantryItemRow, ShoppingItemRow, MealPlanRow } from './database.types'
+import type {
   AccountRow,
   BudgetRow,
   CategoryRow,
@@ -71,7 +91,9 @@ import type {
   UpdateCategoryInput,
   UpdateLedgerInput,
   UpdateTransactionInput,
+  SetSubscriptionInput,
 } from '@shared/schemas'
+import type { SubscriptionRow } from './database.types'
 
 /**
  * Thin typed wrappers over the shared SECURITY DEFINER RPCs and RLS-protected
@@ -1106,6 +1128,17 @@ export async function removeReminder(reminderId: string): Promise<void> {
   const res = await supabase.rpc('remove_reminder', { p_user_id: null, p_reminder_id: reminderId })
   if (res.error) throw new Error(res.error.message)
 }
+export async function setTaskUrl(taskId: string, url: string): Promise<TaskRow> {
+  return unwrap(await supabase.rpc('set_task_url', { p_user_id: null, p_task_id: taskId, p_url: url }))
+}
+
+// ── Daily review (end-of-day) ──
+export async function getReviewPrefs(): Promise<ReviewPrefsRow | null> {
+  return unwrap(await supabase.from('review_prefs').select('*').maybeSingle())
+}
+export async function setReviewPrefs(isEnabled: boolean): Promise<ReviewPrefsRow> {
+  return unwrap(await supabase.rpc('set_review_prefs', { p_user_id: null, p_is_enabled: isEnabled }))
+}
 
 // ── Captures (quick-capture inbox / 暫存區) ──
 export type CaptureStatus = 'pending' | 'processed' | 'dismissed'
@@ -1142,6 +1175,285 @@ export async function reopenCapture(captureId: string): Promise<CaptureRow> {
 }
 export async function deleteCapture(captureId: string): Promise<void> {
   const res = await supabase.rpc('delete_capture', { p_user_id: null, p_capture_id: captureId })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ════════════════════ Mnema Vitals (health) ════════════════════
+export interface HealthLogFilters {
+  kind?: HealthLogKind
+  from?: string
+  to?: string
+  limit?: number
+}
+
+export async function getHealthSettings(): Promise<HealthSettingsRow | null> {
+  return unwrap(await supabase.from('health_settings').select('*').maybeSingle())
+}
+export async function setHealthSettings(input: SetHealthSettingsInput): Promise<HealthSettingsRow> {
+  return unwrap(
+    await supabase.rpc('set_health_settings', {
+      p_user_id: null,
+      p_enabled_modules: input.enabled_modules ?? undefined,
+      p_weight_unit: input.weight_unit ?? undefined,
+    }),
+  )
+}
+
+export async function listHealthLogs(filters: HealthLogFilters = {}): Promise<HealthLogRow[]> {
+  let q = supabase.from('health_logs').select('*').order('logged_at', { ascending: false })
+  if (filters.kind) q = q.eq('kind', filters.kind)
+  if (filters.from) q = q.gte('logged_date', filters.from)
+  if (filters.to) q = q.lte('logged_date', filters.to)
+  q = q.limit(filters.limit ?? 500)
+  return unwrap(await q)
+}
+export async function logHealth(input: LogHealthInput): Promise<HealthLogRow> {
+  return unwrap(
+    await supabase.rpc('log_health', {
+      p_user_id: null,
+      p_kind: input.kind,
+      p_value: input.value ?? undefined,
+      p_value2: input.value2 ?? undefined,
+      p_unit: input.unit ?? undefined,
+      p_text_value: input.text_value ?? undefined,
+      p_meta: (input.meta ?? undefined) as unknown as Json | undefined,
+      p_logged_at: input.logged_at ?? undefined,
+      p_logged_date: input.logged_date ?? undefined,
+      p_note: input.note ?? undefined,
+    }),
+  )
+}
+export async function updateHealthLog(input: UpdateHealthLogInput): Promise<HealthLogRow> {
+  return unwrap(
+    await supabase.rpc('update_health_log', {
+      p_user_id: null,
+      p_log_id: input.log_id,
+      p_value: input.value ?? undefined,
+      p_value2: input.value2 ?? undefined,
+      p_unit: input.unit ?? undefined,
+      p_text_value: input.text_value ?? undefined,
+      p_meta: (input.meta ?? undefined) as unknown as Json | undefined,
+      p_logged_at: input.logged_at ?? undefined,
+      p_logged_date: input.logged_date ?? undefined,
+      p_note: input.note ?? undefined,
+    }),
+  )
+}
+export async function deleteHealthLog(logId: string): Promise<void> {
+  const res = await supabase.rpc('delete_health_log', { p_user_id: null, p_log_id: logId })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function listJournalEntries(from?: string, to?: string): Promise<JournalEntryRow[]> {
+  let q = supabase.from('journal_entries').select('*').order('entry_date', { ascending: false })
+  if (from) q = q.gte('entry_date', from)
+  if (to) q = q.lte('entry_date', to)
+  return unwrap(await q.limit(500))
+}
+export async function getJournalEntry(date: string): Promise<JournalEntryRow | null> {
+  return unwrap(await supabase.from('journal_entries').select('*').eq('entry_date', date).maybeSingle())
+}
+export async function setJournalEntry(input: SetJournalEntryInput): Promise<JournalEntryRow> {
+  return unwrap(
+    await supabase.rpc('set_journal_entry', {
+      p_user_id: null,
+      p_entry_date: input.entry_date ?? undefined,
+      p_mood: input.mood ?? undefined,
+      p_energy: input.energy ?? undefined,
+      p_body: input.body ?? undefined,
+      p_tags: input.tags ?? undefined,
+    }),
+  )
+}
+export async function deleteJournalEntry(entryId: string): Promise<void> {
+  const res = await supabase.rpc('delete_journal_entry', { p_user_id: null, p_entry_id: entryId })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function listMedications(activeOnly = false): Promise<MedicationRow[]> {
+  let q = supabase.from('medications').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: true })
+  if (activeOnly) q = q.eq('is_active', true)
+  return unwrap(await q)
+}
+export async function createMedication(input: CreateMedicationInput): Promise<MedicationRow> {
+  return unwrap(
+    await supabase.rpc('create_medication', {
+      p_user_id: null,
+      p_name: input.name,
+      p_dosage: input.dosage ?? undefined,
+      p_times: input.times ?? undefined,
+      p_schedule_rule: input.schedule_rule ?? undefined,
+      p_is_active: input.is_active ?? undefined,
+      p_notes: input.notes ?? undefined,
+    }),
+  )
+}
+export async function updateMedication(input: UpdateMedicationInput): Promise<MedicationRow> {
+  return unwrap(
+    await supabase.rpc('update_medication', {
+      p_user_id: null,
+      p_medication_id: input.medication_id,
+      p_name: input.name ?? undefined,
+      p_dosage: input.dosage ?? undefined,
+      p_times: input.times ?? undefined,
+      p_schedule_rule: input.schedule_rule ?? undefined,
+      p_is_active: input.is_active ?? undefined,
+      p_notes: input.notes ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function deleteMedication(medicationId: string): Promise<void> {
+  const res = await supabase.rpc('delete_medication', { p_user_id: null, p_medication_id: medicationId })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ════════════════════ Mnema Kitchen (recipes / pantry / shopping / meal plan) ════════════════════
+export async function listRecipes(query?: string, favoritesOnly = false): Promise<RecipeRow[]> {
+  let q = supabase
+    .from('recipes')
+    .select('*')
+    .order('is_favorite', { ascending: false })
+    .order('updated_at', { ascending: false })
+  if (query) q = q.ilike('title', `%${query}%`)
+  if (favoritesOnly) q = q.eq('is_favorite', true)
+  return unwrap(await q.limit(500))
+}
+export async function getRecipe(id: string): Promise<RecipeRow | null> {
+  return unwrap(await supabase.from('recipes').select('*').eq('id', id).maybeSingle())
+}
+export async function createRecipe(input: CreateRecipeInput): Promise<RecipeRow> {
+  return unwrap(
+    await supabase.rpc('create_recipe', {
+      p_user_id: null,
+      p_title: input.title,
+      p_description: input.description ?? undefined,
+      p_instructions: input.instructions ?? undefined,
+      p_ingredients: (input.ingredients ?? undefined) as unknown as Json | undefined,
+      p_servings: input.servings ?? undefined,
+      p_total_minutes: input.total_minutes ?? undefined,
+      p_tags: input.tags ?? undefined,
+      p_source_url: input.source_url ?? undefined,
+      p_image_url: input.image_url ?? undefined,
+      p_is_favorite: input.is_favorite ?? undefined,
+    }),
+  )
+}
+export async function updateRecipe(input: UpdateRecipeInput): Promise<RecipeRow> {
+  return unwrap(
+    await supabase.rpc('update_recipe', {
+      p_user_id: null,
+      p_recipe_id: input.recipe_id,
+      p_title: input.title ?? undefined,
+      p_description: input.description ?? undefined,
+      p_instructions: input.instructions ?? undefined,
+      p_ingredients: (input.ingredients ?? undefined) as unknown as Json | undefined,
+      p_servings: input.servings ?? undefined,
+      p_total_minutes: input.total_minutes ?? undefined,
+      p_tags: input.tags ?? undefined,
+      p_source_url: input.source_url ?? undefined,
+      p_image_url: input.image_url ?? undefined,
+      p_is_favorite: input.is_favorite ?? undefined,
+    }),
+  )
+}
+export async function deleteRecipe(recipeId: string): Promise<void> {
+  const res = await supabase.rpc('delete_recipe', { p_user_id: null, p_recipe_id: recipeId })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function listPantry(): Promise<PantryItemRow[]> {
+  return unwrap(await supabase.from('pantry_items').select('*').order('category', { ascending: true }).order('name', { ascending: true }).limit(1000))
+}
+export async function addPantryItem(input: AddPantryItemInput): Promise<PantryItemRow> {
+  return unwrap(
+    await supabase.rpc('add_pantry_item', {
+      p_user_id: null,
+      p_name: input.name,
+      p_quantity: input.quantity ?? undefined,
+      p_unit: input.unit ?? undefined,
+      p_category: input.category ?? undefined,
+      p_location: input.location ?? undefined,
+      p_expires_on: input.expires_on ?? undefined,
+      p_notes: input.notes ?? undefined,
+    }),
+  )
+}
+export async function updatePantryItem(input: UpdatePantryItemInput): Promise<PantryItemRow> {
+  return unwrap(
+    await supabase.rpc('update_pantry_item', {
+      p_user_id: null,
+      p_item_id: input.item_id,
+      p_name: input.name ?? undefined,
+      p_quantity: input.quantity ?? undefined,
+      p_unit: input.unit ?? undefined,
+      p_category: input.category ?? undefined,
+      p_location: input.location ?? undefined,
+      p_expires_on: input.expires_on ?? undefined,
+      p_notes: input.notes ?? undefined,
+    }),
+  )
+}
+export async function deletePantryItem(itemId: string): Promise<void> {
+  const res = await supabase.rpc('delete_pantry_item', { p_user_id: null, p_item_id: itemId })
+  if (res.error) throw new Error(res.error.message)
+}
+
+export async function listShopping(): Promise<ShoppingItemRow[]> {
+  return unwrap(
+    await supabase.from('shopping_items').select('*').order('is_checked', { ascending: true }).order('sort_order', { ascending: true }).order('created_at', { ascending: true }).limit(1000),
+  )
+}
+export async function addShoppingItems(input: AddShoppingItemsInput): Promise<ShoppingItemRow[]> {
+  return unwrap(
+    await supabase.rpc('add_shopping_items', {
+      p_user_id: null,
+      p_items: input.items as unknown as Json,
+    }),
+  )
+}
+export async function updateShoppingItem(input: UpdateShoppingItemInput): Promise<ShoppingItemRow> {
+  return unwrap(
+    await supabase.rpc('update_shopping_item', {
+      p_user_id: null,
+      p_item_id: input.item_id,
+      p_name: input.name ?? undefined,
+      p_quantity: input.quantity ?? undefined,
+      p_category: input.category ?? undefined,
+      p_is_checked: input.is_checked ?? undefined,
+      p_sort_order: input.sort_order ?? undefined,
+    }),
+  )
+}
+export async function deleteShoppingItem(itemId: string): Promise<void> {
+  const res = await supabase.rpc('delete_shopping_item', { p_user_id: null, p_item_id: itemId })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function clearCheckedShopping(): Promise<number> {
+  return unwrap(await supabase.rpc('clear_checked_shopping', { p_user_id: null }))
+}
+
+export async function listMealPlans(from?: string, to?: string): Promise<MealPlanRow[]> {
+  let q = supabase.from('meal_plans').select('*').order('plan_date', { ascending: true }).order('slot', { ascending: true })
+  if (from) q = q.gte('plan_date', from)
+  if (to) q = q.lte('plan_date', to)
+  return unwrap(await q.limit(1000))
+}
+export async function setMealPlan(input: SetMealPlanInput): Promise<MealPlanRow> {
+  return unwrap(
+    await supabase.rpc('set_meal_plan', {
+      p_user_id: null,
+      p_plan_id: input.plan_id ?? undefined,
+      p_plan_date: input.plan_date ?? undefined,
+      p_slot: input.slot ?? undefined,
+      p_recipe_id: input.recipe_id ?? undefined,
+      p_title: input.title ?? undefined,
+      p_note: input.note ?? undefined,
+    }),
+  )
+}
+export async function deleteMealPlan(planId: string): Promise<void> {
+  const res = await supabase.rpc('delete_meal_plan', { p_user_id: null, p_plan_id: planId })
   if (res.error) throw new Error(res.error.message)
 }
 
@@ -1567,4 +1879,54 @@ export async function listSettlements(ledgerId: string): Promise<SettlementRow[]
 export async function listSplitTxnIds(ledgerId: string): Promise<string[]> {
   const rows = unwrap(await supabase.from('transaction_splits').select('transaction_id').eq('ledger_id', ledgerId)) as { transaction_id: string }[]
   return [...new Set(rows.map((r) => r.transaction_id))]
+}
+
+// ── Galleon: subscriptions ──
+export interface UpcomingSubscription {
+  id: string
+  name: string
+  amount: number
+  currency: string
+  renewal_date: string
+  cancel_reminder_days: number
+}
+export async function listSubscriptions(ledgerId: string): Promise<SubscriptionRow[]> {
+  return unwrap(
+    await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('ledger_id', ledgerId)
+      .order('is_active', { ascending: false })
+      .order('renewal_date', { ascending: true }),
+  )
+}
+export async function setSubscription(input: SetSubscriptionInput): Promise<SubscriptionRow> {
+  return unwrap(
+    await supabase.rpc('set_subscription', {
+      p_user_id: null,
+      p_ledger_id: input.ledger_id,
+      p_name: input.name,
+      p_amount: input.amount,
+      p_renewal_date: input.renewal_date,
+      p_recurrence_rule: input.recurrence_rule ?? undefined,
+      p_account_id: input.account_id ?? undefined,
+      p_category_id: input.category_id ?? undefined,
+      p_currency: input.currency ?? undefined,
+      p_cancel_reminder_days: input.cancel_reminder_days ?? undefined,
+      p_notes: input.notes ?? undefined,
+      p_subscription_id: input.subscription_id ?? undefined,
+      p_is_active: input.is_active ?? undefined,
+    }),
+  )
+}
+export async function deleteSubscription(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_subscription', { p_user_id: null, p_subscription_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function postDueSubscriptions(ledgerId: string): Promise<number> {
+  return unwrap(await supabase.rpc('post_due_subscriptions', { p_user_id: null, p_ledger_id: ledgerId }))
+}
+export async function getUpcomingSubscriptions(ledgerId: string, daysAhead = 14): Promise<UpcomingSubscription[]> {
+  const data = unwrap(await supabase.rpc('get_upcoming_subscriptions', { p_user_id: null, p_ledger_id: ledgerId, p_days_ahead: daysAhead }))
+  return (data ?? []) as unknown as UpcomingSubscription[]
 }

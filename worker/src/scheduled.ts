@@ -58,6 +58,74 @@ export async function runReminderScan(env: Env): Promise<void> {
   )
 }
 
+interface DueReview {
+  user_id: string
+  subscriptions: { endpoint: string; p256dh: string; auth: string }[]
+}
+
+/**
+ * Daily end-of-day review sweep. For each opted-in user who hasn't journaled
+ * today (and hasn't been prompted today): web-push a nudge AND drop a capture
+ * (暫存區) so their own AI can ask about today — and again tomorrow if ignored
+ * (the catch-up). Idempotent via mark_daily_review_prompted. Push is best-effort
+ * and skipped if VAPID is unset; the capture + in-app card still work.
+ */
+export async function runDailyReviewScan(env: Env): Promise<void> {
+  const sb = serviceClient(env)
+  const { data, error } = await sb.rpc('due_daily_reviews_for_cron')
+  if (error || !Array.isArray(data)) return
+  const vapid =
+    env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT && env.VAPID_PUBLIC_KEY
+      ? { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY }
+      : null
+
+  await Promise.allSettled(
+    (data as DueReview[]).map(async (r) => {
+      // 1) Push (best-effort).
+      if (vapid) {
+        await Promise.allSettled(
+          r.subscriptions.map(async (s) => {
+            const message = {
+              data: {
+                title: 'Mnema',
+                body: '今天過得如何? · How was today?',
+                url: '/today?review=1',
+                tag: 'daily-review',
+              },
+              options: { ttl: 3600 as number },
+            }
+            try {
+              const payload = await buildPushPayload(
+                message,
+                { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } },
+                vapid,
+              )
+              const res = await fetch(s.endpoint, payload)
+              if (res.status === 404 || res.status === 410) {
+                await sb.rpc('prune_push_subscription', { p_endpoint: s.endpoint })
+              }
+            } catch {
+              /* best-effort */
+            }
+          }),
+        )
+      }
+      // 2) Capture (暫存區) — the BYO-AI catch-up hook.
+      try {
+        await sb.rpc('create_capture', {
+          p_user_id: r.user_id,
+          p_raw_text: '今天過得如何? 回顧一下今天 — 心情、健康、完成的事。(每日回顧 / daily review)',
+          p_source: 'rest',
+        })
+      } catch {
+        /* quota or transient — fine */
+      }
+      // 3) Mark prompted so we don't re-prompt today.
+      await sb.rpc('mark_daily_review_prompted', { p_user_id: r.user_id, p_review_date: null })
+    }),
+  )
+}
+
 export function scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): void {
   ctx.waitUntil(runReminderScan(env))
 }

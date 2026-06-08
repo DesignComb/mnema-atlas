@@ -1,0 +1,149 @@
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { useCreateRecipe, useUpdateRecipe } from '@/lib/hooks'
+import { useI18n } from '@/lib/i18n'
+import type { RecipeRow } from '@/lib/database.types'
+import type { RecipeIngredient } from '@shared/schemas'
+import { TagInput } from '@/components/editor/TagInput'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+
+/** Display an ingredient row as one line (qty name unit). */
+function ingredientToLine(i: RecipeIngredient): string {
+  return [i.quantity, i.name, i.unit].filter(Boolean).join(' ').trim()
+}
+/** Each non-empty line becomes one ingredient (free-text name). */
+function linesToIngredients(text: string): RecipeIngredient[] {
+  return text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((name) => ({ name: name.slice(0, 120) }))
+}
+
+export function RecipeDialog({
+  open,
+  onOpenChange,
+  recipe,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  recipe?: RecipeRow
+}) {
+  const { t } = useI18n()
+  const editing = Boolean(recipe)
+  const create = useCreateRecipe()
+  const update = useUpdateRecipe()
+
+  const [title, setTitle] = useState('')
+  const [ingredients, setIngredients] = useState('')
+  const [instructions, setInstructions] = useState('')
+  const [servings, setServings] = useState('')
+  const [minutes, setMinutes] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [favorite, setFavorite] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setTitle(recipe?.title ?? '')
+    const ings = (recipe?.ingredients as RecipeIngredient[] | null) ?? []
+    setIngredients(Array.isArray(ings) ? ings.map(ingredientToLine).join('\n') : '')
+    setInstructions(recipe?.instructions ?? '')
+    setServings(recipe?.servings != null ? String(recipe.servings) : '')
+    setMinutes(recipe?.total_minutes != null ? String(recipe.total_minutes) : '')
+    setTags(recipe?.tags ?? [])
+    setSourceUrl(recipe?.source_url ?? '')
+    setFavorite(recipe?.is_favorite ?? false)
+  }, [open, recipe])
+
+  const pending = create.isPending || update.isPending
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim()) {
+      toast.error(t('Title is required', '請輸入標題'))
+      return
+    }
+    const fields = {
+      title: title.trim(),
+      ingredients: linesToIngredients(ingredients),
+      instructions: instructions.trim() || undefined,
+      servings: servings.trim() ? Number(servings) : undefined,
+      total_minutes: minutes.trim() ? Number(minutes) : undefined,
+      tags,
+      source_url: sourceUrl.trim() || undefined,
+      is_favorite: favorite,
+    }
+    try {
+      if (editing && recipe) {
+        await update.mutateAsync({ recipe_id: recipe.id, ...fields })
+      } else {
+        await create.mutateAsync(fields)
+      }
+      onOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('Failed to save', '儲存失敗'))
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{editing ? t('Edit recipe', '編輯食譜') : t('New recipe', '新增食譜')}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <input
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={t('Recipe title', '食譜名稱')}
+            className="w-full border-b border-border bg-transparent pb-2 text-lg font-semibold outline-none placeholder:text-muted-foreground/50 focus:border-brand"
+          />
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="rc-ing">{t('Ingredients (one per line)', '食材(一行一項)')}</Label>
+            <Textarea id="rc-ing" value={ingredients} onChange={(e) => setIngredients(e.target.value)} rows={5} placeholder={t('2 eggs\n1 cup rice\n…', '2 顆蛋\n1 杯米\n…')} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="rc-steps">{t('Instructions', '作法')}</Label>
+            <Textarea id="rc-steps" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={5} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="rc-serv">{t('Servings', '份量')}</Label>
+              <Input id="rc-serv" inputMode="numeric" value={servings} onChange={(e) => setServings(e.target.value)} placeholder="2" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="rc-min">{t('Total minutes', '總時間(分)')}</Label>
+              <Input id="rc-min" inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="30" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="rc-src">{t('Source link', '來源連結')}</Label>
+            <Input id="rc-src" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>{t('Tags', '標籤')}</Label>
+            <TagInput tags={tags} onChange={setTags} listId="recipe-tags" />
+          </div>
+          <label className="flex items-center gap-2 text-[13px] text-foreground">
+            <input type="checkbox" checked={favorite} onChange={(e) => setFavorite(e.target.checked)} className="size-4 accent-[var(--brand)]" />
+            {t('Favorite', '最愛')}
+          </label>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              {t('Cancel', '取消')}
+            </Button>
+            <Button type="submit" variant="brand" disabled={pending}>
+              {pending ? t('Saving…', '儲存中…') : editing ? t('Save', '儲存') : t('Add', '新增')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

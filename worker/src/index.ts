@@ -7,7 +7,7 @@ import { rateLimit } from './ratelimit'
 import { buildOpenApiSpec } from './openapi'
 import { buildLlmsTxt } from './llms'
 import { discoveryIndex } from './discovery'
-import { runReminderScan, scheduled } from './scheduled'
+import { runReminderScan, runDailyReviewScan, scheduled } from './scheduled'
 import { serviceClient } from './db'
 import { buildPushPayload } from '@block65/webcrypto-web-push'
 import type { Env } from './env'
@@ -133,6 +133,16 @@ app.post('/_cron/run-reminders', async (c) => {
     return c.json({ error: 'forbidden' }, 403)
   }
   c.executionCtx.waitUntil(runReminderScan(c.env))
+  return c.json({ ok: true })
+})
+
+// Daily end-of-day review sweep. Schedule this once each evening from pg_cron
+// (e.g. 0 21 * * *), same shared-secret guard as the reminder sweep.
+app.post('/_cron/run-daily-reviews', async (c) => {
+  if (!c.env.CRON_SECRET || c.req.header('x-cron-secret') !== c.env.CRON_SECRET) {
+    return c.json({ error: 'forbidden' }, 403)
+  }
+  c.executionCtx.waitUntil(runDailyReviewScan(c.env))
   return c.json({ ok: true })
 })
 

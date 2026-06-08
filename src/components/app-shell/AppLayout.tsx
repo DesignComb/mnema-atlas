@@ -84,6 +84,8 @@ export function AppLayout() {
           pathname.startsWith('/trips') && 'theme-voyage',
           pathname.startsWith('/tempo') && 'theme-tempo',
           pathname.startsWith('/galleon') && 'theme-galleon',
+          pathname.startsWith('/health') && 'theme-health',
+          pathname.startsWith('/kitchen') && 'theme-kitchen',
         )}
       >
         {/* Desktop: far-left space rail (1-tap switch) + the contextual sidebar (lg+). */}

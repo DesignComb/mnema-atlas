@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useAddReminder, useCreateTask, useSetRecurrence, useUpdateTask } from '@/lib/hooks'
+import { useAddReminder, useCreateTask, useSetRecurrence, useSetTaskUrl, useUpdateTask } from '@/lib/hooks'
 import { useI18n } from '@/lib/i18n'
 import type { TaskListRow, TaskRow } from '@/lib/database.types'
 import { buildRRule, computeOccurrence, parseRRule, WEEKDAYS, type Freq } from '@/lib/recurrence'
@@ -64,6 +64,7 @@ export function TaskDialog({
   const updateTask = useUpdateTask()
   const setRecurrence = useSetRecurrence()
   const addReminder = useAddReminder()
+  const setTaskUrl = useSetTaskUrl()
 
   const [title, setTitle] = useState('')
   const [listId, setListId] = useState<string>(INBOX)
@@ -74,6 +75,7 @@ export function TaskDialog({
   const [dueTime, setDueTime] = useState('')
   const [labels, setLabels] = useState<string[]>([])
   const [notes, setNotes] = useState('')
+  const [url, setUrl] = useState('')
   // recurrence
   const [repeat, setRepeat] = useState<Freq | 'none'>('none')
   const [interval, setIntervalV] = useState(1)
@@ -95,6 +97,7 @@ export function TaskDialog({
     setDueTime(task?.due_time ? task.due_time.slice(0, 5) : '')
     setLabels(task?.labels ?? [])
     setNotes(task?.description ?? '')
+    setUrl(task?.url ?? '')
     const p = parseRRule(task?.recurrence_rule ?? null)
     setRepeat(p.freq)
     setIntervalV(p.interval)
@@ -102,7 +105,7 @@ export function TaskDialog({
     setAfterCompletion(task?.recurrence_after_completion ?? false)
   }, [open, task, defaultListId])
 
-  const pending = createTask.isPending || updateTask.isPending || setRecurrence.isPending || addReminder.isPending
+  const pending = createTask.isPending || updateTask.isPending || setRecurrence.isPending || addReminder.isPending || setTaskUrl.isPending
 
   // Plain-language preview of the chosen recurrence, so "fixed vs after-completion" is obvious.
   const unitEn = repeat !== 'none' ? UNIT_EN[repeat] : ''
@@ -185,6 +188,11 @@ export function TaskDialog({
           remind_at: remindAt,
           offset_min: reminderPreset && reminderPreset !== 'custom' ? Number(reminderPreset) : undefined,
         })
+      }
+      // Persist the hyperlink (set or clear) when it changed.
+      const trimmedUrl = url.trim()
+      if (taskId && trimmedUrl !== (task?.url ?? '')) {
+        await setTaskUrl.mutateAsync({ taskId, url: trimmedUrl })
       }
       onOpenChange(false)
     } catch (err) {
@@ -406,6 +414,11 @@ export function TaskDialog({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="task-notes">{t('Notes', '備註')}</Label>
             <Textarea id="task-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="task-url">{t('Link', '連結')}</Label>
+            <Input id="task-url" type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
           </div>
 
           <DialogFooter>

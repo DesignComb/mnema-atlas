@@ -102,8 +102,8 @@ export function CaptureInbox({
             }}
             rows={2}
             placeholder={t(
-              'Jot anything — “原神 深淵 6/16”, “買咖啡豆”, “問 Alex 週末…”. File it later with your AI.',
-              '隨手記任何事 —— 「原神 深淵 6/16」「買咖啡豆」「問 Alex 週末…」。之後再讓 AI 歸檔。',
+              'Jot anything — “buy milk”, “book a dentist appt”, “gym at 19:00…”. File it later with your AI.',
+              '隨手記任何事 —— 「買牛奶」「預約看牙」「19:00 健身…」。之後再讓 AI 歸檔。',
             )}
             className="min-h-0 resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
           />

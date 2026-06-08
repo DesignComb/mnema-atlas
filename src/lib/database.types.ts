@@ -1266,6 +1266,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         Insert: {
@@ -1296,6 +1297,7 @@ export type Database = {
           title: string
           tz?: string | null
           updated_at?: string
+          url?: string | null
           user_id: string
         }
         Update: {
@@ -1326,6 +1328,7 @@ export type Database = {
           title?: string
           tz?: string | null
           updated_at?: string
+          url?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1625,11 +1628,1133 @@ export type Database = {
           },
         ]
       }
+      health_settings: {
+        Row: {
+          created_at: string
+          enabled_modules: string[]
+          updated_at: string
+          user_id: string
+          weight_unit: string
+        }
+        Insert: {
+          created_at?: string
+          enabled_modules?: string[]
+          updated_at?: string
+          user_id: string
+          weight_unit?: string
+        }
+        Update: {
+          created_at?: string
+          enabled_modules?: string[]
+          updated_at?: string
+          user_id?: string
+          weight_unit?: string
+        }
+        Relationships: []
+      }
+      health_logs: {
+        Row: {
+          created_at: string
+          created_via: string
+          id: string
+          kind: string
+          logged_at: string
+          logged_date: string
+          meta: Json | null
+          note: string | null
+          text_value: string | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+          value2: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_via?: string
+          id?: string
+          kind: string
+          logged_at?: string
+          logged_date?: string
+          meta?: Json | null
+          note?: string | null
+          text_value?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+          value?: number | null
+          value2?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_via?: string
+          id?: string
+          kind?: string
+          logged_at?: string
+          logged_date?: string
+          meta?: Json | null
+          note?: string | null
+          text_value?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+          value2?: number | null
+        }
+        Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          body: string | null
+          created_at: string
+          created_via: string
+          energy: number | null
+          entry_date: string
+          id: string
+          mood: number | null
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          created_via?: string
+          energy?: number | null
+          entry_date: string
+          id?: string
+          mood?: number | null
+          tags?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          created_via?: string
+          energy?: number | null
+          entry_date?: string
+          id?: string
+          mood?: number | null
+          tags?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      medications: {
+        Row: {
+          created_at: string
+          created_via: string
+          dosage: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          schedule_rule: string | null
+          sort_order: number
+          times: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_via?: string
+          dosage?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          schedule_rule?: string | null
+          sort_order?: number
+          times?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_via?: string
+          dosage?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          schedule_rule?: string | null
+          sort_order?: number
+          times?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recipes: {
+        Row: {
+          created_at: string
+          created_via: string
+          description: string | null
+          id: string
+          image_url: string | null
+          ingredients: Json
+          instructions: string | null
+          is_favorite: boolean
+          servings: number | null
+          source_url: string | null
+          tags: string[]
+          title: string
+          total_minutes: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_via?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          ingredients?: Json
+          instructions?: string | null
+          is_favorite?: boolean
+          servings?: number | null
+          source_url?: string | null
+          tags?: string[]
+          title: string
+          total_minutes?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_via?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          ingredients?: Json
+          instructions?: string | null
+          is_favorite?: boolean
+          servings?: number | null
+          source_url?: string | null
+          tags?: string[]
+          title?: string
+          total_minutes?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pantry_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_via: string
+          expires_on: string | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          quantity: number | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_via?: string
+          expires_on?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          quantity?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_via?: string
+          expires_on?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          quantity?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      shopping_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_via: string
+          id: string
+          is_checked: boolean
+          name: string
+          quantity: string | null
+          recipe_id: string | null
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_via?: string
+          id?: string
+          is_checked?: boolean
+          name: string
+          quantity?: string | null
+          recipe_id?: string | null
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_via?: string
+          id?: string
+          is_checked?: boolean
+          name?: string
+          quantity?: string | null
+          recipe_id?: string | null
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meal_plans: {
+        Row: {
+          created_at: string
+          created_via: string
+          id: string
+          note: string | null
+          plan_date: string
+          recipe_id: string | null
+          slot: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_via?: string
+          id?: string
+          note?: string | null
+          plan_date: string
+          recipe_id?: string | null
+          slot?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_via?: string
+          id?: string
+          note?: string | null
+          plan_date?: string
+          recipe_id?: string | null
+          slot?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          cancel_reminder_days: number
+          category_id: string | null
+          created_at: string
+          created_via: string
+          currency: string
+          id: string
+          is_active: boolean
+          last_billed: string | null
+          ledger_id: string
+          name: string
+          notes: string | null
+          owner_id: string
+          recurrence_rule: string
+          renewal_date: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          cancel_reminder_days?: number
+          category_id?: string | null
+          created_at?: string
+          created_via?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          last_billed?: string | null
+          ledger_id: string
+          name: string
+          notes?: string | null
+          owner_id: string
+          recurrence_rule?: string
+          renewal_date: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          cancel_reminder_days?: number
+          category_id?: string | null
+          created_at?: string
+          created_via?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          last_billed?: string | null
+          ledger_id?: string
+          name?: string
+          notes?: string | null
+          owner_id?: string
+          recurrence_rule?: string
+          renewal_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      review_prefs: {
+        Row: {
+          created_at: string
+          is_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          is_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          is_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          review_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          review_date: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          review_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      set_review_prefs: {
+        Args: { p_is_enabled: boolean; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          is_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+      }
+      mark_daily_review_prompted: {
+        Args: { p_review_date?: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      due_daily_reviews_for_cron: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      set_task_url: {
+        Args: { p_task_id: string; p_url: string; p_user_id: string | null }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_via: string
+          current_streak: number
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          duration_min: number | null
+          id: string
+          kind: string
+          labels: string[]
+          list_id: string | null
+          longest_streak: number
+          next_occurrence: string | null
+          parent_task_id: string | null
+          priority: number
+          recurrence_after_completion: boolean
+          recurrence_anchor: string | null
+          recurrence_rule: string | null
+          reset_time: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          sort_order: number
+          status: string
+          title: string
+          tz: string | null
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+      }
+      set_subscription: {
+        Args: {
+          p_account_id?: string
+          p_amount: number
+          p_cancel_reminder_days?: number
+          p_category_id?: string
+          p_created_via?: string
+          p_currency?: string
+          p_is_active?: boolean
+          p_ledger_id: string
+          p_name: string
+          p_notes?: string
+          p_recurrence_rule?: string
+          p_renewal_date: string
+          p_subscription_id?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          account_id: string | null
+          amount: number
+          cancel_reminder_days: number
+          category_id: string | null
+          created_at: string
+          created_via: string
+          currency: string
+          id: string
+          is_active: boolean
+          last_billed: string | null
+          ledger_id: string
+          name: string
+          notes: string | null
+          owner_id: string
+          recurrence_rule: string
+          renewal_date: string
+          updated_at: string
+        }
+      }
+      delete_subscription: {
+        Args: { p_subscription_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      list_subscriptions: {
+        Args: { p_ledger_id: string; p_user_id: string | null }
+        Returns: {
+          account_id: string | null
+          amount: number
+          cancel_reminder_days: number
+          category_id: string | null
+          created_at: string
+          created_via: string
+          currency: string
+          id: string
+          is_active: boolean
+          last_billed: string | null
+          ledger_id: string
+          name: string
+          notes: string | null
+          owner_id: string
+          recurrence_rule: string
+          renewal_date: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      post_due_subscriptions: {
+        Args: { p_ledger_id: string; p_user_id: string | null }
+        Returns: number
+      }
+      get_upcoming_subscriptions: {
+        Args: { p_days_ahead?: number; p_ledger_id: string; p_user_id: string | null }
+        Returns: Json
+      }
+      create_recipe: {
+        Args: {
+          p_created_via?: string
+          p_description?: string
+          p_image_url?: string
+          p_ingredients?: Json
+          p_instructions?: string
+          p_is_favorite?: boolean
+          p_servings?: number
+          p_source_url?: string
+          p_tags?: string[]
+          p_title: string
+          p_total_minutes?: number
+          p_user_id: string | null
+        }
+        Returns: {
+          created_at: string
+          created_via: string
+          description: string | null
+          id: string
+          image_url: string | null
+          ingredients: Json
+          instructions: string | null
+          is_favorite: boolean
+          servings: number | null
+          source_url: string | null
+          tags: string[]
+          title: string
+          total_minutes: number | null
+          updated_at: string
+          user_id: string
+        }
+      }
+      update_recipe: {
+        Args: {
+          p_description?: string
+          p_image_url?: string
+          p_ingredients?: Json
+          p_instructions?: string
+          p_is_favorite?: boolean
+          p_recipe_id: string
+          p_servings?: number
+          p_source_url?: string
+          p_tags?: string[]
+          p_title?: string
+          p_total_minutes?: number
+          p_user_id: string | null
+        }
+        Returns: {
+          created_at: string
+          created_via: string
+          description: string | null
+          id: string
+          image_url: string | null
+          ingredients: Json
+          instructions: string | null
+          is_favorite: boolean
+          servings: number | null
+          source_url: string | null
+          tags: string[]
+          title: string
+          total_minutes: number | null
+          updated_at: string
+          user_id: string
+        }
+      }
+      delete_recipe: {
+        Args: { p_recipe_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      list_recipes: {
+        Args: { p_favorites_only?: boolean; p_limit?: number; p_query?: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          created_via: string
+          description: string | null
+          id: string
+          image_url: string | null
+          ingredients: Json
+          instructions: string | null
+          is_favorite: boolean
+          servings: number | null
+          source_url: string | null
+          tags: string[]
+          title: string
+          total_minutes: number | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "recipes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_recipe: {
+        Args: { p_recipe_id: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          created_via: string
+          description: string | null
+          id: string
+          image_url: string | null
+          ingredients: Json
+          instructions: string | null
+          is_favorite: boolean
+          servings: number | null
+          source_url: string | null
+          tags: string[]
+          title: string
+          total_minutes: number | null
+          updated_at: string
+          user_id: string
+        }
+      }
+      add_pantry_item: {
+        Args: {
+          p_category?: string
+          p_created_via?: string
+          p_expires_on?: string
+          p_location?: string
+          p_name: string
+          p_notes?: string
+          p_quantity?: number
+          p_unit?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          category: string | null
+          created_at: string
+          created_via: string
+          expires_on: string | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          quantity: number | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+      }
+      update_pantry_item: {
+        Args: {
+          p_category?: string
+          p_expires_on?: string
+          p_item_id: string
+          p_location?: string
+          p_name?: string
+          p_notes?: string
+          p_quantity?: number
+          p_unit?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          category: string | null
+          created_at: string
+          created_via: string
+          expires_on: string | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          quantity: number | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+      }
+      delete_pantry_item: {
+        Args: { p_item_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      list_pantry: {
+        Args: { p_limit?: number; p_user_id: string | null }
+        Returns: {
+          category: string | null
+          created_at: string
+          created_via: string
+          expires_on: string | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          quantity: number | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "pantry_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      add_shopping_items: {
+        Args: { p_created_via?: string; p_items: Json; p_user_id: string | null }
+        Returns: {
+          category: string | null
+          created_at: string
+          created_via: string
+          id: string
+          is_checked: boolean
+          name: string
+          quantity: string | null
+          recipe_id: string | null
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "shopping_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      update_shopping_item: {
+        Args: {
+          p_category?: string
+          p_is_checked?: boolean
+          p_item_id: string
+          p_name?: string
+          p_quantity?: string
+          p_sort_order?: number
+          p_user_id: string | null
+        }
+        Returns: {
+          category: string | null
+          created_at: string
+          created_via: string
+          id: string
+          is_checked: boolean
+          name: string
+          quantity: string | null
+          recipe_id: string | null
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+      }
+      delete_shopping_item: {
+        Args: { p_item_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      clear_checked_shopping: {
+        Args: { p_user_id: string | null }
+        Returns: number
+      }
+      list_shopping: {
+        Args: { p_limit?: number; p_user_id: string | null }
+        Returns: {
+          category: string | null
+          created_at: string
+          created_via: string
+          id: string
+          is_checked: boolean
+          name: string
+          quantity: string | null
+          recipe_id: string | null
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "shopping_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_meal_plan: {
+        Args: {
+          p_created_via?: string
+          p_note?: string
+          p_plan_date?: string
+          p_plan_id?: string
+          p_recipe_id?: string
+          p_slot?: string
+          p_title?: string
+          p_user_id: string | null
+        }
+        Returns: {
+          created_at: string
+          created_via: string
+          id: string
+          note: string | null
+          plan_date: string
+          recipe_id: string | null
+          slot: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+      }
+      delete_meal_plan: {
+        Args: { p_plan_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      list_meal_plans: {
+        Args: { p_from?: string; p_limit?: number; p_to?: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          created_via: string
+          id: string
+          note: string | null
+          plan_date: string
+          recipe_id: string | null
+          slot: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "meal_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_health_settings: {
+        Args: { p_enabled_modules?: string[]; p_user_id: string | null; p_weight_unit?: string }
+        Returns: {
+          created_at: string
+          enabled_modules: string[]
+          updated_at: string
+          user_id: string
+          weight_unit: string
+        }
+      }
+      log_health: {
+        Args: {
+          p_created_via?: string
+          p_kind: string
+          p_logged_at?: string
+          p_logged_date?: string
+          p_meta?: Json
+          p_note?: string
+          p_text_value?: string
+          p_unit?: string
+          p_user_id: string | null
+          p_value?: number
+          p_value2?: number
+        }
+        Returns: {
+          created_at: string
+          created_via: string
+          id: string
+          kind: string
+          logged_at: string
+          logged_date: string
+          meta: Json | null
+          note: string | null
+          text_value: string | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+          value2: number | null
+        }
+      }
+      update_health_log: {
+        Args: {
+          p_log_id: string
+          p_logged_at?: string
+          p_logged_date?: string
+          p_meta?: Json
+          p_note?: string
+          p_text_value?: string
+          p_unit?: string
+          p_user_id: string | null
+          p_value?: number
+          p_value2?: number
+        }
+        Returns: {
+          created_at: string
+          created_via: string
+          id: string
+          kind: string
+          logged_at: string
+          logged_date: string
+          meta: Json | null
+          note: string | null
+          text_value: string | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+          value2: number | null
+        }
+      }
+      delete_health_log: {
+        Args: { p_log_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      list_health_logs: {
+        Args: { p_from?: string; p_kind?: string; p_limit?: number; p_to?: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          created_via: string
+          id: string
+          kind: string
+          logged_at: string
+          logged_date: string
+          meta: Json | null
+          note: string | null
+          text_value: string | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+          value2: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "health_logs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_journal_entry: {
+        Args: {
+          p_body?: string
+          p_created_via?: string
+          p_energy?: number
+          p_entry_date?: string
+          p_mood?: number
+          p_tags?: string[]
+          p_user_id: string | null
+        }
+        Returns: {
+          body: string | null
+          created_at: string
+          created_via: string
+          energy: number | null
+          entry_date: string
+          id: string
+          mood: number | null
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }
+      }
+      delete_journal_entry: {
+        Args: { p_entry_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      list_journal_entries: {
+        Args: { p_from?: string; p_limit?: number; p_to?: string; p_user_id: string | null }
+        Returns: {
+          body: string | null
+          created_at: string
+          created_via: string
+          energy: number | null
+          entry_date: string
+          id: string
+          mood: number | null
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "journal_entries"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      create_medication: {
+        Args: {
+          p_created_via?: string
+          p_dosage?: string
+          p_is_active?: boolean
+          p_name: string
+          p_notes?: string
+          p_schedule_rule?: string
+          p_times?: string[]
+          p_user_id: string | null
+        }
+        Returns: {
+          created_at: string
+          created_via: string
+          dosage: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          schedule_rule: string | null
+          sort_order: number
+          times: string[]
+          updated_at: string
+          user_id: string
+        }
+      }
+      update_medication: {
+        Args: {
+          p_dosage?: string
+          p_is_active?: boolean
+          p_medication_id: string
+          p_name?: string
+          p_notes?: string
+          p_schedule_rule?: string
+          p_sort_order?: number
+          p_times?: string[]
+          p_user_id: string | null
+        }
+        Returns: {
+          created_at: string
+          created_via: string
+          dosage: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          schedule_rule: string | null
+          sort_order: number
+          times: string[]
+          updated_at: string
+          user_id: string
+        }
+      }
+      delete_medication: {
+        Args: { p_medication_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
+      list_medications: {
+        Args: { p_active_only?: boolean; p_limit?: number; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          created_via: string
+          dosage: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          schedule_rule: string | null
+          sort_order: number
+          times: string[]
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "medications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_capture: {
         Args: { p_raw_text: string; p_source?: string; p_user_id: string | null }
         Returns: {
@@ -1834,6 +2959,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -1878,6 +3004,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -2533,6 +3660,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -2602,6 +3730,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }[]
         SetofOptions: {
@@ -2983,6 +4112,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }[]
         SetofOptions: {
@@ -3070,6 +4200,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -3271,6 +4402,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -3330,6 +4462,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }[]
         SetofOptions: {
@@ -3664,6 +4797,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -3756,6 +4890,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -3803,6 +4938,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -3842,6 +4978,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -4312,6 +5449,7 @@ export type Database = {
           title: string
           tz: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         SetofOptions: {
@@ -4552,6 +5690,14 @@ export type TripChecklistRow = PublicTables['trip_checklist']['Row']
 export type TaskListRow = PublicTables['task_lists']['Row']
 export type TaskRow = PublicTables['tasks']['Row']
 export type CaptureRow = PublicTables['captures']['Row']
+export type HealthSettingsRow = PublicTables['health_settings']['Row']
+export type HealthLogRow = PublicTables['health_logs']['Row']
+export type JournalEntryRow = PublicTables['journal_entries']['Row']
+export type MedicationRow = PublicTables['medications']['Row']
+export type RecipeRow = PublicTables['recipes']['Row']
+export type PantryItemRow = PublicTables['pantry_items']['Row']
+export type ShoppingItemRow = PublicTables['shopping_items']['Row']
+export type MealPlanRow = PublicTables['meal_plans']['Row']
 export type TaskCheckinRow = PublicTables['task_checkins']['Row']
 export type TaskReminderRow = PublicTables['task_reminders']['Row']
 export type PushSubscriptionRow = PublicTables['push_subscriptions']['Row']
@@ -4564,3 +5710,6 @@ export type BudgetRow = PublicTables['budgets']['Row']
 export type RecurringTransactionRow = PublicTables['recurring_transactions']['Row']
 export type TransactionSplitRow = PublicTables['transaction_splits']['Row']
 export type SettlementRow = PublicTables['settlements']['Row']
+export type SubscriptionRow = PublicTables['subscriptions']['Row']
+export type ReviewPrefsRow = PublicTables['review_prefs']['Row']
+export type DailyReviewRow = PublicTables['daily_reviews']['Row']

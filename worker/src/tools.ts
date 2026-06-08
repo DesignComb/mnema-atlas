@@ -62,6 +62,38 @@ import {
   dismissCaptureInput,
   reopenCaptureInput,
   deleteCaptureInput,
+  // Mnema Vitals (health)
+  logHealthInput,
+  updateHealthLogInput,
+  deleteHealthLogInput,
+  listHealthLogsInput,
+  setJournalEntryInput,
+  deleteJournalEntryInput,
+  listJournalEntriesInput,
+  createMedicationInput,
+  updateMedicationInput,
+  deleteMedicationInput,
+  listMedicationsInput,
+  setHealthSettingsInput,
+  setReviewPrefsInput,
+  // Mnema Kitchen
+  createRecipeInput,
+  updateRecipeInput,
+  deleteRecipeInput,
+  listRecipesInput,
+  getRecipeInput,
+  addPantryItemInput,
+  updatePantryItemInput,
+  deletePantryItemInput,
+  listPantryInput,
+  addShoppingItemsInput,
+  updateShoppingItemInput,
+  deleteShoppingItemInput,
+  clearCheckedShoppingInput,
+  listShoppingInput,
+  setMealPlanInput,
+  deleteMealPlanInput,
+  listMealPlansInput,
   deleteTaskInput,
   deleteTaskListInput,
   getHabitInput,
@@ -70,6 +102,7 @@ import {
   listTasksInput,
   moveTaskInput,
   removeReminderInput,
+  setTaskUrlInput,
   reorderTaskListsInput,
   reorderTasksInput,
   scheduleTaskInput,
@@ -120,6 +153,11 @@ import {
   updateLedgerInput,
   updateLedgerMemberInput,
   updateTransactionInput,
+  // Galleon subscriptions
+  setSubscriptionInput,
+  deleteSubscriptionInput,
+  listSubscriptionsInput,
+  getUpcomingSubscriptionsInput,
 } from '../../shared/schemas'
 import { settleUp, type MemberBalance } from '../../shared/settle'
 import { callRpc, ownedSelect, serviceClient } from './db'
@@ -1282,6 +1320,17 @@ export const tools: ToolDef[] = [
       return { summary: 'Reminder removed', data: { ok: true } }
     },
   },
+  {
+    name: 'set_task_url',
+    description: toolDescriptions.set_task_url,
+    schema: setTaskUrlInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'set_task_url', { p_task_id: a.task_id, p_url: a.url })
+      return { summary: 'Task link set', data: row }
+    },
+  },
 
   // ── Mnema Tempo: reads ──
   {
@@ -1432,6 +1481,451 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       await callRpc(ctx.env, ctx.userId, 'delete_capture', { p_capture_id: a.capture_id })
       return { summary: 'Capture deleted', data: { ok: true } }
+    },
+  },
+
+  // ── Mnema Vitals: health (metrics / journal+mood / medications) ──
+  {
+    name: 'log_health',
+    description: toolDescriptions.log_health,
+    schema: logHealthInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc<{ id: string; kind: string }>(ctx.env, ctx.userId, 'log_health', {
+        p_kind: a.kind,
+        p_value: a.value ?? null,
+        p_value2: a.value2 ?? null,
+        p_unit: a.unit ?? null,
+        p_text_value: a.text_value ?? null,
+        p_meta: a.meta ?? null,
+        p_logged_at: a.logged_at ?? null,
+        p_logged_date: a.logged_date ?? null,
+        p_note: a.note ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Logged ${row.kind} (${row.id})`, data: row }
+    },
+  },
+  {
+    name: 'update_health_log',
+    description: toolDescriptions.update_health_log,
+    schema: updateHealthLogInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'update_health_log', {
+        p_log_id: a.log_id,
+        p_value: a.value ?? null,
+        p_value2: a.value2 ?? null,
+        p_unit: a.unit ?? null,
+        p_text_value: a.text_value ?? null,
+        p_meta: a.meta ?? null,
+        p_logged_at: a.logged_at ?? null,
+        p_logged_date: a.logged_date ?? null,
+        p_note: a.note ?? null,
+      })
+      return { summary: 'Health log updated', data: row }
+    },
+  },
+  {
+    name: 'delete_health_log',
+    description: toolDescriptions.delete_health_log,
+    schema: deleteHealthLogInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_health_log', { p_log_id: a.log_id })
+      return { summary: 'Health log deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_health_logs',
+    description: toolDescriptions.list_health_logs,
+    schema: listHealthLogsInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_health_logs', {
+        p_kind: a.kind ?? null,
+        p_from: a.from ?? null,
+        p_to: a.to ?? null,
+        p_limit: a.limit ?? 200,
+      })
+      return { summary: `${rows.length} health log(s)`, data: rows }
+    },
+  },
+  {
+    name: 'set_journal_entry',
+    description: toolDescriptions.set_journal_entry,
+    schema: setJournalEntryInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc<{ id: string; entry_date: string }>(ctx.env, ctx.userId, 'set_journal_entry', {
+        p_entry_date: a.entry_date ?? null,
+        p_mood: a.mood ?? null,
+        p_energy: a.energy ?? null,
+        p_body: a.body ?? null,
+        p_tags: a.tags ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Journal saved for ${row.entry_date}`, data: row }
+    },
+  },
+  {
+    name: 'delete_journal_entry',
+    description: toolDescriptions.delete_journal_entry,
+    schema: deleteJournalEntryInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_journal_entry', { p_entry_id: a.entry_id })
+      return { summary: 'Journal entry deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_journal_entries',
+    description: toolDescriptions.list_journal_entries,
+    schema: listJournalEntriesInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_journal_entries', {
+        p_from: a.from ?? null,
+        p_to: a.to ?? null,
+        p_limit: a.limit ?? 100,
+      })
+      return { summary: `${rows.length} journal entries`, data: rows }
+    },
+  },
+  {
+    name: 'create_medication',
+    description: toolDescriptions.create_medication,
+    schema: createMedicationInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'create_medication', {
+        p_name: a.name,
+        p_dosage: a.dosage ?? null,
+        p_times: a.times ?? null,
+        p_schedule_rule: a.schedule_rule ?? null,
+        p_is_active: a.is_active ?? null,
+        p_notes: a.notes ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Added medication “${row.name}” (${row.id})`, data: row }
+    },
+  },
+  {
+    name: 'update_medication',
+    description: toolDescriptions.update_medication,
+    schema: updateMedicationInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'update_medication', {
+        p_medication_id: a.medication_id,
+        p_name: a.name ?? null,
+        p_dosage: a.dosage ?? null,
+        p_times: a.times ?? null,
+        p_schedule_rule: a.schedule_rule ?? null,
+        p_is_active: a.is_active ?? null,
+        p_notes: a.notes ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: 'Medication updated', data: row }
+    },
+  },
+  {
+    name: 'delete_medication',
+    description: toolDescriptions.delete_medication,
+    schema: deleteMedicationInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_medication', { p_medication_id: a.medication_id })
+      return { summary: 'Medication deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_medications',
+    description: toolDescriptions.list_medications,
+    schema: listMedicationsInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_medications', {
+        p_active_only: a.active_only ?? false,
+        p_limit: a.limit ?? 200,
+      })
+      return { summary: `${rows.length} medication(s)`, data: rows }
+    },
+  },
+  {
+    name: 'set_health_settings',
+    description: toolDescriptions.set_health_settings,
+    schema: setHealthSettingsInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'set_health_settings', {
+        p_enabled_modules: a.enabled_modules ?? null,
+        p_weight_unit: a.weight_unit ?? null,
+      })
+      return { summary: 'Health settings saved', data: row }
+    },
+  },
+  {
+    name: 'set_review_prefs',
+    description: toolDescriptions.set_review_prefs,
+    schema: setReviewPrefsInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'set_review_prefs', { p_is_enabled: a.is_enabled })
+      return { summary: `Daily review ${a.is_enabled ? 'enabled' : 'disabled'}`, data: row }
+    },
+  },
+
+  // ── Mnema Kitchen: recipes / pantry / shopping / meal plan ──
+  {
+    name: 'create_recipe',
+    description: toolDescriptions.create_recipe,
+    schema: createRecipeInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'create_recipe', {
+        p_title: a.title,
+        p_description: a.description ?? null,
+        p_instructions: a.instructions ?? null,
+        p_ingredients: a.ingredients ?? null,
+        p_servings: a.servings ?? null,
+        p_total_minutes: a.total_minutes ?? null,
+        p_tags: a.tags ?? null,
+        p_source_url: a.source_url ?? null,
+        p_image_url: a.image_url ?? null,
+        p_is_favorite: a.is_favorite ?? false,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Saved recipe “${row.title}” (${row.id})`, data: row }
+    },
+  },
+  {
+    name: 'update_recipe',
+    description: toolDescriptions.update_recipe,
+    schema: updateRecipeInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'update_recipe', {
+        p_recipe_id: a.recipe_id,
+        p_title: a.title ?? null,
+        p_description: a.description ?? null,
+        p_instructions: a.instructions ?? null,
+        p_ingredients: a.ingredients ?? null,
+        p_servings: a.servings ?? null,
+        p_total_minutes: a.total_minutes ?? null,
+        p_tags: a.tags ?? null,
+        p_source_url: a.source_url ?? null,
+        p_image_url: a.image_url ?? null,
+        p_is_favorite: a.is_favorite ?? null,
+      })
+      return { summary: 'Recipe updated', data: row }
+    },
+  },
+  {
+    name: 'delete_recipe',
+    description: toolDescriptions.delete_recipe,
+    schema: deleteRecipeInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_recipe', { p_recipe_id: a.recipe_id })
+      return { summary: 'Recipe deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_recipes',
+    description: toolDescriptions.list_recipes,
+    schema: listRecipesInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_recipes', {
+        p_query: a.query ?? null,
+        p_favorites_only: a.favorites_only ?? false,
+        p_limit: a.limit ?? 200,
+      })
+      return { summary: `${rows.length} recipe(s)`, data: rows }
+    },
+  },
+  {
+    name: 'get_recipe',
+    description: toolDescriptions.get_recipe,
+    schema: getRecipeInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'get_recipe', { p_recipe_id: a.recipe_id })
+      return { summary: 'Recipe', data: row }
+    },
+  },
+  {
+    name: 'add_pantry_item',
+    description: toolDescriptions.add_pantry_item,
+    schema: addPantryItemInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'add_pantry_item', {
+        p_name: a.name,
+        p_quantity: a.quantity ?? null,
+        p_unit: a.unit ?? null,
+        p_category: a.category ?? null,
+        p_location: a.location ?? null,
+        p_expires_on: a.expires_on ?? null,
+        p_notes: a.notes ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Added “${row.name}” to the pantry (${row.id})`, data: row }
+    },
+  },
+  {
+    name: 'update_pantry_item',
+    description: toolDescriptions.update_pantry_item,
+    schema: updatePantryItemInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'update_pantry_item', {
+        p_item_id: a.item_id,
+        p_name: a.name ?? null,
+        p_quantity: a.quantity ?? null,
+        p_unit: a.unit ?? null,
+        p_category: a.category ?? null,
+        p_location: a.location ?? null,
+        p_expires_on: a.expires_on ?? null,
+        p_notes: a.notes ?? null,
+      })
+      return { summary: 'Pantry item updated', data: row }
+    },
+  },
+  {
+    name: 'delete_pantry_item',
+    description: toolDescriptions.delete_pantry_item,
+    schema: deletePantryItemInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_pantry_item', { p_item_id: a.item_id })
+      return { summary: 'Pantry item removed', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_pantry',
+    description: toolDescriptions.list_pantry,
+    schema: listPantryInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_pantry', { p_limit: a.limit ?? 500 })
+      return { summary: `${rows.length} pantry item(s)`, data: rows }
+    },
+  },
+  {
+    name: 'add_shopping_items',
+    description: toolDescriptions.add_shopping_items,
+    schema: addShoppingItemsInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'add_shopping_items', {
+        p_items: a.items,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Added ${rows.length} item(s) to the shopping list`, data: rows }
+    },
+  },
+  {
+    name: 'update_shopping_item',
+    description: toolDescriptions.update_shopping_item,
+    schema: updateShoppingItemInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'update_shopping_item', {
+        p_item_id: a.item_id,
+        p_name: a.name ?? null,
+        p_quantity: a.quantity ?? null,
+        p_category: a.category ?? null,
+        p_is_checked: a.is_checked ?? null,
+        p_sort_order: a.sort_order ?? null,
+      })
+      return { summary: 'Shopping item updated', data: row }
+    },
+  },
+  {
+    name: 'delete_shopping_item',
+    description: toolDescriptions.delete_shopping_item,
+    schema: deleteShoppingItemInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_shopping_item', { p_item_id: a.item_id })
+      return { summary: 'Shopping item removed', data: { ok: true } }
+    },
+  },
+  {
+    name: 'clear_checked_shopping',
+    description: toolDescriptions.clear_checked_shopping,
+    schema: clearCheckedShoppingInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx) => {
+      const n = await callRpc<number>(ctx.env, ctx.userId, 'clear_checked_shopping', {})
+      return { summary: `Cleared ${n} item(s)`, data: { cleared: n } }
+    },
+  },
+  {
+    name: 'list_shopping',
+    description: toolDescriptions.list_shopping,
+    schema: listShoppingInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_shopping', { p_limit: a.limit ?? 500 })
+      return { summary: `${rows.length} shopping item(s)`, data: rows }
+    },
+  },
+  {
+    name: 'set_meal_plan',
+    description: toolDescriptions.set_meal_plan,
+    schema: setMealPlanInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc<{ id: string }>(ctx.env, ctx.userId, 'set_meal_plan', {
+        p_plan_id: a.plan_id ?? null,
+        p_plan_date: a.plan_date ?? null,
+        p_slot: a.slot ?? null,
+        p_recipe_id: a.recipe_id ?? null,
+        p_title: a.title ?? null,
+        p_note: a.note ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: 'Meal planned', data: row }
+    },
+  },
+  {
+    name: 'delete_meal_plan',
+    description: toolDescriptions.delete_meal_plan,
+    schema: deleteMealPlanInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_meal_plan', { p_plan_id: a.plan_id })
+      return { summary: 'Meal plan removed', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_meal_plans',
+    description: toolDescriptions.list_meal_plans,
+    schema: listMealPlansInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_meal_plans', {
+        p_from: a.from ?? null,
+        p_to: a.to ?? null,
+        p_limit: a.limit ?? 500,
+      })
+      return { summary: `${rows.length} planned meal(s)`, data: rows }
     },
   },
 
@@ -2013,6 +2507,67 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       const ids = await callRpc(ctx.env, ctx.userId, 'list_split_txn_ids', { p_ledger_id: a.ledger_id })
       return { summary: 'Split transaction ids', data: ids }
+    },
+  },
+
+  // ── Mnema Galleon: subscriptions ──
+  {
+    name: 'set_subscription',
+    description: toolDescriptions.set_subscription,
+    schema: setSubscriptionInput,
+    readOnly: false,
+    requiresScope: 'edit', // upsert: with subscription_id it updates an existing subscription
+    run: async (ctx, a) => {
+      const row = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'set_subscription', {
+        p_ledger_id: a.ledger_id,
+        p_name: a.name,
+        p_amount: a.amount,
+        p_renewal_date: a.renewal_date,
+        p_recurrence_rule: a.recurrence_rule ?? null,
+        p_account_id: a.account_id ?? null,
+        p_category_id: a.category_id ?? null,
+        p_currency: a.currency ?? null,
+        p_cancel_reminder_days: a.cancel_reminder_days ?? null,
+        p_notes: a.notes ?? null,
+        p_subscription_id: a.subscription_id ?? null,
+        p_is_active: a.is_active ?? null,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Subscription “${row.name}” saved (${row.id})`, data: row }
+    },
+  },
+  {
+    name: 'delete_subscription',
+    description: toolDescriptions.delete_subscription,
+    schema: deleteSubscriptionInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_subscription', { p_subscription_id: a.subscription_id })
+      return { summary: 'Subscription deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_subscriptions',
+    description: toolDescriptions.list_subscriptions,
+    schema: listSubscriptionsInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_subscriptions', { p_ledger_id: a.ledger_id })
+      return { summary: `${rows.length} subscription(s)`, data: rows }
+    },
+  },
+  {
+    name: 'get_upcoming_subscriptions',
+    description: toolDescriptions.get_upcoming_subscriptions,
+    schema: getUpcomingSubscriptionsInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc(ctx.env, ctx.userId, 'get_upcoming_subscriptions', {
+        p_ledger_id: a.ledger_id,
+        p_days_ahead: a.days_ahead ?? 14,
+      })
+      return { summary: 'Upcoming subscriptions', data: rows }
     },
   },
 ]

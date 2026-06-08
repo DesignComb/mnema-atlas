@@ -51,6 +51,24 @@ import type {
   UpdateCategoryInput,
   UpdateLedgerInput,
   UpdateTransactionInput,
+  SetSubscriptionInput,
+} from '@shared/schemas'
+import type {
+  SetHealthSettingsInput,
+  LogHealthInput,
+  UpdateHealthLogInput,
+  SetJournalEntryInput,
+  CreateMedicationInput,
+  UpdateMedicationInput,
+} from '@shared/schemas'
+import type {
+  CreateRecipeInput,
+  UpdateRecipeInput,
+  AddPantryItemInput,
+  UpdatePantryItemInput,
+  AddShoppingItemsInput,
+  UpdateShoppingItemInput,
+  SetMealPlanInput,
 } from '@shared/schemas'
 
 export const qk = {
@@ -73,6 +91,19 @@ export const qk = {
   streak: (id: string) => ['streak', id] as const,
   recurringSuggestions: ['recurring-suggestions'] as const,
   captures: (status?: string) => ['captures', status ?? 'pending'] as const,
+  // Mnema Vitals (health)
+  healthSettings: ['health-settings'] as const,
+  healthLogs: (key?: string) => ['health-logs', key ?? 'all'] as const,
+  journalEntries: (key?: string) => ['journal-entries', key ?? 'all'] as const,
+  journalEntry: (date: string) => ['journal-entry', date] as const,
+  medications: (activeOnly?: boolean) => ['medications', activeOnly ? 'active' : 'all'] as const,
+  reviewPrefs: ['review-prefs'] as const,
+  // Mnema Kitchen
+  recipes: (key?: string) => ['recipes', key ?? 'all'] as const,
+  recipe: (id: string) => ['recipe', id] as const,
+  pantry: ['pantry'] as const,
+  shopping: ['shopping'] as const,
+  mealPlans: (key?: string) => ['meal-plans', key ?? 'all'] as const,
   // Mnema Galleon
   ledgers: ['ledgers'] as const,
   ledger: (id: string) => ['ledger', id] as const,
@@ -84,6 +115,8 @@ export const qk = {
   balances: (ledgerId: string) => ['ledger-balances', ledgerId] as const,
   settlements: (ledgerId: string) => ['ledger-settlements', ledgerId] as const,
   splitTxnIds: (ledgerId: string) => ['ledger-split-ids', ledgerId] as const,
+  subscriptions: (ledgerId: string) => ['subscriptions', ledgerId] as const,
+  upcomingSubscriptions: (ledgerId: string) => ['upcoming-subscriptions', ledgerId] as const,
 }
 
 export function useDecks() {
@@ -623,6 +656,10 @@ export function useRemoveReminder() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (reminderId: string) => api.removeReminder(reminderId), onSuccess: () => bumpTasks(qc) })
 }
+export function useSetTaskUrl() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (v: { taskId: string; url: string }) => api.setTaskUrl(v.taskId, v.url), onSuccess: () => bumpTasks(qc) })
+}
 
 // ── Captures (quick-capture inbox / 暫存區) ──
 function bumpCaptures(qc: ReturnType<typeof useQueryClient>) {
@@ -652,10 +689,162 @@ export function useDeleteCapture() {
   return useMutation({ mutationFn: (id: string) => api.deleteCapture(id), onSuccess: () => bumpCaptures(qc) })
 }
 
+// ════════════════════ Mnema Vitals (health) ════════════════════
+function bumpHealth(qc: ReturnType<typeof useQueryClient>) {
+  for (const k of ['health-logs', 'journal-entries', 'journal-entry', 'medications']) {
+    qc.invalidateQueries({ queryKey: [k] })
+  }
+}
+
+export function useHealthSettings() {
+  return useQuery({ queryKey: qk.healthSettings, queryFn: api.getHealthSettings })
+}
+export function useSetHealthSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetHealthSettingsInput) => api.setHealthSettings(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.healthSettings }),
+  })
+}
+
+export function useHealthLogs(filters: api.HealthLogFilters = {}) {
+  const key = [filters.kind, filters.from, filters.to, filters.limit].join('|')
+  return useQuery({ queryKey: qk.healthLogs(key), queryFn: () => api.listHealthLogs(filters) })
+}
+export function useLogHealth() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: LogHealthInput) => api.logHealth(input), onSuccess: () => bumpHealth(qc) })
+}
+export function useUpdateHealthLog() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateHealthLogInput) => api.updateHealthLog(input), onSuccess: () => bumpHealth(qc) })
+}
+export function useDeleteHealthLog() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteHealthLog(id), onSuccess: () => bumpHealth(qc) })
+}
+
+export function useJournalEntries(from?: string, to?: string) {
+  return useQuery({ queryKey: qk.journalEntries(`${from ?? ''}_${to ?? ''}`), queryFn: () => api.listJournalEntries(from, to) })
+}
+export function useJournalEntry(date: string) {
+  return useQuery({ queryKey: qk.journalEntry(date), queryFn: () => api.getJournalEntry(date), enabled: !!date })
+}
+export function useSetJournalEntry() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: SetJournalEntryInput) => api.setJournalEntry(input), onSuccess: () => bumpHealth(qc) })
+}
+export function useDeleteJournalEntry() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteJournalEntry(id), onSuccess: () => bumpHealth(qc) })
+}
+
+export function useMedications(activeOnly = false) {
+  return useQuery({ queryKey: qk.medications(activeOnly), queryFn: () => api.listMedications(activeOnly) })
+}
+export function useCreateMedication() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateMedicationInput) => api.createMedication(input), onSuccess: () => bumpHealth(qc) })
+}
+export function useUpdateMedication() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateMedicationInput) => api.updateMedication(input), onSuccess: () => bumpHealth(qc) })
+}
+export function useDeleteMedication() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteMedication(id), onSuccess: () => bumpHealth(qc) })
+}
+
+// Daily review (end-of-day) preferences
+export function useReviewPrefs() {
+  return useQuery({ queryKey: qk.reviewPrefs, queryFn: api.getReviewPrefs })
+}
+export function useSetReviewPrefs() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (isEnabled: boolean) => api.setReviewPrefs(isEnabled),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.reviewPrefs }),
+  })
+}
+
+// ════════════════════ Mnema Kitchen (recipes / pantry / shopping / meal plan) ════════════════════
+function bumpKitchen(qc: ReturnType<typeof useQueryClient>) {
+  for (const k of ['recipes', 'recipe', 'pantry', 'shopping', 'meal-plans']) {
+    qc.invalidateQueries({ queryKey: [k] })
+  }
+}
+
+export function useRecipes(query?: string, favoritesOnly = false) {
+  return useQuery({ queryKey: qk.recipes(`${query ?? ''}_${favoritesOnly}`), queryFn: () => api.listRecipes(query, favoritesOnly) })
+}
+export function useRecipe(id: string) {
+  return useQuery({ queryKey: qk.recipe(id), queryFn: () => api.getRecipe(id), enabled: !!id })
+}
+export function useCreateRecipe() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: CreateRecipeInput) => api.createRecipe(input), onSuccess: () => bumpKitchen(qc) })
+}
+export function useUpdateRecipe() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateRecipeInput) => api.updateRecipe(input), onSuccess: () => bumpKitchen(qc) })
+}
+export function useDeleteRecipe() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteRecipe(id), onSuccess: () => bumpKitchen(qc) })
+}
+
+export function usePantry() {
+  return useQuery({ queryKey: qk.pantry, queryFn: api.listPantry })
+}
+export function useAddPantryItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: AddPantryItemInput) => api.addPantryItem(input), onSuccess: () => bumpKitchen(qc) })
+}
+export function useUpdatePantryItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdatePantryItemInput) => api.updatePantryItem(input), onSuccess: () => bumpKitchen(qc) })
+}
+export function useDeletePantryItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deletePantryItem(id), onSuccess: () => bumpKitchen(qc) })
+}
+
+export function useShopping() {
+  return useQuery({ queryKey: qk.shopping, queryFn: api.listShopping })
+}
+export function useAddShoppingItems() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: AddShoppingItemsInput) => api.addShoppingItems(input), onSuccess: () => bumpKitchen(qc) })
+}
+export function useUpdateShoppingItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: UpdateShoppingItemInput) => api.updateShoppingItem(input), onSuccess: () => bumpKitchen(qc) })
+}
+export function useDeleteShoppingItem() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteShoppingItem(id), onSuccess: () => bumpKitchen(qc) })
+}
+export function useClearCheckedShopping() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: () => api.clearCheckedShopping(), onSuccess: () => bumpKitchen(qc) })
+}
+
+export function useMealPlans(from?: string, to?: string) {
+  return useQuery({ queryKey: qk.mealPlans(`${from ?? ''}_${to ?? ''}`), queryFn: () => api.listMealPlans(from, to) })
+}
+export function useSetMealPlan() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: SetMealPlanInput) => api.setMealPlan(input), onSuccess: () => bumpKitchen(qc) })
+}
+export function useDeleteMealPlan() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteMealPlan(id), onSuccess: () => bumpKitchen(qc) })
+}
+
 // ════════════════════ Mnema Galleon (money) ════════════════════
 
 function bumpGalleon(qc: ReturnType<typeof useQueryClient>) {
-  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend', 'ledger-balances', 'ledger-settlements', 'ledger-split-ids']) {
+  for (const k of ['ledgers', 'ledger', 'ledger-txns', 'ledger-summary', 'budget-status', 'recurring', 'monthly-trend', 'ledger-balances', 'ledger-settlements', 'ledger-split-ids', 'subscriptions', 'upcoming-subscriptions']) {
     qc.invalidateQueries({ queryKey: [k] })
   }
 }
@@ -828,6 +1017,30 @@ export function useRecordSettlement() {
 export function useDeleteSettlement() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (id: string) => api.deleteSettlement(id), onSuccess: () => bumpGalleon(qc) })
+}
+
+// Galleon: subscriptions
+export function useSubscriptions(ledgerId: string) {
+  return useQuery({ queryKey: qk.subscriptions(ledgerId), queryFn: () => api.listSubscriptions(ledgerId), enabled: !!ledgerId })
+}
+export function useUpcomingSubscriptions(ledgerId: string, daysAhead = 14) {
+  return useQuery({
+    queryKey: qk.upcomingSubscriptions(ledgerId),
+    queryFn: () => api.getUpcomingSubscriptions(ledgerId, daysAhead),
+    enabled: !!ledgerId,
+  })
+}
+export function useSetSubscription() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (input: SetSubscriptionInput) => api.setSubscription(input), onSuccess: () => bumpGalleon(qc) })
+}
+export function useDeleteSubscription() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => api.deleteSubscription(id), onSuccess: () => bumpGalleon(qc) })
+}
+export function usePostDueSubscriptions() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (ledgerId: string) => api.postDueSubscriptions(ledgerId), onSuccess: () => bumpGalleon(qc) })
 }
 
 // Reminders already surfaced this session (so the poll doesn't re-toast them).

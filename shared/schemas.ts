@@ -468,6 +468,14 @@ export const addReminderInput = z.object({
 export type AddReminderInput = z.infer<typeof addReminderInput>
 export const removeReminderInput = z.object({ reminder_id: uuid })
 
+// A hyperlink on a task (pass "" to clear it).
+export const setTaskUrlInput = z.object({ task_id: uuid, url: z.string().trim().max(2_000) })
+export type SetTaskUrlInput = z.infer<typeof setTaskUrlInput>
+
+// Daily end-of-day review opt-in.
+export const setReviewPrefsInput = z.object({ is_enabled: z.boolean() })
+export type SetReviewPrefsInput = z.infer<typeof setReviewPrefsInput>
+
 export const getTaskInput = z.object({ task_id: uuid })
 export const listTasksInput = z.object({
   list_id: uuid.optional(),
@@ -513,6 +521,209 @@ export type ResolveCaptureInput = z.infer<typeof resolveCaptureInput>
 export const dismissCaptureInput = z.object({ capture_id: uuid })
 export const reopenCaptureInput = z.object({ capture_id: uuid })
 export const deleteCaptureInput = z.object({ capture_id: uuid })
+
+// ── Mnema Vitals: health (metrics / journal+mood / medications) ────
+export const healthModule = z.enum(['vitals', 'activity', 'nutrition', 'meds', 'journal'])
+export type HealthModule = z.infer<typeof healthModule>
+export const healthLogKind = z.enum([
+  'weight', 'body_fat', 'waist', 'blood_pressure', 'heart_rate', 'blood_glucose', 'temperature',
+  'sleep', 'workout', 'water', 'meal', 'meds', 'symptom', 'other',
+])
+export type HealthLogKind = z.infer<typeof healthLogKind>
+const healthMeta = z.record(z.unknown())
+const moodScale = z.number().int().min(1).max(5)
+const healthTags = z.array(z.string().trim().min(1).max(40)).max(20)
+
+export const setHealthSettingsInput = z.object({
+  enabled_modules: z.array(healthModule).max(5).optional(),
+  weight_unit: z.enum(['kg', 'lb']).optional(),
+})
+export type SetHealthSettingsInput = z.infer<typeof setHealthSettingsInput>
+
+export const logHealthInput = z.object({
+  kind: healthLogKind,
+  value: z.number().optional(),
+  value2: z.number().optional(),
+  unit: z.string().trim().max(16).optional(),
+  text_value: z.string().trim().max(300).optional(),
+  meta: healthMeta.optional(),
+  logged_at: z.string().trim().max(40).optional(),
+  logged_date: isoDate.optional(),
+  note: z.string().max(2_000).optional(),
+})
+export type LogHealthInput = z.infer<typeof logHealthInput>
+
+export const updateHealthLogInput = z.object({
+  log_id: uuid,
+  value: z.number().optional(),
+  value2: z.number().optional(),
+  unit: z.string().trim().max(16).optional(),
+  text_value: z.string().trim().max(300).optional(),
+  meta: healthMeta.optional(),
+  logged_at: z.string().trim().max(40).optional(),
+  logged_date: isoDate.optional(),
+  note: z.string().max(2_000).optional(),
+})
+export type UpdateHealthLogInput = z.infer<typeof updateHealthLogInput>
+
+export const deleteHealthLogInput = z.object({ log_id: uuid })
+export const listHealthLogsInput = z.object({
+  kind: healthLogKind.optional(),
+  from: isoDate.optional(),
+  to: isoDate.optional(),
+  limit: z.number().int().min(1).max(1_000).default(200),
+})
+export type ListHealthLogsInput = z.infer<typeof listHealthLogsInput>
+
+export const setJournalEntryInput = z.object({
+  entry_date: isoDate.optional(),
+  mood: moodScale.optional(),
+  energy: moodScale.optional(),
+  body: z.string().max(20_000).optional(),
+  tags: healthTags.optional(),
+})
+export type SetJournalEntryInput = z.infer<typeof setJournalEntryInput>
+
+export const deleteJournalEntryInput = z.object({ entry_id: uuid })
+export const listJournalEntriesInput = z.object({
+  from: isoDate.optional(),
+  to: isoDate.optional(),
+  limit: z.number().int().min(1).max(1_000).default(100),
+})
+export type ListJournalEntriesInput = z.infer<typeof listJournalEntriesInput>
+
+const medTimes = z.array(clockTime).max(12)
+export const createMedicationInput = z.object({
+  name: z.string().trim().min(1).max(200),
+  dosage: z.string().trim().max(120).optional(),
+  times: medTimes.optional(),
+  schedule_rule: z.string().trim().max(1_000).optional(),
+  is_active: z.boolean().optional(),
+  notes: z.string().max(2_000).optional(),
+})
+export type CreateMedicationInput = z.infer<typeof createMedicationInput>
+
+export const updateMedicationInput = z.object({
+  medication_id: uuid,
+  name: z.string().trim().min(1).max(200).optional(),
+  dosage: z.string().trim().max(120).optional(),
+  times: medTimes.optional(),
+  schedule_rule: z.string().trim().max(1_000).optional(),
+  is_active: z.boolean().optional(),
+  notes: z.string().max(2_000).optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateMedicationInput = z.infer<typeof updateMedicationInput>
+
+export const deleteMedicationInput = z.object({ medication_id: uuid })
+export const listMedicationsInput = z.object({
+  active_only: z.boolean().optional(),
+  limit: z.number().int().min(1).max(1_000).default(200),
+})
+export type ListMedicationsInput = z.infer<typeof listMedicationsInput>
+
+// ── Mnema Kitchen: recipes / pantry / shopping / meal plan ─────────
+const recipeUrl = z.string().trim().url().max(2_000)
+const kitchenTags = z.array(z.string().trim().min(1).max(40)).max(20)
+export const recipeIngredient = z.object({
+  name: z.string().trim().min(1).max(120),
+  quantity: z.string().trim().max(60).optional(),
+  unit: z.string().trim().max(40).optional(),
+})
+export type RecipeIngredient = z.infer<typeof recipeIngredient>
+const ingredientsArray = z.array(recipeIngredient).max(100)
+
+const recipeFields = {
+  description: z.string().max(5_000).optional(),
+  instructions: z.string().max(50_000).optional(),
+  ingredients: ingredientsArray.optional(),
+  servings: z.number().int().min(0).max(100).optional(),
+  total_minutes: z.number().int().min(0).max(100_000).optional(),
+  tags: kitchenTags.optional(),
+  source_url: recipeUrl.optional(),
+  image_url: recipeUrl.optional(),
+  is_favorite: z.boolean().optional(),
+}
+export const createRecipeInput = z.object({ title: z.string().trim().min(1).max(300), ...recipeFields })
+export type CreateRecipeInput = z.infer<typeof createRecipeInput>
+export const updateRecipeInput = z.object({
+  recipe_id: uuid,
+  title: z.string().trim().min(1).max(300).optional(),
+  ...recipeFields,
+})
+export type UpdateRecipeInput = z.infer<typeof updateRecipeInput>
+export const deleteRecipeInput = z.object({ recipe_id: uuid })
+export const getRecipeInput = z.object({ recipe_id: uuid })
+export const listRecipesInput = z.object({
+  query: z.string().trim().min(1).optional(),
+  favorites_only: z.boolean().optional(),
+  limit: z.number().int().min(1).max(1_000).default(200),
+})
+export type ListRecipesInput = z.infer<typeof listRecipesInput>
+
+export const addPantryItemInput = z.object({
+  name: z.string().trim().min(1).max(200),
+  quantity: z.number().optional(),
+  unit: z.string().trim().max(24).optional(),
+  category: z.string().trim().max(60).optional(),
+  location: z.string().trim().max(60).optional(),
+  expires_on: isoDate.optional(),
+  notes: z.string().max(1_000).optional(),
+})
+export type AddPantryItemInput = z.infer<typeof addPantryItemInput>
+export const updatePantryItemInput = z.object({
+  item_id: uuid,
+  name: z.string().trim().min(1).max(200).optional(),
+  quantity: z.number().optional(),
+  unit: z.string().trim().max(24).optional(),
+  category: z.string().trim().max(60).optional(),
+  location: z.string().trim().max(60).optional(),
+  expires_on: isoDate.optional(),
+  notes: z.string().max(1_000).optional(),
+})
+export type UpdatePantryItemInput = z.infer<typeof updatePantryItemInput>
+export const deletePantryItemInput = z.object({ item_id: uuid })
+export const listPantryInput = z.object({ limit: z.number().int().min(1).max(2_000).default(500) })
+
+export const shoppingItemInput = z.object({
+  name: z.string().trim().min(1).max(200),
+  quantity: z.string().trim().max(60).optional(),
+  category: z.string().trim().max(60).optional(),
+  recipe_id: uuid.optional(),
+})
+export const addShoppingItemsInput = z.object({ items: z.array(shoppingItemInput).min(1).max(200) })
+export type AddShoppingItemsInput = z.infer<typeof addShoppingItemsInput>
+export const updateShoppingItemInput = z.object({
+  item_id: uuid,
+  name: z.string().trim().min(1).max(200).optional(),
+  quantity: z.string().trim().max(60).optional(),
+  category: z.string().trim().max(60).optional(),
+  is_checked: z.boolean().optional(),
+  sort_order: z.number().int().optional(),
+})
+export type UpdateShoppingItemInput = z.infer<typeof updateShoppingItemInput>
+export const deleteShoppingItemInput = z.object({ item_id: uuid })
+export const clearCheckedShoppingInput = z.object({})
+export const listShoppingInput = z.object({ limit: z.number().int().min(1).max(2_000).default(500) })
+
+export const mealSlot = z.enum(['breakfast', 'lunch', 'dinner', 'snack'])
+export type MealSlot = z.infer<typeof mealSlot>
+export const setMealPlanInput = z.object({
+  plan_id: uuid.optional(),
+  plan_date: isoDate.optional(),
+  slot: mealSlot.optional(),
+  recipe_id: uuid.optional(),
+  title: z.string().trim().max(300).optional(),
+  note: z.string().max(1_000).optional(),
+})
+export type SetMealPlanInput = z.infer<typeof setMealPlanInput>
+export const deleteMealPlanInput = z.object({ plan_id: uuid })
+export const listMealPlansInput = z.object({
+  from: isoDate.optional(),
+  to: isoDate.optional(),
+  limit: z.number().int().min(1).max(2_000).default(500),
+})
+export type ListMealPlansInput = z.infer<typeof listMealPlansInput>
 
 // ── Mnema Galleon: money (ledgers / accounts / categories / transactions) ──
 export const accountType = z.enum(['cash', 'bank', 'credit', 'ewallet', 'investment'])
@@ -677,6 +888,30 @@ export const deleteRecurringTransactionInput = z.object({ recurring_id: uuid })
 export const runDueRecurringInput = z.object({ ledger_id: uuid })
 export const getMonthlyTrendInput = z.object({ ledger_id: uuid, months: z.number().int().min(1).max(36).default(6) })
 
+// Galleon: subscriptions (recurring paid services with renewal + auto-post)
+export const setSubscriptionInput = z.object({
+  ledger_id: uuid,
+  name: z.string().trim().min(1).max(200),
+  amount: money,
+  renewal_date: isoDate,
+  recurrence_rule: z.string().trim().min(1).max(1_000).optional(),
+  account_id: uuid.optional(),
+  category_id: uuid.optional(),
+  currency: currency.optional(),
+  cancel_reminder_days: z.number().int().min(0).max(365).optional(),
+  notes: z.string().max(2_000).optional(),
+  subscription_id: uuid.optional(),
+  is_active: z.boolean().optional(),
+})
+export type SetSubscriptionInput = z.infer<typeof setSubscriptionInput>
+export const deleteSubscriptionInput = z.object({ subscription_id: uuid })
+export const listSubscriptionsInput = z.object({ ledger_id: uuid })
+export const postDueSubscriptionsInput = z.object({ ledger_id: uuid })
+export const getUpcomingSubscriptionsInput = z.object({
+  ledger_id: uuid,
+  days_ahead: z.number().int().min(0).max(365).default(14),
+})
+
 // Galleon P3: members + splitting
 const splitShare = z.object({ member_id: uuid, paid: money, owed: money })
 export const addLedgerMemberInput = z.object({
@@ -828,6 +1063,9 @@ export const toolDescriptions = {
   uncheck_in: 'Remove a habit check-in for a date and recompute the streak.',
   add_reminder: 'Add a reminder to a task at an absolute time (ISO 8601). Delivered via web push when due.',
   remove_reminder: 'Remove a reminder.',
+  set_task_url: 'Attach a hyperlink to a task (a ticket, doc, or product page), shown as a clickable link on the todo. Pass an empty string to clear it.',
+  set_review_prefs:
+    'Turn the daily end-of-day review on or off (is_enabled). When on, the user gets an evening nudge to log their mood/journal and a catch-up the next day if they miss it.',
   get_task: 'Fetch one task with its subtasks, reminders, and (for habits) check-in history.',
   list_tasks:
     'List tasks with optional filters: list_id, status (todo/done/cancelled), kind (task/habit), label, due_before, scheduled_on. Top-level only unless include_subtasks=true.',
@@ -838,7 +1076,7 @@ export const toolDescriptions = {
     'Find clusters of repeatedly-added non-recurring tasks (with an inferred cadence) so you can propose turning them into recurring tasks.',
   // Captures (quick-capture inbox / 暫存區)
   create_capture:
-    'Drop a raw quick-capture line into the user’s inbox (暫存區) — an unstructured thought to triage later, not yet filed anywhere. Use this when the user is jotting on the go (e.g. “記一下:原神深淵 6/16”), not when they want something filed now. Returns the capture id.',
+    'Drop a raw quick-capture line into the user’s inbox (暫存區) — an unstructured thought to triage later, not yet filed anywhere. Use this when the user is jotting on the go (e.g. “記一下:週五要交報告”), not when they want something filed now. Returns the capture id.',
   list_captures:
     'List the user’s captures (default status=pending) — the quick-capture inbox (暫存區) to triage. When the user asks to process their inbox (“處理我的暫存區 / process my inbox”), for EACH pending capture: (1) interpret the raw text into the right space — a Tempo task or habit, a note, a trip item, or a money transaction; (2) auto-categorise using the user’s OWN lists — call list_task_lists first and match (e.g. “原神/星鐵/寶可夢” → a 遊戲/Games list); (3) ask only the few things you genuinely need (a specific time? repeat/recurring? which list? for a game daily, the reset time?) — be conversational, do not silently dump; (4) create the item with create_task/create_note/etc., then call resolve_capture with its id. Confirm what you filed.',
   resolve_capture:
@@ -846,6 +1084,46 @@ export const toolDescriptions = {
   dismiss_capture: 'Mark a capture as dismissed (not worth keeping) without filing it anywhere.',
   reopen_capture: 'Move a processed or dismissed capture back to pending (undo a triage).',
   delete_capture: 'Permanently delete a capture from the inbox.',
+  // Mnema Vitals (health)
+  log_health:
+    'Log one health metric. Pick `kind` and use the right fields: weight/body_fat/waist/heart_rate/blood_glucose/temperature → value (+unit, e.g. kg, bpm, mg/dL, °C); blood_pressure → value=systolic, value2=diastolic; sleep → value=hours (meta {bedtime,wake}); workout → value=minutes, text_value=type (meta {distance_km, calories}); water → value=ml; meal → text_value=description, value=kcal (meta {protein,carbs,fat}); meds → text_value=medication name; symptom → text_value=what + note. Pass logged_date (YYYY-MM-DD, the user’s local day) and optional logged_at. This is the "log my weight / meal / workout / sleep / blood pressure" tool. Returns the new row id.',
+  update_health_log: 'Update a health log entry (only the fields you pass change).',
+  delete_health_log: 'Delete a health log entry.',
+  list_health_logs:
+    'List the user’s health logs, optionally filtered by kind and a date range (from/to, YYYY-MM-DD). Use it to read trends before answering (e.g. weight over the last month).',
+  set_journal_entry:
+    'Create or update the user’s daily journal entry (one per day) — the merged journal + mood. Pass entry_date (default today), an optional mood and energy each 1–5, free-text body, and tags. Upserts: re-calling for the same day merges. This is the tool for "today I felt…", the end-of-day reflection, and recording a mood.',
+  delete_journal_entry: 'Delete a journal entry by id.',
+  list_journal_entries: 'List journal entries (mood/energy/body) over an optional date range — for mood trends and reflections.',
+  create_medication:
+    'Add a medication/supplement the user takes. Pass name, optional dosage, times (wall-clock "HH:MM" array, e.g. ["08:00","20:00"]), an optional RRULE schedule_rule for non-daily meds, and notes. Logging an actual dose taken is log_health(kind="meds"). Returns the new id.',
+  update_medication: 'Update a medication’s name, dosage, times, schedule, active state, or order.',
+  delete_medication: 'Delete a medication from the list.',
+  list_medications: 'List the user’s medications (pass active_only=true for current ones) — with their times and dosage.',
+  set_health_settings:
+    'Set which health modules the user wants visible (enabled_modules: any of vitals, activity, nutrition, meds, journal) and/or the weight unit (kg/lb). Use when the user wants to turn a whole category on or off.',
+  // Mnema Kitchen (recipes / pantry / shopping / meal plan)
+  create_recipe:
+    'Save a recipe. Pass title, optional description, instructions (markdown steps), ingredients (array of {name, quantity, unit}), servings, total_minutes, tags, source_url, image_url. This is the "save this recipe" tool. Returns the new recipe id.',
+  update_recipe: 'Update a recipe’s fields (only the fields you pass change). Pass the full ingredients array to replace it.',
+  delete_recipe: 'Delete a recipe.',
+  list_recipes: 'List the user’s recipes (optional title query, favorites_only). Returns ids + titles + ingredients.',
+  get_recipe: 'Fetch one recipe with its full ingredients and instructions.',
+  add_pantry_item:
+    'Add an item to the pantry/fridge inventory. Pass name, optional quantity (number) + unit, category, location (fridge/freezer/pantry), expires_on (YYYY-MM-DD), notes. Use for "我買了…" / "冰箱還有…".',
+  update_pantry_item: 'Update a pantry item (e.g. reduce quantity after cooking, set an expiry).',
+  delete_pantry_item: 'Remove an item from the pantry (e.g. it’s used up).',
+  list_pantry: 'List what’s in the pantry — read this before suggesting meals from what the user has, or before building a shopping list.',
+  add_shopping_items:
+    'Add one or more items to the shopping list. Pass items: an array of {name, quantity?, category?, recipe_id?}. To fill the list from a recipe, read the recipe’s ingredients and add them (set recipe_id). Returns the created items.',
+  update_shopping_item: 'Update a shopping item — rename, change quantity, or tick it off (is_checked=true).',
+  delete_shopping_item: 'Remove an item from the shopping list.',
+  clear_checked_shopping: 'Delete all ticked-off shopping items (after a shop). Returns how many were removed.',
+  list_shopping: 'List the shopping list (unchecked first).',
+  set_meal_plan:
+    'Plan a meal for a day. Pass plan_date (YYYY-MM-DD), slot (breakfast/lunch/dinner/snack), and either recipe_id (a saved recipe) or a free-text title. Pass plan_id to update an existing plan. Returns the plan.',
+  delete_meal_plan: 'Remove a planned meal.',
+  list_meal_plans: 'List planned meals over an optional date range (from/to) — for the week’s menu.',
   // Mnema Galleon (money)
   create_ledger: 'Create a money ledger (帳本). Seeds default categories. Returns the new ledger id.',
   update_ledger: 'Rename a ledger, change its base currency, icon, colour, or archive it.',
@@ -891,4 +1169,10 @@ export const toolDescriptions = {
   list_recurring: 'List a ledger’s recurring-transaction templates with their recurring_id, amount, rule, and next run date.',
   get_transaction: 'Get one transaction plus its per-member split breakdown (paid/owed). Read this before editing splits so you do not overwrite other members’ shares.',
   list_split_txn_ids: 'List the ids of transactions in a ledger that have a split breakdown — use it to tell which transactions are shared.',
+  // Galleon: subscriptions
+  set_subscription:
+    'Create or update a subscription (a recurring paid service — Netflix, iCloud, gym…). Pass ledger_id, name, amount, renewal_date (YYYY-MM-DD, the next charge), an RRULE recurrence_rule (default FREQ=MONTHLY), and optional account_id/category_id/currency/cancel_reminder_days/notes. Subscriptions AUTO-POST: an expense is recorded and the renewal_date advances when the ledger is opened. Pass subscription_id to update. Returns the subscription.',
+  delete_subscription: 'Delete a subscription (stops future auto-posting). Past posted transactions are kept.',
+  list_subscriptions: 'List a ledger’s subscriptions with their amount, renewal date, and active state.',
+  get_upcoming_subscriptions: 'List active subscriptions renewing within the next N days (days_ahead, default 14) — for "what’s renewing soon" and cancel reminders.',
 } as const

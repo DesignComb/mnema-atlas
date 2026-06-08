@@ -7,6 +7,7 @@ import {
   Flag,
   Flame,
   Inbox,
+  Link2,
   ListTodo,
   MoreHorizontal,
   Pencil,
@@ -437,6 +438,20 @@ function TaskRowItem({
           </div>
         ) : null}
       </button>
+
+      {task.url ? (
+        <a
+          href={task.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 rounded p-1 text-muted-foreground transition hover:text-brand"
+          aria-label={t('Open link', '開啟連結')}
+          title={task.url}
+        >
+          <Link2 className="size-4" />
+        </a>
+      ) : null}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

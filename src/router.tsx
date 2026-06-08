@@ -72,7 +72,15 @@ const appRoute = createRoute({
 
 // Light, common screens stay eager; heavy/rare leaves are code-split so a new
 // user who only sees "/" doesn't download TipTap, force-graph, or motion.
-const homeRoute = createRoute({ getParentRoute: () => appRoute, path: 'today', component: HomeScreen })
+const homeRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'today',
+  // ?review=1 deep-links here from the daily-review push to open the journal.
+  validateSearch: (search: Record<string, unknown>): { review?: string } => ({
+    review: typeof search.review === 'string' && search.review ? search.review : undefined,
+  }),
+  component: HomeScreen,
+})
 const notesRoute = createRoute({ getParentRoute: () => appRoute, path: 'notes', component: NotesScreen })
 const deckRoute = createRoute({ getParentRoute: () => appRoute, path: 'decks/$deckId', component: DeckScreen })
 const cardsRoute = createRoute({ getParentRoute: () => appRoute, path: 'cards', component: CardsScreen })
@@ -118,15 +126,45 @@ const galleonRoute = createRoute({
   // `section` (not `view`) so it never collides with Tempo's `view` search param.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { section?: 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split'; ledger?: string } => {
+  ): { section?: 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split' | 'subscriptions'; ledger?: string } => {
     const s = search.section
-    const ok = s === 'overview' || s === 'transactions' || s === 'accounts' || s === 'budgets' || s === 'reports' || s === 'split'
+    const ok =
+      s === 'overview' || s === 'transactions' || s === 'accounts' || s === 'budgets' || s === 'reports' || s === 'split' || s === 'subscriptions'
     return {
-      section: ok ? (s as 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split') : undefined,
+      section: ok ? (s as 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split' | 'subscriptions') : undefined,
       ledger: typeof search.ledger === 'string' && search.ledger ? search.ledger : undefined,
     }
   },
   component: lazyRouteComponent(() => import('@/routes/galleon'), 'GalleonScreen'),
+})
+const healthRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'health',
+  // `section` (unique to this space) — overview / journal / meds / history / settings.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { section?: 'overview' | 'journal' | 'meds' | 'history' | 'settings' } => {
+    const s = search.section
+    const ok = s === 'overview' || s === 'journal' || s === 'meds' || s === 'history' || s === 'settings'
+    return { section: ok ? (s as 'overview' | 'journal' | 'meds' | 'history' | 'settings') : undefined }
+  },
+  component: lazyRouteComponent(() => import('@/routes/health'), 'HealthScreen'),
+})
+const kitchenRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'kitchen',
+  // `ksection` (unique to this space) — recipes / pantry / shopping / plan.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { ksection?: 'recipes' | 'pantry' | 'shopping' | 'plan'; recipe?: string } => {
+    const s = search.ksection
+    const ok = s === 'recipes' || s === 'pantry' || s === 'shopping' || s === 'plan'
+    return {
+      ksection: ok ? (s as 'recipes' | 'pantry' | 'shopping' | 'plan') : undefined,
+      recipe: typeof search.recipe === 'string' && search.recipe ? search.recipe : undefined,
+    }
+  },
+  component: lazyRouteComponent(() => import('@/routes/kitchen'), 'KitchenScreen'),
 })
 const noteRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -192,6 +230,8 @@ const routeTree = rootRoute.addChildren([
     tripRoute,
     tempoRoute,
     galleonRoute,
+    healthRoute,
+    kitchenRoute,
     studyRoute,
     studyDeckRoute,
     graphRoute,

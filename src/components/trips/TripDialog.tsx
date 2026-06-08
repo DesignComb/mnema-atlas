@@ -109,7 +109,7 @@ export function TripDialog({
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('e.g. Kyoto with Tracy', '例如：京都之旅')}
+              placeholder={t('e.g. Kyoto trip', '例如：京都之旅')}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -158,7 +158,7 @@ export function TripDialog({
                 id="trip-travelers"
                 value={travelers}
                 onChange={(e) => setTravelers(e.target.value)}
-                placeholder="Hao, Tracy"
+                placeholder={t('e.g. Sam, Jamie', '例如：小明、小華')}
               />
             </div>
             <div className="flex flex-col gap-1.5">
