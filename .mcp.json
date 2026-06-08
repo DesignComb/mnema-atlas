@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mnema": {
+      "type": "http",
+      "url": "https://mnema-ai.dco.tw/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MNEMA_API_KEY}"
+      }
+    }
+  }
+}
