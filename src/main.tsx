@@ -11,7 +11,12 @@ import { queryClient } from '@/lib/queryClient'
 import { router } from '@/router'
 import { WidgetSync } from '@/components/WidgetSync'
 import { OtaUpdater } from '@/components/OtaUpdater'
+import { notifyReady } from '@/lib/ota'
 import './index.css'
+
+// Tell Capgo the bundle booted, as early as possible (before the provider tree
+// renders) so a slow first paint never trips the 10s auto-rollback. No-op on web.
+void notifyReady()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

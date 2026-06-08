@@ -73,6 +73,16 @@ export async function dismissUpdate(version: string): Promise<void> {
   }
 }
 
+/** Undo a dismissal for this version (e.g. so a failed update can re-prompt). */
+export async function clearDismiss(version: string): Promise<void> {
+  try {
+    const cur = (await Preferences.get({ key: DISMISS_KEY })).value
+    if (cur === version) await Preferences.remove({ key: DISMISS_KEY })
+  } catch {
+    // ignore
+  }
+}
+
 /** Download + activate the bundle. set() reloads the webview into the new bundle. */
 export async function applyUpdate(m: OtaManifest): Promise<void> {
   const bundle = await CapacitorUpdater.download({ version: m.version, url: m.url, checksum: m.checksum })
