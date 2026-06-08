@@ -21,5 +21,9 @@ export const supabase = createClient<Database>(url ?? '', publishableKey ?? '', 
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    // PKCE so the OAuth redirect carries a ?code= we can exchange. On web,
+    // detectSessionInUrl swaps it automatically; in the Capacitor shell, the
+    // deep-link handler in auth.tsx calls exchangeCodeForSession explicitly.
+    flowType: 'pkce',
   },
 })
