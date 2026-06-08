@@ -1113,6 +1113,16 @@ export async function uncheckIn(taskId: string, date?: string): Promise<TaskRow>
     await supabase.rpc('uncheck_in', { p_user_id: null, p_task_id: taskId, p_checkin_date: date ?? undefined }),
   )
 }
+/** A check-in / completion row for the calendar history (habit check-ins AND task completions). */
+export interface CheckInRow {
+  task_id: string
+  checkin_date: string
+  title: string
+  kind: string
+}
+export async function listCheckIns(from: string, to: string): Promise<CheckInRow[]> {
+  return unwrap(await supabase.rpc('list_check_ins', { p_user_id: null, p_from: from, p_to: to }))
+}
 export async function addReminder(input: AddReminderInput): Promise<TaskReminderRow> {
   return unwrap(
     await supabase.rpc('add_reminder', {

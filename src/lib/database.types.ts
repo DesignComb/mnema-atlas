@@ -4072,6 +4072,19 @@ export type Database = {
         Args: { p_ledger_id: string; p_user_id: string | null }
         Returns: Json
       }
+      list_check_ins: {
+        Args: {
+          p_from: string
+          p_to: string
+          p_user_id: string | null
+        }
+        Returns: {
+          checkin_date: string
+          kind: string
+          task_id: string
+          title: string
+        }[]
+      }
       list_tasks: {
         Args: {
           p_due_before?: string

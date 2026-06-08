@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useScheduleTask } from '@/lib/hooks'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { CalendarRange, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useCheckInsInRange, useScheduleTask } from '@/lib/hooks'
 import { useHolidays } from '@/lib/holidays'
 import { useT } from '@/lib/i18n'
 import type { TaskRow } from '@/lib/database.types'
+import type { CheckInRow } from '@/lib/api'
+import { DayDetailSheet } from './DayDetailSheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,6 +70,20 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
     }
   })
   const today = todayISO()
+  const [dayDetail, setDayDetail] = useState<string | null>(null)
+
+  // Check-in / completion history for the visible month grid (covers month + week).
+  const gridDays = useMemo(() => monthGrid(yearOf(cursor), monthOf(cursor)), [cursor])
+  const { data: checkins } = useCheckInsInRange(gridDays[0], gridDays[gridDays.length - 1])
+  const doneByDate = useMemo(() => {
+    const m = new Map<string, CheckInRow[]>()
+    for (const c of checkins ?? []) {
+      const arr = m.get(c.checkin_date) ?? []
+      arr.push(c)
+      m.set(c.checkin_date, arr)
+    }
+    return m
+  }, [checkins])
 
   function toggleTasks() {
     setShowTasks((v) => {
@@ -190,7 +206,7 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
 
       <div className="min-h-0 flex-1">
         {mode === 'month' ? (
-          <MonthGrid cursor={cursor} byDate={byDate} holidays={holidays} today={today} t={t} onEdit={onEdit} />
+          <MonthGrid cursor={cursor} byDate={byDate} doneByDate={doneByDate} holidays={holidays} today={today} t={t} onEdit={onEdit} onDayClick={setDayDetail} />
         ) : (
           <div className="h-full overflow-y-auto pb-1">
             {mode === 'week' ? (
@@ -206,11 +222,18 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
                 }
               />
             ) : (
-              <Agenda cursor={cursor} byDate={byDate} holidays={holidays} today={today} t={t} onEdit={onEdit} />
+              <Agenda cursor={cursor} byDate={byDate} doneByDate={doneByDate} holidays={holidays} today={today} t={t} onEdit={onEdit} onDayClick={setDayDetail} />
             )}
           </div>
         )}
       </div>
+
+      <DayDetailSheet
+        date={dayDetail}
+        tasks={tasks}
+        doneRows={dayDetail ? doneByDate.get(dayDetail) ?? [] : []}
+        onOpenChange={setDayDetail}
+      />
     </div>
   )
 }
@@ -218,17 +241,21 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
 function MonthGrid({
   cursor,
   byDate,
+  doneByDate,
   holidays,
   today,
   t,
   onEdit,
+  onDayClick,
 }: {
   cursor: string
   byDate: Map<string, TaskRow[]>
+  doneByDate: Map<string, CheckInRow[]>
   holidays: Map<string, string>
   today: string
   t: Tr
   onEdit: (t: TaskRow) => void
+  onDayClick: (d: string) => void
 }) {
   const days = monthGrid(yearOf(cursor), monthOf(cursor))
   const curMonth = monthOf(cursor)
@@ -250,12 +277,14 @@ function MonthGrid({
         {days.map((d) => {
           const inMonth = monthOf(d) === curMonth
           const items = byDate.get(d) ?? []
+          const done = doneByDate.get(d) ?? []
           const isToday = d === today
           const holiday = holidays.get(d)
           return (
             <div
               key={d}
-              className={`flex min-h-0 flex-col overflow-hidden border-t border-r border-border/40 p-1 transition hover:bg-muted/30 ${
+              onClick={() => onDayClick(d)}
+              className={`flex min-h-0 cursor-pointer flex-col overflow-hidden border-t border-r border-border/40 p-1 transition hover:bg-muted/30 ${
                 isWeekend(d) ? 'bg-muted/20' : ''
               } ${inMonth ? '' : 'opacity-45'}`}
             >
@@ -276,10 +305,19 @@ function MonthGrid({
                 </span>
               </div>
               <div className="min-h-0 flex-1 space-y-0.5 overflow-hidden">
+                {done.length > 0 ? (
+                  <div className="flex items-center gap-1 rounded bg-emerald-500/12 px-1.5 py-0.5 text-[10.5px] font-medium text-emerald-600">
+                    <Check className="size-3 shrink-0" />
+                    <span className="truncate">{t(`${done.length} done`, `完成 ${done.length}`)}</span>
+                  </div>
+                ) : null}
                 {items.slice(0, 3).map((task) => (
                   <button
                     key={task.id}
-                    onClick={() => onEdit(task)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEdit(task)
+                    }}
                     className="flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px] text-foreground transition hover:bg-brand-muted"
                   >
                     <span className="size-1.5 shrink-0 rounded-full bg-brand" />
@@ -300,18 +338,23 @@ function MonthGrid({
 function Agenda({
   cursor,
   byDate,
+  doneByDate,
   holidays,
   today,
   t,
   onEdit,
+  onDayClick,
 }: {
   cursor: string
   byDate: Map<string, TaskRow[]>
+  doneByDate: Map<string, CheckInRow[]>
   holidays: Map<string, string>
   today: string
   t: Tr
   onEdit: (t: TaskRow) => void
+  onDayClick: (d: string) => void
 }) {
+  void doneByDate
   const start = cursor < today ? today : cursor
   const days = Array.from({ length: 30 }, (_, i) => addDays(start, i)).filter((d) => byDate.has(d) || holidays.has(d))
   if (!days.length) {
@@ -329,9 +372,9 @@ function Agenda({
         return (
           <div key={d}>
             <p className="mb-1 flex items-center gap-2 text-[12px] font-semibold">
-              <span className={numClass(d, Boolean(holiday))}>
+              <button onClick={() => onDayClick(d)} className={`${numClass(d, Boolean(holiday))} transition hover:underline`}>
                 {d === today ? t('Today', '今天') : d} · {t(WD_EN[wdIdx], WD_ZH[wdIdx])}
-              </span>
+              </button>
               {holiday ? <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] font-medium text-red-500">{holiday}</span> : null}
             </p>
             {(byDate.get(d) ?? []).length ? (

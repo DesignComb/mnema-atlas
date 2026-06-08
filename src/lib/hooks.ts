@@ -539,6 +539,7 @@ function bumpTasks(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['task'] })
   qc.invalidateQueries({ queryKey: ['habit'] })
   qc.invalidateQueries({ queryKey: ['streak'] })
+  qc.invalidateQueries({ queryKey: ['checkins'] })
 }
 
 export function useTaskLists() {
@@ -592,7 +593,8 @@ export function useUpdateTask() {
 export function useCompleteTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (v: { taskId: string; nextOccurrence?: string }) => api.completeTask(v.taskId, { nextOccurrence: v.nextOccurrence }),
+    mutationFn: (v: { taskId: string; nextOccurrence?: string; completedAt?: string }) =>
+      api.completeTask(v.taskId, { nextOccurrence: v.nextOccurrence, completedAt: v.completedAt }),
     onSuccess: () => bumpTasks(qc),
   })
 }
@@ -647,6 +649,10 @@ export function useUncheckIn() {
     mutationFn: (v: { taskId: string; date?: string }) => api.uncheckIn(v.taskId, v.date),
     onSuccess: () => bumpTasks(qc),
   })
+}
+/** Check-in / completion history for the calendar (inclusive date range, ISO strings). */
+export function useCheckInsInRange(from: string, to: string, enabled = true) {
+  return useQuery({ queryKey: ['checkins', from, to], queryFn: () => api.listCheckIns(from, to), enabled })
 }
 export function useAddReminder() {
   const qc = useQueryClient()
