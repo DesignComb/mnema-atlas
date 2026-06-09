@@ -70,7 +70,11 @@ async function accessToken(sa: ServiceAccount): Promise<string> {
   return j.access_token
 }
 
-export async function sendFcm(env: Env, tokens: string[], msg: { title: string; body: string; url?: string }): Promise<void> {
+export async function sendFcm(
+  env: Env,
+  tokens: string[],
+  msg: { title: string; body: string; url?: string; taskId?: string; reminderId?: string; kind?: string },
+): Promise<void> {
   if (!env.FCM_SERVICE_ACCOUNT || !tokens || tokens.length === 0) return
   let sa: ServiceAccount
   try {
@@ -87,13 +91,20 @@ export async function sendFcm(env: Env, tokens: string[], msg: { title: string; 
   const url = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`
   const sb = serviceClient(env)
 
+  // Data-only (no `notification` key) so the native MnemaMessagingService renders
+  // it and can add the 延後/已完成 action buttons. All data values must be strings.
+  const data: Record<string, string> = { title: msg.title, body: msg.body || '' }
+  if (msg.url) data.url = msg.url
+  if (msg.taskId) data.task_id = msg.taskId
+  if (msg.reminderId) data.reminder_id = msg.reminderId
+  if (msg.kind) data.kind = msg.kind
+
   await Promise.allSettled(
     tokens.map(async (t) => {
       const body = {
         message: {
           token: t,
-          notification: { title: msg.title, body: msg.body },
-          data: msg.url ? { url: msg.url } : {},
+          data,
           android: { priority: 'HIGH' },
         },
       }

@@ -72,8 +72,15 @@ export async function runReminderScan(env: Env): Promise<void> {
           }
         }),
       )
-      // Native (FCM) push, alongside Web Push.
-      await sendFcm(env, r.fcm_tokens ?? [], { title: r.title, body: r.body || '', url: '/tempo?view=today' })
+      // Native (FCM) push, alongside Web Push — data-only so the app can add buttons.
+      await sendFcm(env, r.fcm_tokens ?? [], {
+        title: r.title,
+        body: r.body || '',
+        url: '/tempo?view=today',
+        taskId: r.task_id,
+        reminderId: r.reminder_id,
+        kind: 'reminder',
+      })
       // Mark delivered so it won't fire again (even if the user had no devices).
       await sb.rpc('mark_reminder_delivered', { p_reminder_id: r.reminder_id })
     }),
