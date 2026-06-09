@@ -1,7 +1,7 @@
 // Minimal service worker — enough to make Mnema installable + offline-tolerant
 // for the app shell. It NEVER touches the API (different origin) or Supabase, so
 // data always comes fresh from the network.
-const CACHE = 'mnema-v3'
+const CACHE = 'mnema-v4'
 const SHELL = ['/', '/index.html', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
@@ -87,21 +87,30 @@ self.addEventListener('push', (e) => {
 async function runNotificationAction(action, d) {
   try {
     const sub = await self.registration.pushManager.getSubscription()
-    if (!sub || !d.action_url) return
-    await fetch(d.action_url, {
+    if (!sub || !d.action_url) throw new Error('no-sub')
+    const res = await fetch(d.action_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: sub.endpoint, action, task_id: d.task_id, reminder_id: d.reminder_id }),
     })
+    if (!res.ok) throw new Error('http ' + res.status)
     await self.registration.showNotification(action === 'done' ? '已完成 ✓' : '已延後 1 小時 ⏰', {
       body: '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      tag: (d.task_id || 'ota') + '-ack',
+      tag: (d.task_id || 'ack') + '-ack',
       silent: true,
     })
   } catch {
-    /* best-effort */
+    // Surface the failure (and let a tap open the app to act manually) rather
+    // than lying with a success ack.
+    await self.registration.showNotification('操作失敗,請開啟 App 處理', {
+      body: '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: (d.task_id || 'ack') + '-err',
+      data: { url: d.url || '/tempo' },
+    })
   }
 }
 

@@ -8,16 +8,18 @@ import android.content.SharedPreferences;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 /**
- * Toggles a habit's check-in straight from the widget. Reads the stored auth blob
- * (project URL + anon key + access token) and POSTs the Supabase check_in /
- * uncheck_in RPC with NO date, so the server computes the reset-aware habit-day
- * (migration 0033). Optimistic: flips the snapshot + redraws first, then the
- * network call; the next app sync reconciles if it fails.
+ * Toggles a habit's check-in from the widget. Calls the reset-aware
+ * toggle_check_in RPC (migration 0036), which flips based on the SERVER's own
+ * habit-day and returns the new state — so a stale snapshot (e.g. after a day
+ * rollover with the app closed) can never act on the wrong day. We flip
+ * optimistically for instant feedback, then correct to the authoritative result.
  */
 public class HabitActionReceiver extends BroadcastReceiver {
 
@@ -32,7 +34,7 @@ public class HabitActionReceiver extends BroadcastReceiver {
     final boolean wasChecked = intent.getBooleanExtra(EXTRA_CHECKED, false);
     if (habitId == null || habitId.isEmpty()) return;
 
-    SharedPreferences prefs = context.getSharedPreferences(HabitsWidget.PREFS, Context.MODE_PRIVATE);
+    final SharedPreferences prefs = context.getSharedPreferences(HabitsWidget.PREFS, Context.MODE_PRIVATE);
     final String auth = prefs.getString("widget_auth", null);
     if (auth == null) {
       Intent open = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
@@ -43,7 +45,7 @@ public class HabitActionReceiver extends BroadcastReceiver {
       return;
     }
 
-    // Optimistic flip + redraw.
+    // Optimistic flip for instant feedback (corrected below by the server's answer).
     flipSnapshot(prefs, habitId, !wasChecked);
     HabitsWidget.refreshAll(context);
 
@@ -53,9 +55,11 @@ public class HabitActionReceiver extends BroadcastReceiver {
       public void run() {
         try {
           JSONObject a = new JSONObject(auth);
-          // wasChecked → undo it; else check in. Both reset-aware (no date).
-          String rpc = wasChecked ? "uncheck_in" : "check_in";
-          call(a.optString("url"), a.optString("anonKey"), a.optString("token"), rpc, habitId);
+          Boolean nowChecked = toggle(a.optString("url"), a.optString("anonKey"), a.optString("token"), habitId);
+          if (nowChecked != null) {
+            flipSnapshot(prefs, habitId, nowChecked); // authoritative server state
+            HabitsWidget.refreshAll(context);
+          }
         } catch (Exception ignored) {
         } finally {
           pending.finish();
@@ -80,9 +84,10 @@ public class HabitActionReceiver extends BroadcastReceiver {
     }
   }
 
-  private static void call(String url, String anonKey, String token, String rpc, String taskId) throws Exception {
-    if (url == null || url.isEmpty()) return;
-    URL endpoint = new URL(url + "/rest/v1/rpc/" + rpc);
+  /** POST toggle_check_in; returns the new checked state (true/false), or null on failure. */
+  private static Boolean toggle(String url, String anonKey, String token, String taskId) throws Exception {
+    if (url == null || url.isEmpty()) return null;
+    URL endpoint = new URL(url + "/rest/v1/rpc/toggle_check_in");
     HttpURLConnection c = (HttpURLConnection) endpoint.openConnection();
     try {
       c.setRequestMethod("POST");
@@ -92,12 +97,19 @@ public class HabitActionReceiver extends BroadcastReceiver {
       c.setRequestProperty("Content-Type", "application/json");
       c.setRequestProperty("apikey", anonKey);
       c.setRequestProperty("Authorization", "Bearer " + token);
-      c.setRequestProperty("Prefer", "return=minimal");
       String body = "{\"p_user_id\":null,\"p_task_id\":\"" + taskId + "\"}";
       OutputStream os = c.getOutputStream();
       os.write(body.getBytes("UTF-8"));
       os.close();
-      c.getResponseCode();
+      int code = c.getResponseCode();
+      if (code < 200 || code >= 300) return null;
+      InputStream is = c.getInputStream();
+      ByteArrayOutputStream buf = new ByteArrayOutputStream();
+      byte[] tmp = new byte[256];
+      int n;
+      while ((n = is.read(tmp)) != -1) buf.write(tmp, 0, n);
+      is.close();
+      return Boolean.valueOf("true".equalsIgnoreCase(buf.toString("UTF-8").trim()));
     } finally {
       c.disconnect();
     }

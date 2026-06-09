@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { useAuth } from '@/lib/auth'
@@ -36,10 +37,20 @@ export function WidgetSync() {
 }
 
 function WidgetSyncInner({ token }: { token: string }) {
+  const qc = useQueryClient()
+  // Re-render each minute so localToday()/the range roll over live at midnight or
+  // a habit's reset_time (otherwise frozen at first-render's day).
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   // Shares the query cache with the Tempo screen (same key) — no extra fetch there.
   const { data: tasks } = useTasks({ status: 'todo', limit: 500 })
-  // Today + yesterday check-ins cover every habit's reset-aware "today".
-  const { data: checkins } = useCheckInsInRange(addDaysISO(localToday(), -1), localToday())
+  // ±1 day around today covers every habit's reset-aware "today" even when the
+  // habit's tz runs ahead of / behind the device's.
+  const { data: checkins } = useCheckInsInRange(addDaysISO(localToday(), -1), addDaysISO(localToday(), 1))
   const lastRef = useRef('')
   const habitsRef = useRef('')
 
@@ -47,6 +58,18 @@ function WidgetSyncInner({ token }: { token: string }) {
   useEffect(() => {
     void pushWidgetAuth(token)
   }, [token])
+
+  // On foreground, re-pull tasks + check-ins so the widget reflects a new day or
+  // a check-in made elsewhere.
+  useEffect(() => {
+    const handle = CapApp.addListener('resume', () => {
+      void qc.invalidateQueries({ queryKey: ['tasks'] })
+      void qc.invalidateQueries({ queryKey: ['checkins'] })
+    })
+    return () => {
+      handle.then((h) => h.remove()).catch(() => {})
+    }
+  }, [qc])
 
   // The widget's "+" opens tw.dco.mnema://add — land on the Tempo add screen.
   useEffect(() => {

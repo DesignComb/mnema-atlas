@@ -172,7 +172,10 @@ export function TaskDialog({
           due_date: dueDate || undefined,
           due_time: dueTime || undefined,
           reset_time: kind === 'habit' && resetTime ? resetTime : undefined,
-          tz: kind === 'habit' && resetTime ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined,
+          // Store tz for ALL habits (not just reset-time ones) so the habit-day
+          // the client computes (habitTodayISO) matches the server (app.habit_today)
+          // — otherwise plain habits split device-local vs UTC near midnight.
+          tz: kind === 'habit' ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined,
           recurrence_rule: rule ?? undefined,
           recurrence_after_completion: rule ? afterCompletion : undefined,
           recurrence_anchor: rule ? anchor : undefined,
