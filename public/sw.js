@@ -1,7 +1,7 @@
 // Minimal service worker — enough to make Mnema installable + offline-tolerant
 // for the app shell. It NEVER touches the API (different origin) or Supabase, so
 // data always comes fresh from the network.
-const CACHE = 'mnema-v2'
+const CACHE = 'mnema-v3'
 const SHELL = ['/', '/index.html', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
@@ -68,14 +68,52 @@ self.addEventListener('push', (e) => {
       badge: '/icon-192.png',
       tag: data.tag,
       renotify: Boolean(data.tag),
-      data: { url: data.url || '/tempo' },
+      // 延後 / 已完成 buttons when the sender includes them (task reminders).
+      actions: Array.isArray(data.actions) ? data.actions : [],
+      data: {
+        url: data.url || '/tempo',
+        task_id: data.task_id,
+        reminder_id: data.reminder_id,
+        action_url: data.action_url,
+        kind: data.kind,
+      },
     }),
   )
 })
 
+// Handle a notification action button (done/snooze) WITHOUT opening the app: the
+// SW identifies the user by its own push subscription endpoint and POSTs the
+// worker's /_action route (url carried in the payload).
+async function runNotificationAction(action, d) {
+  try {
+    const sub = await self.registration.pushManager.getSubscription()
+    if (!sub || !d.action_url) return
+    await fetch(d.action_url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: sub.endpoint, action, task_id: d.task_id, reminder_id: d.reminder_id }),
+    })
+    await self.registration.showNotification(action === 'done' ? '已完成 ✓' : '已延後 1 小時 ⏰', {
+      body: '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: (d.task_id || 'ota') + '-ack',
+      silent: true,
+    })
+  } catch {
+    /* best-effort */
+  }
+}
+
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
-  const target = (e.notification.data && e.notification.data.url) || '/tempo'
+  const d = e.notification.data || {}
+  // Action buttons act in the background; a plain click opens the app.
+  if ((e.action === 'done' || e.action === 'snooze') && d.action_url) {
+    e.waitUntil(runNotificationAction(e.action, d))
+    return
+  }
+  const target = d.url || '/tempo'
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const c of clients) {

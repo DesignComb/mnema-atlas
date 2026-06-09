@@ -28,6 +28,8 @@ routes = [
 # signing pushes. The PRIVATE key + subject are secrets (see below).
 [vars]
 VAPID_PUBLIC_KEY = "BJOIOxAJypzGgGZ4v_GsrrRAT2-gGwreLMbhrju_DxZ_2ZmvEunXKHmYuOGUrFI4TVKzY2RLBboN-O0Iy7sbJ38"
+# Public base URL of this worker — the SW POSTs notification actions to {url}/_action.
+WORKER_PUBLIC_URL = "https://mnema-ai.dco.tw"
 
 # ── Secrets (server-only — NEVER commit) ─────────────────────────────
 # Local dev: put them in worker/.dev.vars (see .dev.vars.example).

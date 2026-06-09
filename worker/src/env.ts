@@ -22,6 +22,9 @@ export interface Env {
   VAPID_SUBJECT?: string
   /** Shared secret for the pg_cron → /_cron/run-reminders ping (secret). */
   CRON_SECRET?: string
+  /** Public base URL of this worker (committed [vars]); put into push payloads so
+   *  the service worker knows where to POST notification actions. */
+  WORKER_PUBLIC_URL?: string
 }
 
 export interface ToolContext {

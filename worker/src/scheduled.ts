@@ -18,6 +18,8 @@ interface DueReminder {
 export async function runReminderScan(env: Env): Promise<void> {
   if (!env.VAPID_PRIVATE_KEY || !env.VAPID_SUBJECT || !env.VAPID_PUBLIC_KEY) return // push not configured yet
   const sb = serviceClient(env)
+  // Re-fire reminders for tasks still open ~24h on so an overdue item keeps nudging.
+  await sb.rpc('rearm_overdue_reminders')
   const { data, error } = await sb.rpc('due_reminders_for_cron')
   if (error || !Array.isArray(data)) return
   const vapid = {
@@ -25,6 +27,7 @@ export async function runReminderScan(env: Env): Promise<void> {
     publicKey: env.VAPID_PUBLIC_KEY,
     privateKey: env.VAPID_PRIVATE_KEY,
   }
+  const actionUrl = env.WORKER_PUBLIC_URL ? `${env.WORKER_PUBLIC_URL}/_action` : ''
 
   await Promise.allSettled(
     (data as DueReminder[]).map(async (r) => {
@@ -36,7 +39,22 @@ export async function runReminderScan(env: Env): Promise<void> {
             keys: { p256dh: s.p256dh, auth: s.auth },
           }
           const message = {
-            data: { title: r.title, body: r.body || '', url: '/tempo', tag: r.task_id },
+            data: {
+              title: r.title,
+              body: r.body || '',
+              url: '/tempo?view=today',
+              tag: r.task_id,
+              task_id: r.task_id,
+              reminder_id: r.reminder_id,
+              kind: 'reminder',
+              action_url: actionUrl,
+              actions: actionUrl
+                ? [
+                    { action: 'done', title: '已完成' },
+                    { action: 'snooze', title: '延後 1 小時' },
+                  ]
+                : [],
+            },
             options: { ttl: 120 as number },
           }
           try {

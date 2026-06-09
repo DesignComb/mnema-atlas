@@ -148,4 +148,30 @@ app.post('/_cron/run-daily-reviews', async (c) => {
   return c.json({ ok: true })
 })
 
+// Notification-action callback from the service worker (延後 / 已完成 buttons).
+// The SW has no API key — it identifies the user by its OWN push subscription
+// endpoint (a per-user secret already stored in push_subscriptions), which we
+// resolve server-side, then run the action with the service-role client.
+app.post('/_action', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  if (!body || typeof body.endpoint !== 'string' || typeof body.action !== 'string') {
+    return c.json({ error: 'bad request' }, 400)
+  }
+  const sb = serviceClient(c.env)
+  const { data: uid } = await sb.rpc('user_id_for_push_endpoint', { p_endpoint: body.endpoint })
+  if (!uid) return c.json({ error: 'unknown subscription' }, 403)
+  try {
+    if (body.action === 'done' && typeof body.task_id === 'string') {
+      await sb.rpc('complete_task', { p_user_id: uid, p_task_id: body.task_id })
+    } else if (body.action === 'snooze' && typeof body.reminder_id === 'string') {
+      await sb.rpc('snooze_reminder', { p_user_id: uid, p_reminder_id: body.reminder_id, p_minutes: 60 })
+    } else {
+      return c.json({ error: 'bad action' }, 400)
+    }
+  } catch {
+    return c.json({ error: 'action failed' }, 500)
+  }
+  return c.json({ ok: true })
+})
+
 export default { fetch: app.fetch, scheduled }
