@@ -25,6 +25,9 @@ export interface Env {
   /** Public base URL of this worker (committed [vars]); put into push payloads so
    *  the service worker knows where to POST notification actions. */
   WORKER_PUBLIC_URL?: string
+  /** Firebase service-account JSON (secret) — signs FCM HTTP v1 sends for native
+   *  Android push. Native push is disabled until set. */
+  FCM_SERVICE_ACCOUNT?: string
 }
 
 export interface ToolContext {

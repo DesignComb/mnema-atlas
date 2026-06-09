@@ -11,6 +11,7 @@ import { queryClient } from '@/lib/queryClient'
 import { router } from '@/router'
 import { WidgetSync } from '@/components/WidgetSync'
 import { OtaUpdater } from '@/components/OtaUpdater'
+import { FcmRegister } from '@/components/FcmRegister'
 import { notifyReady } from '@/lib/ota'
 import './index.css'
 
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
               <RouterProvider router={router} />
               <WidgetSync />
               <OtaUpdater />
+              <FcmRegister />
               <Toaster position="bottom-right" toastOptions={{ className: 'font-sans' }} richColors />
             </TooltipProvider>
           </AuthProvider>

@@ -1165,6 +1165,16 @@ export async function setDigestPrefs(input: { isEnabled: boolean; time?: string;
   )
 }
 
+// ── FCM native push tokens ──
+export async function saveFcmToken(token: string, platform = 'android'): Promise<void> {
+  const res = await supabase.rpc('save_fcm_token', { p_user_id: null, p_token: token, p_platform: platform })
+  if (res.error) throw new Error(res.error.message)
+}
+export async function deleteFcmToken(token: string): Promise<void> {
+  const res = await supabase.rpc('delete_fcm_token', { p_user_id: null, p_token: token })
+  if (res.error) throw new Error(res.error.message)
+}
+
 // ── Captures (quick-capture inbox / 暫存區) ──
 export type CaptureStatus = 'pending' | 'processed' | 'dismissed'
 export async function listCaptures(status: CaptureStatus | 'all' = 'pending'): Promise<CaptureRow[]> {

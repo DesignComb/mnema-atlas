@@ -1,5 +1,6 @@
 import { buildPushPayload } from '@block65/webcrypto-web-push'
 import { serviceClient } from './db'
+import { sendFcm } from './fcm'
 import type { Env } from './env'
 
 interface DueReminder {
@@ -8,6 +9,7 @@ interface DueReminder {
   title: string
   body: string
   subscriptions: { endpoint: string; p256dh: string; auth: string }[]
+  fcm_tokens?: string[]
 }
 
 /**
@@ -70,6 +72,8 @@ export async function runReminderScan(env: Env): Promise<void> {
           }
         }),
       )
+      // Native (FCM) push, alongside Web Push.
+      await sendFcm(env, r.fcm_tokens ?? [], { title: r.title, body: r.body || '', url: '/tempo?view=today' })
       // Mark delivered so it won't fire again (even if the user had no devices).
       await sb.rpc('mark_reminder_delivered', { p_reminder_id: r.reminder_id })
     }),
@@ -148,6 +152,7 @@ interface DueDigest {
   user_id: string
   count: number
   subscriptions: { endpoint: string; p256dh: string; auth: string }[]
+  fcm_tokens?: string[]
 }
 
 /**
@@ -168,29 +173,32 @@ export async function runTodoDigestScan(env: Env): Promise<void> {
 
   await Promise.allSettled(
     (data as DueDigest[]).map(async (r) => {
-      if (vapid && r.count > 0) {
+      if (r.count > 0) {
         const body = `你今天有 ${r.count} 件待辦 · ${r.count} task${r.count === 1 ? '' : 's'} today`
-        await Promise.allSettled(
-          r.subscriptions.map(async (s) => {
-            const message = {
-              data: { title: '今日待辦 · Today', body, url: '/tempo?view=today', tag: 'todo-digest' },
-              options: { ttl: 3600 as number },
-            }
-            try {
-              const payload = await buildPushPayload(
-                message,
-                { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } },
-                vapid,
-              )
-              const res = await fetch(s.endpoint, payload)
-              if (res.status === 404 || res.status === 410) {
-                await sb.rpc('prune_push_subscription', { p_endpoint: s.endpoint })
+        if (vapid) {
+          await Promise.allSettled(
+            r.subscriptions.map(async (s) => {
+              const message = {
+                data: { title: '今日待辦 · Today', body, url: '/tempo?view=today', tag: 'todo-digest' },
+                options: { ttl: 3600 as number },
               }
-            } catch {
-              /* best-effort */
-            }
-          }),
-        )
+              try {
+                const payload = await buildPushPayload(
+                  message,
+                  { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } },
+                  vapid,
+                )
+                const res = await fetch(s.endpoint, payload)
+                if (res.status === 404 || res.status === 410) {
+                  await sb.rpc('prune_push_subscription', { p_endpoint: s.endpoint })
+                }
+              } catch {
+                /* best-effort */
+              }
+            }),
+          )
+        }
+        await sendFcm(env, r.fcm_tokens ?? [], { title: '今日待辦 · Today', body, url: '/tempo?view=today' })
       }
       // Mark sent even when count=0 so we don't re-check (and fire late) all day.
       await sb.rpc('mark_todo_digest_sent', { p_user_id: r.user_id })

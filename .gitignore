@@ -63,3 +63,8 @@ e2e/.auth/
 
 # Capacitor native project — never ship stray local Claude settings inside it
 android/.claude/
+
+# Firebase / FCM — never commit to the public repo
+google-services.json
+android/app/google-services.json
+*-firebase-adminsdk-*.json

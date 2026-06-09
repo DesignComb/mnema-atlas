@@ -2121,6 +2121,14 @@ export type Database = {
         Args: Record<string, never>
         Returns: Json
       }
+      save_fcm_token: {
+        Args: { p_platform?: string; p_token: string; p_user_id: string | null }
+        Returns: undefined
+      }
+      delete_fcm_token: {
+        Args: { p_token: string; p_user_id: string | null }
+        Returns: undefined
+      }
       set_digest_prefs: {
         Args: { p_digest_time?: string; p_is_enabled: boolean; p_tz?: string; p_user_id: string | null }
         Returns: {
