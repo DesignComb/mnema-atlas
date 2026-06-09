@@ -7,8 +7,10 @@ import { disableReminders, enableReminders, hasPushSubscription, notificationPer
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Capacitor } from '@capacitor/core'
 import { cn, relativeDue } from '@/lib/utils'
 import { useDigestPrefs, useSetDigestPrefs } from '@/lib/hooks'
+import { formatVersion, checkForUpdate, applyUpdate } from '@/lib/ota'
 import { useT } from '@/lib/i18n'
 import { MCP_URL, REST_URL, OPENAPI_URL } from '@/lib/endpoints'
 import {
@@ -137,6 +139,40 @@ function ReminderCard() {
   )
 }
 
+function AboutCard() {
+  const t = useT()
+  const [busy, setBusy] = useState(false)
+  async function check() {
+    setBusy(true)
+    try {
+      const m = await checkForUpdate()
+      if (!m) {
+        toast.success(t('You’re on the latest version', '已是最新版本'))
+        return
+      }
+      toast.loading(t('Downloading update…', '下載更新中…'), { id: 'about-ota' })
+      await applyUpdate(m) // reloads into the new bundle
+    } catch {
+      toast.error(t('Update check failed', '檢查更新失敗'))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <section className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card p-4 shadow-soft">
+      <div className="min-w-0">
+        <p className="text-[13px] font-medium text-foreground">{t('Version', '版本')}</p>
+        <p className="font-mono text-[12px] text-muted-foreground">{formatVersion()}</p>
+      </div>
+      {Capacitor.isNativePlatform() ? (
+        <Button variant="outline" size="sm" onClick={check} disabled={busy}>
+          {busy ? t('Checking…', '檢查中…') : t('Check for updates', '檢查更新')}
+        </Button>
+      ) : null}
+    </section>
+  )
+}
+
 export function IntegrationsScreen() {
   const qc = useQueryClient()
   const t = useT()
@@ -181,6 +217,7 @@ export function IntegrationsScreen() {
           </div>
 
           <ReminderCard />
+          <AboutCard />
 
           {/* 1 · Keys */}
           <section className="space-y-3">

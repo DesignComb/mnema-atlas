@@ -26,6 +26,12 @@ export function runningVersion(): number {
   return Number.isFinite(n) ? n : 0
 }
 
+/** Human-readable running version, e.g. "2026-06-09 14:09" (or "dev"). */
+export function formatVersion(): string {
+  const v = String(__BUILD_VERSION__)
+  return /^\d{12}$/.test(v) ? `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)} ${v.slice(8, 10)}:${v.slice(10, 12)}` : v
+}
+
 /** Mark the loaded bundle good so Capgo doesn't auto-roll-back. Call once on boot. */
 export async function notifyReady(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return

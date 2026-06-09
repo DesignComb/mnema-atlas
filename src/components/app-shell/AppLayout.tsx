@@ -79,6 +79,9 @@ export function AppLayout() {
   return (
     <MobileNavContext.Provider value={{ openNav: () => setNavOpen(true) }}>
       <div
+        // Pad past the device status bar (top) so content isn't drawn under it on
+        // edge-to-edge Android / notched phones (viewport-fit=cover makes env() real).
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
         className={cn(
           'flex h-dvh overflow-hidden bg-background text-foreground',
           pathname.startsWith('/trips') && 'theme-voyage',
@@ -122,7 +125,7 @@ export function AppLayout() {
           </button>
         </div>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-16 lg:pb-0">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
           <Outlet />
         </main>
 
