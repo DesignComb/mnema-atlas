@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/habits_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/habits_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="習慣"
+            android:textColor="#F4F4F7"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/habits_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#9A9AA6"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/habits_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="#9A9AA6"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <LinearLayout android:id="@+id/hrow0" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+        <ImageView android:id="@+id/hcheck0" android:layout_width="30dp" android:layout_height="30dp" android:padding="4dp" android:src="@drawable/ic_widget_check" android:contentDescription="打卡" />
+        <TextView android:id="@+id/htitle0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp" android:maxLines="1" android:ellipsize="end" android:textColor="#E8E8EE" android:textSize="14sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/hrow1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+        <ImageView android:id="@+id/hcheck1" android:layout_width="30dp" android:layout_height="30dp" android:padding="4dp" android:src="@drawable/ic_widget_check" android:contentDescription="打卡" />
+        <TextView android:id="@+id/htitle1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp" android:maxLines="1" android:ellipsize="end" android:textColor="#E8E8EE" android:textSize="14sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/hrow2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+        <ImageView android:id="@+id/hcheck2" android:layout_width="30dp" android:layout_height="30dp" android:padding="4dp" android:src="@drawable/ic_widget_check" android:contentDescription="打卡" />
+        <TextView android:id="@+id/htitle2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp" android:maxLines="1" android:ellipsize="end" android:textColor="#E8E8EE" android:textSize="14sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/hrow3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+        <ImageView android:id="@+id/hcheck3" android:layout_width="30dp" android:layout_height="30dp" android:padding="4dp" android:src="@drawable/ic_widget_check" android:contentDescription="打卡" />
+        <TextView android:id="@+id/htitle3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp" android:maxLines="1" android:ellipsize="end" android:textColor="#E8E8EE" android:textSize="14sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/hrow4" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+        <ImageView android:id="@+id/hcheck4" android:layout_width="30dp" android:layout_height="30dp" android:padding="4dp" android:src="@drawable/ic_widget_check" android:contentDescription="打卡" />
+        <TextView android:id="@+id/htitle4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp" android:maxLines="1" android:ellipsize="end" android:textColor="#E8E8EE" android:textSize="14sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/hrow5" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+        <ImageView android:id="@+id/hcheck5" android:layout_width="30dp" android:layout_height="30dp" android:padding="4dp" android:src="@drawable/ic_widget_check" android:contentDescription="打卡" />
+        <TextView android:id="@+id/htitle5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp" android:maxLines="1" android:ellipsize="end" android:textColor="#E8E8EE" android:textSize="14sp" />
+    </LinearLayout>
+</LinearLayout>

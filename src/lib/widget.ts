@@ -14,8 +14,9 @@ interface WidgetBridgePlugin {
 }
 const WidgetBridge = registerPlugin<WidgetBridgePlugin>('WidgetBridge')
 
-/** Keys shared with the native side (TodayWidget.java / TaskActionReceiver.java). */
+/** Keys shared with the native side (TodayWidget.java / HabitsWidget.java / receivers). */
 export const WIDGET_TODAY_KEY = 'widget_today'
+export const WIDGET_HABITS_KEY = 'widget_habits'
 export const WIDGET_AUTH_KEY = 'widget_auth'
 
 export interface WidgetTask {
@@ -38,6 +39,28 @@ export async function pushTodayWidget(snap: TodaySnapshot): Promise<void> {
     await WidgetBridge.refresh().catch(() => {})
   } catch {
     // The widget is non-critical — never surface a write failure.
+  }
+}
+
+export interface WidgetHabit {
+  id: string
+  title: string
+  /** Whether the habit is checked in for its (reset-aware) today. */
+  checked: boolean
+}
+export interface HabitsSnapshot {
+  date: string
+  items: WidgetHabit[]
+}
+
+/** Today's habits + checked state for the habit widget; tapping toggles check_in. */
+export async function pushHabitsWidget(snap: HabitsSnapshot): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await Preferences.set({ key: WIDGET_HABITS_KEY, value: JSON.stringify(snap) })
+    await WidgetBridge.refresh().catch(() => {})
+  } catch {
+    // best-effort
   }
 }
 

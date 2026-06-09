@@ -5,4 +5,5 @@
     <string name="package_name">tw.dco.mnema</string>
     <string name="custom_url_scheme">tw.dco.mnema</string>
     <string name="widget_today_desc">今日待辦</string>
+    <string name="habits_widget_desc">今日習慣打卡</string>
 </resources>

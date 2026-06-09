@@ -2,14 +2,20 @@ import { useEffect, useRef } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { useAuth } from '@/lib/auth'
-import { useTasks } from '@/lib/hooks'
+import { useTasks, useCheckInsInRange } from '@/lib/hooks'
+import { habitTodayISO } from '@/lib/recurrence'
 import { router } from '@/router'
-import { pushTodayWidget, pushWidgetAuth, type TodaySnapshot } from '@/lib/widget'
+import { pushHabitsWidget, pushTodayWidget, pushWidgetAuth, type HabitsSnapshot, type TodaySnapshot } from '@/lib/widget'
 
 /** Local YYYY-MM-DD — mirrors localToday() in routes/tempo.tsx. */
 function localToday(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function addDaysISO(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + n))
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`
 }
 function cmpDate(a: string | null, b: string | null): number {
   if (a === b) return 0
@@ -32,7 +38,10 @@ export function WidgetSync() {
 function WidgetSyncInner({ token }: { token: string }) {
   // Shares the query cache with the Tempo screen (same key) — no extra fetch there.
   const { data: tasks } = useTasks({ status: 'todo', limit: 500 })
+  // Today + yesterday check-ins cover every habit's reset-aware "today".
+  const { data: checkins } = useCheckInsInRange(addDaysISO(localToday(), -1), localToday())
   const lastRef = useRef('')
+  const habitsRef = useRef('')
 
   // Give the widget the current access token (refreshed while the app is open).
   useEffect(() => {
@@ -75,6 +84,21 @@ function WidgetSyncInner({ token }: { token: string }) {
     lastRef.current = key
     void pushTodayWidget(snap)
   }, [tasks])
+
+  // Habit widget: today's habits + their (reset-aware) checked state.
+  useEffect(() => {
+    if (!tasks) return
+    const done = new Set((checkins ?? []).map((c) => `${c.task_id}|${c.checkin_date}`))
+    const items = tasks
+      .filter((t) => t.kind === 'habit')
+      .slice(0, 6)
+      .map((h) => ({ id: h.id, title: h.title, checked: done.has(`${h.id}|${habitTodayISO(h.reset_time, h.tz)}`) }))
+    const snap: HabitsSnapshot = { date: localToday(), items }
+    const key = JSON.stringify(snap)
+    if (key === habitsRef.current) return
+    habitsRef.current = key
+    void pushHabitsWidget(snap)
+  }, [tasks, checkins])
 
   return null
 }

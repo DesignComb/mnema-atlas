@@ -68,6 +68,21 @@
         <receiver
             android:name=".TaskActionReceiver"
             android:exported="false" />
+
+        <!-- Home-screen widget: today's habits with tap-to-check-in. -->
+        <receiver
+            android:name=".HabitsWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/habits_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".HabitActionReceiver"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->
