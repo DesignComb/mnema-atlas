@@ -7,7 +7,8 @@ import { disableReminders, enableReminders, hasPushSubscription, notificationPer
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { relativeDue } from '@/lib/utils'
+import { cn, relativeDue } from '@/lib/utils'
+import { useDigestPrefs, useSetDigestPrefs } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import { MCP_URL, REST_URL, OPENAPI_URL } from '@/lib/endpoints'
 import {
@@ -34,6 +35,16 @@ function ReminderCard() {
   const [perm, setPerm] = useState(() => notificationPermission())
   const [subscribed, setSubscribed] = useState(false)
   const [busy, setBusy] = useState(false)
+  const { data: digest } = useDigestPrefs()
+  const setDigest = useSetDigestPrefs()
+  const tz = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone
+    } catch {
+      return undefined
+    }
+  }, [])
+  const digestTime = (digest?.digest_time ?? '08:00').slice(0, 5)
 
   useEffect(() => {
     void hasPushSubscription().then(setSubscribed)
@@ -85,6 +96,42 @@ function ReminderCard() {
         <p className="text-[12px] text-destructive">
           {t('Notifications are blocked in your browser settings — allow them to enable reminders.', '瀏覽器已封鎖通知 —— 請允許通知才能開啟提醒。')}
         </p>
+      ) : null}
+
+      {/* Daily to-do digest (rides Web Push; needs reminders enabled above). */}
+      {supported ? (
+        <div className="space-y-2 border-t border-border pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-foreground">{t('Daily to-do summary', '每日待辦提醒')}</p>
+              <p className="text-[12px] text-muted-foreground">
+                {t('A push each day telling you how many tasks you have.', '每天固定時間推播「你今天有幾件待辦」。')}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(digest?.is_enabled)}
+              aria-label={t('Toggle daily summary', '切換每日待辦提醒')}
+              onClick={() => setDigest.mutate({ isEnabled: !digest?.is_enabled, time: digestTime, tz })}
+              className={cn('relative h-6 w-11 shrink-0 rounded-full transition', digest?.is_enabled ? 'bg-brand' : 'bg-muted-foreground/30')}
+            >
+              <span className={cn('absolute top-0.5 size-5 rounded-full bg-white shadow transition-all', digest?.is_enabled ? 'left-[1.375rem]' : 'left-0.5')} />
+            </button>
+          </div>
+          {digest?.is_enabled ? (
+            <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+              {t('Remind at', '提醒時間')}
+              <input
+                type="time"
+                value={digestTime}
+                onChange={(e) => setDigest.mutate({ isEnabled: true, time: e.target.value, tz })}
+                className="rounded-md border border-border bg-background px-2 py-1 text-foreground"
+              />
+              {!subscribed ? <span className="text-[11px] text-amber-600">{t('Enable reminders above', '需先開啟上方提醒')}</span> : null}
+            </label>
+          ) : null}
+        </div>
       ) : null}
     </section>
   )

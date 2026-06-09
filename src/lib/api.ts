@@ -55,7 +55,7 @@ import type {
   UpdateMedicationInput,
   HealthLogKind,
 } from '@shared/schemas'
-import type { HealthSettingsRow, HealthLogRow, JournalEntryRow, MedicationRow, ReviewPrefsRow } from './database.types'
+import type { HealthSettingsRow, HealthLogRow, JournalEntryRow, MedicationRow, ReviewPrefsRow, DigestPrefsRow } from './database.types'
 import type {
   CreateRecipeInput,
   UpdateRecipeInput,
@@ -1148,6 +1148,21 @@ export async function getReviewPrefs(): Promise<ReviewPrefsRow | null> {
 }
 export async function setReviewPrefs(isEnabled: boolean): Promise<ReviewPrefsRow> {
   return unwrap(await supabase.rpc('set_review_prefs', { p_user_id: null, p_is_enabled: isEnabled }))
+}
+
+// ── Daily to-do digest (每日待辦提醒) ──
+export async function getDigestPrefs(): Promise<DigestPrefsRow | null> {
+  return unwrap(await supabase.from('digest_prefs').select('*').maybeSingle())
+}
+export async function setDigestPrefs(input: { isEnabled: boolean; time?: string; tz?: string }): Promise<DigestPrefsRow> {
+  return unwrap(
+    await supabase.rpc('set_digest_prefs', {
+      p_user_id: null,
+      p_is_enabled: input.isEnabled,
+      p_digest_time: input.time ?? undefined,
+      p_tz: input.tz ?? undefined,
+    }),
+  )
 }
 
 // ── Captures (quick-capture inbox / 暫存區) ──

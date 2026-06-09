@@ -98,6 +98,7 @@ export const qk = {
   journalEntry: (date: string) => ['journal-entry', date] as const,
   medications: (activeOnly?: boolean) => ['medications', activeOnly ? 'active' : 'all'] as const,
   reviewPrefs: ['review-prefs'] as const,
+  digestPrefs: ['digest-prefs'] as const,
   // Mnema Kitchen
   recipes: (key?: string) => ['recipes', key ?? 'all'] as const,
   recipe: (id: string) => ['recipe', id] as const,
@@ -770,6 +771,18 @@ export function useSetReviewPrefs() {
   return useMutation({
     mutationFn: (isEnabled: boolean) => api.setReviewPrefs(isEnabled),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.reviewPrefs }),
+  })
+}
+
+// Daily to-do digest preferences
+export function useDigestPrefs() {
+  return useQuery({ queryKey: qk.digestPrefs, queryFn: api.getDigestPrefs })
+}
+export function useSetDigestPrefs() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { isEnabled: boolean; time?: string; tz?: string }) => api.setDigestPrefs(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.digestPrefs }),
   })
 }
 

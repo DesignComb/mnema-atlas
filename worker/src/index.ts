@@ -7,7 +7,7 @@ import { rateLimit } from './ratelimit'
 import { buildOpenApiSpec } from './openapi'
 import { buildLlmsTxt } from './llms'
 import { discoveryIndex } from './discovery'
-import { runReminderScan, runDailyReviewScan, scheduled } from './scheduled'
+import { runReminderScan, runDailyReviewScan, runTodoDigestScan, scheduled } from './scheduled'
 import { serviceClient } from './db'
 import { buildPushPayload } from '@block65/webcrypto-web-push'
 import type { Env } from './env'
@@ -133,6 +133,8 @@ app.post('/_cron/run-reminders', async (c) => {
     return c.json({ error: 'forbidden' }, 403)
   }
   c.executionCtx.waitUntil(runReminderScan(c.env))
+  // Daily to-do digest rides this same per-minute ping (self-gated on the clock).
+  c.executionCtx.waitUntil(runTodoDigestScan(c.env))
   return c.json({ ok: true })
 })
 

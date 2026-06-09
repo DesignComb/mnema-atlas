@@ -126,6 +126,61 @@ export async function runDailyReviewScan(env: Env): Promise<void> {
   )
 }
 
+interface DueDigest {
+  user_id: string
+  count: number
+  subscriptions: { endpoint: string; p256dh: string; auth: string }[]
+}
+
+/**
+ * Daily to-do digest. For each opted-in user whose local time has reached their
+ * digest_time today (and who hasn't been sent one today), push "你今天有 N 件待辦".
+ * Rides the per-minute reminder ping — the finder self-gates on the clock, so it
+ * fires once, within a minute of the chosen time. Idempotent via
+ * mark_todo_digest_sent (marks even when count=0 so it won't re-check all day).
+ */
+export async function runTodoDigestScan(env: Env): Promise<void> {
+  const sb = serviceClient(env)
+  const { data, error } = await sb.rpc('due_todo_digests_for_cron')
+  if (error || !Array.isArray(data)) return
+  const vapid =
+    env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT && env.VAPID_PUBLIC_KEY
+      ? { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY }
+      : null
+
+  await Promise.allSettled(
+    (data as DueDigest[]).map(async (r) => {
+      if (vapid && r.count > 0) {
+        const body = `你今天有 ${r.count} 件待辦 · ${r.count} task${r.count === 1 ? '' : 's'} today`
+        await Promise.allSettled(
+          r.subscriptions.map(async (s) => {
+            const message = {
+              data: { title: '今日待辦 · Today', body, url: '/tempo?view=today', tag: 'todo-digest' },
+              options: { ttl: 3600 as number },
+            }
+            try {
+              const payload = await buildPushPayload(
+                message,
+                { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } },
+                vapid,
+              )
+              const res = await fetch(s.endpoint, payload)
+              if (res.status === 404 || res.status === 410) {
+                await sb.rpc('prune_push_subscription', { p_endpoint: s.endpoint })
+              }
+            } catch {
+              /* best-effort */
+            }
+          }),
+        )
+      }
+      // Mark sent even when count=0 so we don't re-check (and fire late) all day.
+      await sb.rpc('mark_todo_digest_sent', { p_user_id: r.user_id })
+    }),
+  )
+}
+
 export function scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): void {
   ctx.waitUntil(runReminderScan(env))
+  ctx.waitUntil(runTodoDigestScan(env))
 }

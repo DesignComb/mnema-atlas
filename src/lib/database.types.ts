@@ -2072,6 +2072,33 @@ export type Database = {
         }
         Relationships: []
       }
+      digest_prefs: {
+        Row: {
+          created_at: string
+          digest_time: string
+          is_enabled: boolean
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          digest_time?: string
+          is_enabled?: boolean
+          tz?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          digest_time?: string
+          is_enabled?: boolean
+          tz?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2093,6 +2120,17 @@ export type Database = {
       due_daily_reviews_for_cron: {
         Args: Record<string, never>
         Returns: Json
+      }
+      set_digest_prefs: {
+        Args: { p_digest_time?: string; p_is_enabled: boolean; p_tz?: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          digest_time: string
+          is_enabled: boolean
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
       }
       set_task_url: {
         Args: { p_task_id: string; p_url: string; p_user_id: string | null }
@@ -5726,3 +5764,4 @@ export type SettlementRow = PublicTables['settlements']['Row']
 export type SubscriptionRow = PublicTables['subscriptions']['Row']
 export type ReviewPrefsRow = PublicTables['review_prefs']['Row']
 export type DailyReviewRow = PublicTables['daily_reviews']['Row']
+export type DigestPrefsRow = PublicTables['digest_prefs']['Row']
