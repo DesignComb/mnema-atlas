@@ -20,7 +20,8 @@
     "cap:sync": "node scripts/build-web.mjs && cap sync android",
     "cap:open": "cap open android",
     "cap:apk": "cd android && gradlew.bat assembleDebug",
-    "ota:publish": "node scripts/ota-publish.mjs"
+    "ota:publish": "node scripts/ota-publish.mjs",
+    "apk:release": "node scripts/apk-release.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
