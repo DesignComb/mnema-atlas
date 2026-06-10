@@ -252,6 +252,7 @@ export async function runHabitReminderScan(env: Env): Promise<void> {
                 tag: 'habit-' + h.task_id,
                 task_id: h.task_id,
                 kind: 'habit',
+                habit_date: h.habit_date,
                 action_url: actionUrl,
                 actions: actionUrl ? [{ action: 'checkin', title: '打卡' }] : [],
               },
@@ -271,7 +272,7 @@ export async function runHabitReminderScan(env: Env): Promise<void> {
           }),
         )
       }
-      await sendFcm(env, h.fcm_tokens ?? [], { title: '打卡提醒 · Check in', body, url: '/tempo?view=habits', taskId: h.task_id, kind: 'habit' })
+      await sendFcm(env, h.fcm_tokens ?? [], { title: '打卡提醒 · Check in', body, url: '/tempo?view=habits', taskId: h.task_id, kind: 'habit', habitDate: h.habit_date })
       await sb.rpc('mark_habit_nudged', { p_user_id: h.user_id, p_task_id: h.task_id, p_habit_date: h.habit_date })
     }),
   )

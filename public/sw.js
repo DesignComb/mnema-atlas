@@ -1,7 +1,7 @@
 // Minimal service worker — enough to make Mnema installable + offline-tolerant
 // for the app shell. It NEVER touches the API (different origin) or Supabase, so
 // data always comes fresh from the network.
-const CACHE = 'mnema-v5'
+const CACHE = 'mnema-v6'
 const SHELL = ['/', '/index.html', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
@@ -76,6 +76,7 @@ self.addEventListener('push', (e) => {
         reminder_id: data.reminder_id,
         action_url: data.action_url,
         kind: data.kind,
+        habit_date: data.habit_date,
       },
     }),
   )
@@ -91,7 +92,7 @@ async function runNotificationAction(action, d) {
     const res = await fetch(d.action_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpoint: sub.endpoint, action, task_id: d.task_id, reminder_id: d.reminder_id }),
+      body: JSON.stringify({ endpoint: sub.endpoint, action, task_id: d.task_id, reminder_id: d.reminder_id, checkin_date: d.habit_date }),
     })
     if (!res.ok) throw new Error('http ' + res.status)
     const ack = action === 'done' ? '已完成 ✓' : action === 'checkin' ? '已打卡 ✓' : '已延後 1 小時 ⏰'

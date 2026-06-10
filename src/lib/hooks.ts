@@ -785,6 +785,13 @@ export function useSetDigestPrefs() {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.digestPrefs }),
   })
 }
+export function useSetHabitReminderPref() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (enabled: boolean) => api.setHabitReminderPref(enabled),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.digestPrefs }),
+  })
+}
 
 // ════════════════════ Mnema Kitchen (recipes / pantry / shopping / meal plan) ════════════════════
 function bumpKitchen(qc: ReturnType<typeof useQueryClient>) {

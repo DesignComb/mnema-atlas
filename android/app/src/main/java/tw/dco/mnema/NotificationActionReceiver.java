@@ -27,6 +27,7 @@ public class NotificationActionReceiver extends BroadcastReceiver {
     final String act = intent.getStringExtra("act");
     final String taskId = intent.getStringExtra("task_id");
     final String reminderId = intent.getStringExtra("reminder_id");
+    final String habitDate = intent.getStringExtra("habit_date");
     final int nid = intent.getIntExtra("nid", 0);
 
     NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -52,7 +53,8 @@ public class NotificationActionReceiver extends BroadcastReceiver {
           if ("done".equals(act) && taskId != null) {
             rpc(a, "complete_task", "{\"p_user_id\":null,\"p_task_id\":\"" + taskId + "\"}");
           } else if ("checkin".equals(act) && taskId != null) {
-            rpc(a, "check_in", "{\"p_user_id\":null,\"p_task_id\":\"" + taskId + "\"}");
+            String dateField = (habitDate != null && !habitDate.isEmpty()) ? ",\"p_checkin_date\":\"" + habitDate + "\"" : "";
+            rpc(a, "check_in", "{\"p_user_id\":null,\"p_task_id\":\"" + taskId + "\"" + dateField + "}");
           } else if ("snooze".equals(act) && reminderId != null) {
             rpc(a, "snooze_reminder", "{\"p_user_id\":null,\"p_reminder_id\":\"" + reminderId + "\",\"p_minutes\":60}");
           }

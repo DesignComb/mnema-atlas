@@ -54,7 +54,9 @@ function toISO(d: Date): string {
  */
 export function habitTodayISO(resetTime: string | null, tz: string | null, now: Date = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz || undefined,
+    // Null tz → UTC, to MATCH the server (app.habit_today coalesces null→UTC).
+    // Habits created in-app always carry a tz; this only affects AI/legacy ones.
+    timeZone: tz || 'UTC',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -94,7 +96,7 @@ export function formatResetTime(resetTime: string | null): string | null {
  */
 export function minutesUntilReset(resetTime: string | null, tz: string | null, now: Date = new Date()): number {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz || undefined,
+    timeZone: tz || 'UTC', // match the server (app.next_reset_at coalesces null→UTC)
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,

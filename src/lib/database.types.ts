@@ -2076,6 +2076,7 @@ export type Database = {
         Row: {
           created_at: string
           digest_time: string
+          habit_reminders: boolean
           is_enabled: boolean
           tz: string | null
           updated_at: string
@@ -2129,11 +2130,24 @@ export type Database = {
         Args: { p_token: string; p_user_id: string | null }
         Returns: undefined
       }
+      set_habit_reminder_pref: {
+        Args: { p_enabled: boolean; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          digest_time: string
+          habit_reminders: boolean
+          is_enabled: boolean
+          tz: string | null
+          updated_at: string
+          user_id: string
+        }
+      }
       set_digest_prefs: {
         Args: { p_digest_time?: string; p_is_enabled: boolean; p_tz?: string; p_user_id: string | null }
         Returns: {
           created_at: string
           digest_time: string
+          habit_reminders: boolean
           is_enabled: boolean
           tz: string | null
           updated_at: string

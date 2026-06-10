@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Capacitor } from '@capacitor/core'
 import { cn, relativeDue } from '@/lib/utils'
-import { useDigestPrefs, useSetDigestPrefs } from '@/lib/hooks'
+import { useDigestPrefs, useSetDigestPrefs, useSetHabitReminderPref } from '@/lib/hooks'
 import { formatVersion, checkForUpdate, applyUpdate } from '@/lib/ota'
 import { useT } from '@/lib/i18n'
 import { MCP_URL, REST_URL, OPENAPI_URL } from '@/lib/endpoints'
@@ -39,6 +39,7 @@ function ReminderCard() {
   const [busy, setBusy] = useState(false)
   const { data: digest } = useDigestPrefs()
   const setDigest = useSetDigestPrefs()
+  const setHabit = useSetHabitReminderPref()
   const tz = useMemo(() => {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -133,6 +134,25 @@ function ReminderCard() {
               {!subscribed ? <span className="text-[11px] text-amber-600">{t('Enable reminders above', '需先開啟上方提醒')}</span> : null}
             </label>
           ) : null}
+
+          <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-foreground">{t('Habit deadline reminders', '習慣到期提醒')}</p>
+              <p className="text-[12px] text-muted-foreground">
+                {t("A nudge before a habit resets if you haven't checked in — keep your streak.", '習慣快重置卻還沒打卡時提醒你,別讓連續紀錄斷掉。')}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(digest?.habit_reminders)}
+              aria-label={t('Toggle habit reminders', '切換習慣到期提醒')}
+              onClick={() => setHabit.mutate(!digest?.habit_reminders)}
+              className={cn('relative h-6 w-11 shrink-0 rounded-full transition', digest?.habit_reminders ? 'bg-brand' : 'bg-muted-foreground/30')}
+            >
+              <span className={cn('absolute top-0.5 size-5 rounded-full bg-white shadow transition-all', digest?.habit_reminders ? 'left-[1.375rem]' : 'left-0.5')} />
+            </button>
+          </div>
         </div>
       ) : null}
     </section>

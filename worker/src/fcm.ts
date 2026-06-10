@@ -73,7 +73,7 @@ async function accessToken(sa: ServiceAccount): Promise<string> {
 export async function sendFcm(
   env: Env,
   tokens: string[],
-  msg: { title: string; body: string; url?: string; taskId?: string; reminderId?: string; kind?: string },
+  msg: { title: string; body: string; url?: string; taskId?: string; reminderId?: string; kind?: string; habitDate?: string },
 ): Promise<void> {
   if (!env.FCM_SERVICE_ACCOUNT || !tokens || tokens.length === 0) return
   let sa: ServiceAccount
@@ -98,6 +98,7 @@ export async function sendFcm(
   if (msg.taskId) data.task_id = msg.taskId
   if (msg.reminderId) data.reminder_id = msg.reminderId
   if (msg.kind) data.kind = msg.kind
+  if (msg.habitDate) data.habit_date = msg.habitDate
 
   await Promise.allSettled(
     tokens.map(async (t) => {

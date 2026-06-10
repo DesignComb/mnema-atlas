@@ -1164,6 +1164,9 @@ export async function setDigestPrefs(input: { isEnabled: boolean; time?: string;
     }),
   )
 }
+export async function setHabitReminderPref(enabled: boolean): Promise<DigestPrefsRow> {
+  return unwrap(await supabase.rpc('set_habit_reminder_pref', { p_user_id: null, p_enabled: enabled }))
+}
 
 // ── FCM native push tokens ──
 export async function saveFcmToken(token: string, platform = 'android'): Promise<void> {

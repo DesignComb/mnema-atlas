@@ -34,6 +34,7 @@ public class MnemaMessagingService extends FirebaseMessagingService {
     String kind = d.get("kind");
     String taskId = d.get("task_id");
     String reminderId = d.get("reminder_id");
+    String habitDate = d.get("habit_date");
     int nid = taskId != null ? taskId.hashCode() : (int) System.currentTimeMillis();
 
     ensureChannel();
@@ -53,22 +54,23 @@ public class MnemaMessagingService extends FirebaseMessagingService {
         .setPriority(NotificationCompat.PRIORITY_HIGH);
 
     if ("reminder".equals(kind) && taskId != null) {
-      b.addAction(0, "已完成", actionPi(nid * 31 + 1, "done", taskId, reminderId, nid));
-      b.addAction(0, "延後 1 小時", actionPi(nid * 31 + 2, "snooze", taskId, reminderId, nid));
+      b.addAction(0, "已完成", actionPi(nid * 31 + 1, "done", taskId, reminderId, habitDate, nid));
+      b.addAction(0, "延後 1 小時", actionPi(nid * 31 + 2, "snooze", taskId, reminderId, habitDate, nid));
     } else if ("habit".equals(kind) && taskId != null) {
-      b.addAction(0, "打卡", actionPi(nid * 31 + 3, "checkin", taskId, reminderId, nid));
+      b.addAction(0, "打卡", actionPi(nid * 31 + 3, "checkin", taskId, reminderId, habitDate, nid));
     }
 
     NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     if (nm != null) nm.notify(nid, b.build());
   }
 
-  private PendingIntent actionPi(int req, String action, String taskId, String reminderId, int nid) {
+  private PendingIntent actionPi(int req, String action, String taskId, String reminderId, String habitDate, int nid) {
     Intent i = new Intent(this, NotificationActionReceiver.class);
     i.setAction(NotificationActionReceiver.ACTION);
     i.putExtra("act", action);
     i.putExtra("task_id", taskId);
     i.putExtra("reminder_id", reminderId);
+    i.putExtra("habit_date", habitDate);
     i.putExtra("nid", nid);
     return PendingIntent.getBroadcast(this, req, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
   }

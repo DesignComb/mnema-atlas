@@ -166,8 +166,13 @@ app.post('/_action', async (c) => {
     if (body.action === 'done' && typeof body.task_id === 'string') {
       await sb.rpc('complete_task', { p_user_id: uid, p_task_id: body.task_id })
     } else if (body.action === 'checkin' && typeof body.task_id === 'string') {
-      // Habit check-in (reset-aware: no date → server computes the habit-day).
-      await sb.rpc('check_in', { p_user_id: uid, p_task_id: body.task_id })
+      // Pin the check-in to the habit-day the nudge was about, so a tap just AFTER
+      // the reset boundary still saves that day (not the freshly-started one).
+      await sb.rpc('check_in', {
+        p_user_id: uid,
+        p_task_id: body.task_id,
+        p_checkin_date: typeof body.checkin_date === 'string' ? body.checkin_date : undefined,
+      })
     } else if (body.action === 'snooze' && typeof body.reminder_id === 'string') {
       await sb.rpc('snooze_reminder', { p_user_id: uid, p_reminder_id: body.reminder_id, p_minutes: 60 })
     } else {
