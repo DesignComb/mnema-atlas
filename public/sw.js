@@ -1,7 +1,7 @@
 // Minimal service worker — enough to make Mnema installable + offline-tolerant
 // for the app shell. It NEVER touches the API (different origin) or Supabase, so
 // data always comes fresh from the network.
-const CACHE = 'mnema-v4'
+const CACHE = 'mnema-v5'
 const SHELL = ['/', '/index.html', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
@@ -94,7 +94,8 @@ async function runNotificationAction(action, d) {
       body: JSON.stringify({ endpoint: sub.endpoint, action, task_id: d.task_id, reminder_id: d.reminder_id }),
     })
     if (!res.ok) throw new Error('http ' + res.status)
-    await self.registration.showNotification(action === 'done' ? '已完成 ✓' : '已延後 1 小時 ⏰', {
+    const ack = action === 'done' ? '已完成 ✓' : action === 'checkin' ? '已打卡 ✓' : '已延後 1 小時 ⏰'
+    await self.registration.showNotification(ack, {
       body: '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
@@ -118,7 +119,7 @@ self.addEventListener('notificationclick', (e) => {
   e.notification.close()
   const d = e.notification.data || {}
   // Action buttons act in the background; a plain click opens the app.
-  if ((e.action === 'done' || e.action === 'snooze') && d.action_url) {
+  if ((e.action === 'done' || e.action === 'snooze' || e.action === 'checkin') && d.action_url) {
     e.waitUntil(runNotificationAction(e.action, d))
     return
   }

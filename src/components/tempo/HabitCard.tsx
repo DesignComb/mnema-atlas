@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Flame, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { AlarmClock, CheckCircle2, Flame, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useStreak } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import type { TaskRow } from '@/lib/database.types'
-import { formatResetTime, shortRecurrenceLabel } from '@/lib/recurrence'
+import { formatResetTime, minutesUntilReset, shortRecurrenceLabel } from '@/lib/recurrence'
 import { HabitCheckButton } from './HabitCheckButton'
 import {
   DropdownMenu,
@@ -54,10 +54,21 @@ export function HabitCard({
   const recur = shortRecurrenceLabel(habit.recurrence_rule, t)
   const reset = formatResetTime(habit.reset_time)
 
+  // Duolingo-style urgency: not done + the check-in deadline (next reset) is near.
+  const minsLeft = checkedToday ? null : minutesUntilReset(habit.reset_time, habit.tz)
+  const atRisk = minsLeft != null && minsLeft <= 180
+  const deadline = formatResetTime(habit.reset_time) ?? '00:00'
+  const leftLabel =
+    minsLeft == null
+      ? ''
+      : minsLeft < 60
+        ? t(`${minsLeft}m left`, `剩 ${minsLeft} 分`)
+        : t(`${Math.floor(minsLeft / 60)}h left`, `剩 ${Math.floor(minsLeft / 60)} 小時`)
+
   return (
     <div
       className={`rounded-xl border p-3.5 shadow-soft transition-colors sm:p-4 ${
-        checkedToday ? 'border-brand/40 bg-brand-muted/25' : 'border-border bg-card'
+        checkedToday ? 'border-brand/40 bg-brand-muted/25' : atRisk ? 'border-amber-400/70 bg-amber-50' : 'border-border bg-card'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -112,6 +123,20 @@ export function HabitCard({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {atRisk && minsLeft != null ? (
+        <div className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-amber-100 px-2.5 py-1.5 text-[12px] font-semibold text-amber-700">
+          <AlarmClock className="size-3.5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">
+            {current > 0
+              ? t(`Don't break your ${current}-day streak!`, `別讓 ${current} 天連續紀錄斷掉!`)
+              : t('Check in today to start a streak', '今天打卡開始連續紀錄')}
+          </span>
+          <span className="shrink-0 tabular-nums opacity-80">
+            {leftLabel} · {deadline}
+          </span>
+        </div>
+      ) : null}
 
       <div className="mt-3 flex items-end justify-between gap-0.5">
         {days.map((d) => {

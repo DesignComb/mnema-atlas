@@ -7,7 +7,7 @@ import { rateLimit } from './ratelimit'
 import { buildOpenApiSpec } from './openapi'
 import { buildLlmsTxt } from './llms'
 import { discoveryIndex } from './discovery'
-import { runReminderScan, runDailyReviewScan, runTodoDigestScan, scheduled } from './scheduled'
+import { runReminderScan, runDailyReviewScan, runTodoDigestScan, runHabitReminderScan, scheduled } from './scheduled'
 import { serviceClient } from './db'
 import { buildPushPayload } from '@block65/webcrypto-web-push'
 import type { Env } from './env'
@@ -133,8 +133,10 @@ app.post('/_cron/run-reminders', async (c) => {
     return c.json({ error: 'forbidden' }, 403)
   }
   c.executionCtx.waitUntil(runReminderScan(c.env))
-  // Daily to-do digest rides this same per-minute ping (self-gated on the clock).
+  // Daily to-do digest + habit deadline nudges ride this same per-minute ping
+  // (each self-gates on the clock).
   c.executionCtx.waitUntil(runTodoDigestScan(c.env))
+  c.executionCtx.waitUntil(runHabitReminderScan(c.env))
   return c.json({ ok: true })
 })
 
@@ -163,6 +165,9 @@ app.post('/_action', async (c) => {
   try {
     if (body.action === 'done' && typeof body.task_id === 'string') {
       await sb.rpc('complete_task', { p_user_id: uid, p_task_id: body.task_id })
+    } else if (body.action === 'checkin' && typeof body.task_id === 'string') {
+      // Habit check-in (reset-aware: no date → server computes the habit-day).
+      await sb.rpc('check_in', { p_user_id: uid, p_task_id: body.task_id })
     } else if (body.action === 'snooze' && typeof body.reminder_id === 'string') {
       await sb.rpc('snooze_reminder', { p_user_id: uid, p_reminder_id: body.reminder_id, p_minutes: 60 })
     } else {

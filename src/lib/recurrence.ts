@@ -88,6 +88,27 @@ export function formatResetTime(resetTime: string | null): string | null {
 }
 
 /**
+ * Minutes from now until the current habit-day ENDS (the next reset boundary) —
+ * i.e. the deadline to check in. reset null/00:00 → next midnight in tz. Mirrors
+ * the server's due_habit_reminders_for_cron window math.
+ */
+export function minutesUntilReset(resetTime: string | null, tz: string | null, now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz || undefined,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+  const pick = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0')
+  const nowMin = (pick('hour') % 24) * 60 + pick('minute')
+  const [rh, rm] = (resetTime ?? '').split(':').map(Number)
+  const resetMin = (rh || 0) * 60 + (rm || 0)
+  if (resetMin === 0) return 24 * 60 - nowMin || 24 * 60 // next midnight (24h if exactly midnight)
+  if (nowMin < resetMin) return resetMin - nowMin
+  return 24 * 60 - nowMin + resetMin
+}
+
+/**
  * The next occurrence of `rule` relative to `fromISO`.
  *  - inclusive=true  → the first occurrence on/after fromISO (use when seeding next_occurrence).
  *  - inclusive=false → the first occurrence strictly after fromISO (use when advancing on complete).

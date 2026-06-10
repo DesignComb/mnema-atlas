@@ -51,6 +51,8 @@ public class NotificationActionReceiver extends BroadcastReceiver {
           JSONObject a = new JSONObject(auth);
           if ("done".equals(act) && taskId != null) {
             rpc(a, "complete_task", "{\"p_user_id\":null,\"p_task_id\":\"" + taskId + "\"}");
+          } else if ("checkin".equals(act) && taskId != null) {
+            rpc(a, "check_in", "{\"p_user_id\":null,\"p_task_id\":\"" + taskId + "\"}");
           } else if ("snooze".equals(act) && reminderId != null) {
             rpc(a, "snooze_reminder", "{\"p_user_id\":null,\"p_reminder_id\":\"" + reminderId + "\",\"p_minutes\":60}");
           }

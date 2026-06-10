@@ -213,7 +213,72 @@ export async function runTodoDigestScan(env: Env): Promise<void> {
   )
 }
 
+interface DueHabit {
+  task_id: string
+  title: string
+  streak: number
+  user_id: string
+  habit_date: string
+  subscriptions: { endpoint: string; p256dh: string; auth: string }[]
+  fcm_tokens?: string[]
+}
+
+/**
+ * Habit deadline reminders. For each habit not checked in whose current day is
+ * within 3h of its reset (due_habit_reminders_for_cron), push a Duolingo-style
+ * nudge with a 打卡 button. One per habit per habit-day (mark_habit_nudged).
+ */
+export async function runHabitReminderScan(env: Env): Promise<void> {
+  const sb = serviceClient(env)
+  const { data, error } = await sb.rpc('due_habit_reminders_for_cron')
+  if (error || !Array.isArray(data)) return
+  const vapid =
+    env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT && env.VAPID_PUBLIC_KEY
+      ? { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY }
+      : null
+  const actionUrl = env.WORKER_PUBLIC_URL ? `${env.WORKER_PUBLIC_URL}/_action` : ''
+
+  await Promise.allSettled(
+    (data as DueHabit[]).map(async (h) => {
+      const body = h.streak > 0 ? `🔥 別讓 ${h.streak} 天連續紀錄斷掉!「${h.title}」還沒打卡` : `「${h.title}」今天還沒打卡`
+      if (vapid) {
+        await Promise.allSettled(
+          h.subscriptions.map(async (s) => {
+            const message = {
+              data: {
+                title: '打卡提醒 · Check in',
+                body,
+                url: '/tempo?view=habits',
+                tag: 'habit-' + h.task_id,
+                task_id: h.task_id,
+                kind: 'habit',
+                action_url: actionUrl,
+                actions: actionUrl ? [{ action: 'checkin', title: '打卡' }] : [],
+              },
+              options: { ttl: 3600 as number },
+            }
+            try {
+              const payload = await buildPushPayload(
+                message,
+                { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } },
+                vapid,
+              )
+              const res = await fetch(s.endpoint, payload)
+              if (res.status === 404 || res.status === 410) await sb.rpc('prune_push_subscription', { p_endpoint: s.endpoint })
+            } catch {
+              /* best-effort */
+            }
+          }),
+        )
+      }
+      await sendFcm(env, h.fcm_tokens ?? [], { title: '打卡提醒 · Check in', body, url: '/tempo?view=habits', taskId: h.task_id, kind: 'habit' })
+      await sb.rpc('mark_habit_nudged', { p_user_id: h.user_id, p_task_id: h.task_id, p_habit_date: h.habit_date })
+    }),
+  )
+}
+
 export function scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): void {
   ctx.waitUntil(runReminderScan(env))
   ctx.waitUntil(runTodoDigestScan(env))
+  ctx.waitUntil(runHabitReminderScan(env))
 }

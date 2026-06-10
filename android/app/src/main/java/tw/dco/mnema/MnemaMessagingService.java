@@ -55,6 +55,8 @@ public class MnemaMessagingService extends FirebaseMessagingService {
     if ("reminder".equals(kind) && taskId != null) {
       b.addAction(0, "已完成", actionPi(nid * 31 + 1, "done", taskId, reminderId, nid));
       b.addAction(0, "延後 1 小時", actionPi(nid * 31 + 2, "snooze", taskId, reminderId, nid));
+    } else if ("habit".equals(kind) && taskId != null) {
+      b.addAction(0, "打卡", actionPi(nid * 31 + 3, "checkin", taskId, reminderId, nid));
     }
 
     NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
