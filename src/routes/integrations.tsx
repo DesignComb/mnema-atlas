@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, Check, Copy, KeyRound, Plug, Plus, ShieldCheck, Trash2, TriangleAlert, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 const SETUP_TABS = [
   { id: 'claude', label: 'Claude Code' },
@@ -196,12 +197,35 @@ function AboutCard() {
 export function IntegrationsScreen() {
   const qc = useQueryClient()
   const t = useT()
-  const { data: keys, isLoading } = useQuery({ queryKey: ['api-keys'], queryFn: listApiKeys })
+  const { data: keys, isLoading } = useQuery({
+    queryKey: ['api-keys'],
+    queryFn: listApiKeys,
+    // Activation is the make-or-break moment (QW14): while an active key has
+    // never been used, poll so the screen can announce the first request live.
+    refetchInterval: (query) =>
+      query.state.data?.some((k) => !k.revoked_at && !k.last_used_at) ? 10_000 : false,
+  })
   const [name, setName] = useState('')
   const [fullAccess, setFullAccess] = useState(false)
   const [created, setCreated] = useState<CreatedApiKey | null>(null)
   const [lastKey, setLastKey] = useState<string | null>(null) // stash plaintext so the snippets show the real key
   const [tab, setTab] = useState<TabId>('claude')
+  const [confirmRevoke, setConfirmRevoke] = useState<{ id: string; name: string } | null>(null)
+
+  // Celebrate the first-ever request of a key we watched go from unused → used.
+  const unusedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!keys) return
+    const stillUnused = new Set(keys.filter((k) => !k.revoked_at && !k.last_used_at).map((k) => k.id))
+    for (const k of keys) {
+      if (unusedRef.current.has(k.id) && k.last_used_at) {
+        toast.success(t(`Connected! “${k.name}” just made its first request 🎉`, `連上了!「${k.name}」剛送出第一個請求 🎉`), {
+          duration: 8000,
+        })
+      }
+    }
+    unusedRef.current = stillUnused
+  }, [keys, t])
 
   const create = useMutation({
     mutationFn: () => createApiKey(name.trim() || t('Untitled key', '未命名金鑰'), fullAccess ? ['create', 'edit'] : ['create']),
@@ -277,7 +301,7 @@ export function IntegrationsScreen() {
                         {k.name}
                         <span
                           className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                            k.scopes?.includes('edit') ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground'
+                            k.scopes?.includes('edit') ? 'bg-warning-muted text-warning' : 'bg-muted text-muted-foreground'
                           }`}
                         >
                           {k.scopes?.includes('edit') ? t('full', '完整') : t('add-only', '僅新增')}
@@ -286,13 +310,25 @@ export function IntegrationsScreen() {
                       </p>
                       <p className="font-mono text-xs text-muted-foreground">
                         {k.key_prefix}••••••• ·{' '}
-                        {k.last_used_at
-                          ? t(`used ${relativeDue(k.last_used_at, undefined, 'en')}`, `使用於 ${relativeDue(k.last_used_at, undefined, 'zh')}`)
-                          : t('never used', '從未使用')}
+                        {k.last_used_at ? (
+                          t(`used ${relativeDue(k.last_used_at, undefined, 'en')}`, `使用於 ${relativeDue(k.last_used_at, undefined, 'zh')}`)
+                        ) : k.revoked_at ? (
+                          t('never used', '從未使用')
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 font-sans text-brand">
+                            <span className="size-1.5 animate-pulse rounded-full bg-brand" aria-hidden />
+                            {t('Waiting for your AI’s first request…', '等待你的 AI 送出第一個請求…')}
+                          </span>
+                        )}
                       </p>
                     </div>
                     {!k.revoked_at ? (
-                      <Button variant="ghost" size="icon-sm" title={t('Revoke', '撤銷')} onClick={() => revoke.mutate(k.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        title={t('Revoke', '撤銷')}
+                        onClick={() => setConfirmRevoke({ id: k.id, name: k.name })}
+                      >
                         <Trash2 className="size-4 text-muted-foreground" />
                       </Button>
                     ) : null}
@@ -397,6 +433,24 @@ export function IntegrationsScreen() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Revoking is one-way and instantly breaks the AI using it — confirm it. */}
+      <ConfirmDialog
+        open={confirmRevoke !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirmRevoke(null)
+        }}
+        title={t(`Revoke “${confirmRevoke?.name ?? ''}”?`, `撤銷「${confirmRevoke?.name ?? ''}」?`)}
+        description={t(
+          'Any AI using this key loses access immediately. This cannot be undone.',
+          '使用這把金鑰的 AI 會立即失去存取權,且無法復原。',
+        )}
+        confirmLabel={t('Revoke', '撤銷')}
+        cancelLabel={t('Cancel', '取消')}
+        onConfirm={() => {
+          if (confirmRevoke) revoke.mutate(confirmRevoke.id)
+        }}
+      />
     </>
   )
 }
@@ -427,7 +481,7 @@ function CopyBlock({ code }: { code: string }) {
           setCopied(true)
           setTimeout(() => setCopied(false), 1500)
         }}
-        className="absolute right-2 top-2 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 transition group-hover:opacity-100"
+        className="absolute right-2 top-2 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         title={t('Copy', '複製')}
       >
         {copied ? <Check className="size-3.5 text-brand" /> : <Copy className="size-3.5" />}

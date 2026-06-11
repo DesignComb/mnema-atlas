@@ -235,7 +235,7 @@ export function KitchenScreen() {
                         >
                           <Star className={`size-4 ${r.is_favorite ? 'fill-brand text-brand' : ''}`} />
                         </button>
-                        <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
+                        <div className="flex gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
                           <button onClick={() => addRecipeToShopping(r)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" title={t('Add to shopping', '加入購物清單')}>
                             <ListPlus className="size-4" />
                           </button>
@@ -285,7 +285,7 @@ export function KitchenScreen() {
                             </p>
                             {it.expires_on ? <p className="text-[11.5px] text-muted-foreground">{t('Expires', '到期')} {fmtDate(it.expires_on)}</p> : null}
                           </div>
-                          <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
+                          <div className="flex gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
                             <button onClick={() => setPantryDialog({ open: true, item: it })} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
                               <Pencil className="size-3.5" />
                             </button>

@@ -75,6 +75,12 @@ export function LogHealthDialog({
   const pending = logHealth.isPending || updateLog.isPending
   /** Unit actually applied when the field is left blank — weight honours the setting. */
   const defaultUnit = kind === 'weight' && weightUnit ? weightUnit : meta?.unit
+  // Disabled-until-valid (QW15): a non-numeric value or a fully empty entry
+  // can't be submitted; the submit-time toast stays as the backstop.
+  const valueOk = !value.trim() || !Number.isNaN(Number(value))
+  const value2Ok = !value2.trim() || !Number.isNaN(Number(value2))
+  const hasContent = Boolean(value.trim() || value2.trim() || textValue.trim() || note.trim())
+  const canSubmit = valueOk && value2Ok && hasContent
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -222,7 +228,7 @@ export function LogHealthDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}
             </Button>
-            <Button type="submit" variant="brand" disabled={pending}>
+            <Button type="submit" variant="brand" disabled={pending || !canSubmit}>
               {pending ? t('Saving…', '儲存中…') : editing ? t('Save', '儲存') : t('Log', '記錄')}
             </Button>
           </DialogFooter>

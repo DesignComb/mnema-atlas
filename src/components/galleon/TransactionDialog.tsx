@@ -63,6 +63,10 @@ export function TransactionDialog({
 
   const cats = ledger.categories.filter((c) => c.kind === (type === 'income' ? 'income' : 'expense'))
   const pending = createTxn.isPending || updateTxn.isPending
+  // SplitExpenseDialog's disabled-until-valid pattern (QW15): the toasts in
+  // submit() stay as the backstop, but the button tells you before you tap.
+  const canSubmit =
+    Number(amount) > 0 && (type !== 'transfer' || Boolean(accountId && toAccountId && accountId !== toAccountId))
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -229,7 +233,7 @@ export function TransactionDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}
             </Button>
-            <Button type="submit" variant="brand" disabled={pending}>
+            <Button type="submit" variant="brand" disabled={pending || !canSubmit}>
               {pending ? t('Saving…', '儲存中…') : editing ? t('Save', '儲存') : t('Add', '新增')}
             </Button>
           </DialogFooter>

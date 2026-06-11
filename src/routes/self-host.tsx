@@ -190,7 +190,7 @@ function CodeBlock({ code }: { code: string }) {
           setTimeout(() => setCopied(false), 1500)
         }}
         aria-label={t('Copy code', '複製程式碼')}
-        className="absolute right-2.5 top-2.5 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 outline-none transition hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 group-hover:opacity-100"
+        className="absolute right-2.5 top-2.5 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 outline-none transition hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
       >
         {copied ? <Check aria-hidden className="size-3.5 text-brand" /> : <Copy aria-hidden className="size-3.5" />}
       </button>

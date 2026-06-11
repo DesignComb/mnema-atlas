@@ -335,7 +335,7 @@ export function HealthScreen() {
                       <span className="text-xl">{j.mood ? MOOD_FACES[j.mood - 1] : '·'}</span>
                       <span className="text-[13px] font-semibold text-foreground">{fmtDate(j.entry_date)}</span>
                       {j.energy ? <span className="text-[12px] text-muted-foreground">{t('Energy', '精力')} {j.energy}/5</span> : null}
-                      <div className="ml-auto flex gap-1 opacity-0 transition group-hover:opacity-100">
+                      <div className="ml-auto flex gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
                         <button onClick={() => setJournalDialog({ open: true, entry: j })} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
                           <Pencil className="size-3.5" />
                         </button>
@@ -389,7 +389,7 @@ export function HealthScreen() {
                       <p className="truncate text-[14px] font-medium text-foreground">{m.name}{!m.is_active ? <span className="ml-2 text-[11px] text-muted-foreground">{t('inactive', '停用')}</span> : null}</p>
                       <p className="truncate text-[12.5px] text-muted-foreground">{[m.dosage, m.times.join(' · ')].filter(Boolean).join(' · ') || t('No schedule', '無排程')}</p>
                     </div>
-                    <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
+                    <div className="flex gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
                       <button onClick={() => setMedDialog({ open: true, medication: m })} className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
                         <Pencil className="size-4" />
                       </button>
@@ -556,7 +556,7 @@ function LogList({
             <span className="shrink-0 text-[11.5px] tabular-nums text-muted-foreground">
               {fmtDate(l.logged_date)} {hmOf(l.logged_at)}
             </span>
-            <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
+            <div className="flex gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
               <button onClick={() => onEdit(l)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
                 <Pencil className="size-3.5" />
               </button>
