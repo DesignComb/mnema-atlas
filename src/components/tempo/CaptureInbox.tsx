@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, RotateCcw, Sparkles, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCaptures,
   useCreateCapture,
-  useDeleteCapture,
   useDismissCapture,
   useReopenCapture,
 } from '@/lib/hooks'
+import { deleteCapture as apiDeleteCapture } from '@/lib/api'
+import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
 import { useT } from '@/lib/i18n'
 import type { CaptureStatus } from '@/lib/api'
 import type { CaptureRow } from '@/lib/database.types'
@@ -47,7 +49,8 @@ export function CaptureInbox({
   const create = useCreateCapture()
   const dismiss = useDismissCapture()
   const reopen = useReopenCapture()
-  const del = useDeleteCapture()
+  const qc = useQueryClient()
+  const hiddenKeys = useHiddenKeys()
   const [copied, setCopied] = useState(false)
 
   // PWA share-target & quick links land at ?capture=… — file it once, then clear the param.
@@ -82,8 +85,19 @@ export function CaptureInbox({
     setTimeout(() => setCopied(false), 1500)
   }
 
-  const rows = (captures ?? []) as CaptureRow[]
+  const rows = ((captures ?? []) as CaptureRow[]).filter((c) => !hiddenKeys.has(`capture:${c.id}`))
   const pendingCount = filter === 'pending' ? rows.length : null
+
+  function removeCapture(c: CaptureRow) {
+    undoableDelete({
+      key: `capture:${c.id}`,
+      message: t('Capture deleted', '已刪除暫存'),
+      undoLabel: t('Undo', '復原'),
+      errorMessage: t('Delete failed — the capture is back', '刪除失敗,暫存已還原'),
+      commit: () => apiDeleteCapture(c.id),
+      onSettled: () => qc.invalidateQueries({ queryKey: ['captures'] }),
+    })
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -209,7 +223,7 @@ export function CaptureInbox({
                     </button>
                   )}
                   <button
-                    onClick={() => del.mutate(c.id)}
+                    onClick={() => removeCapture(c)}
                     className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-destructive"
                     title={t('Delete', '刪除')}
                     aria-label={t('Delete', '刪除')}

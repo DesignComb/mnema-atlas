@@ -591,17 +591,47 @@ export function useUpdateTask() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (input: UpdateTaskInput) => api.updateTask(input), onSuccess: () => bumpTasks(qc) })
 }
+/**
+ * Optimistically flip a task's status across every cached ['tasks', …] list
+ * (QW2 — completion must feel instant). Returns the snapshots for rollback.
+ */
+function flipTaskStatus(qc: ReturnType<typeof useQueryClient>, taskId: string, status: 'done' | 'todo') {
+  const snapshots = qc.getQueriesData<{ id: string; status: string }[]>({ queryKey: ['tasks'] })
+  qc.setQueriesData<{ id: string; status: string }[]>({ queryKey: ['tasks'] }, (rows) =>
+    rows?.map((r) => (r.id === taskId ? { ...r, status } : r)),
+  )
+  return snapshots
+}
+type TaskSnapshots = ReturnType<typeof flipTaskStatus>
+
+function rollbackTasks(qc: ReturnType<typeof useQueryClient>, snapshots?: TaskSnapshots) {
+  for (const [key, data] of snapshots ?? []) qc.setQueryData(key, data)
+}
+
 export function useCompleteTask() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (v: { taskId: string; nextOccurrence?: string; completedAt?: string }) =>
       api.completeTask(v.taskId, { nextOccurrence: v.nextOccurrence, completedAt: v.completedAt }),
-    onSuccess: () => bumpTasks(qc),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] })
+      return { snapshots: flipTaskStatus(qc, v.taskId, 'done') }
+    },
+    onError: (_e, _v, ctx) => rollbackTasks(qc, ctx?.snapshots),
+    onSettled: () => bumpTasks(qc),
   })
 }
 export function useUncompleteTask() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (taskId: string) => api.uncompleteTask(taskId), onSuccess: () => bumpTasks(qc) })
+  return useMutation({
+    mutationFn: (taskId: string) => api.uncompleteTask(taskId),
+    onMutate: async (taskId) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] })
+      return { snapshots: flipTaskStatus(qc, taskId, 'todo') }
+    },
+    onError: (_e, _v, ctx) => rollbackTasks(qc, ctx?.snapshots),
+    onSettled: () => bumpTasks(qc),
+  })
 }
 export function useDeleteTask() {
   const qc = useQueryClient()
@@ -844,7 +874,23 @@ export function useAddShoppingItems() {
 }
 export function useUpdateShoppingItem() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (input: UpdateShoppingItemInput) => api.updateShoppingItem(input), onSuccess: () => bumpKitchen(qc) })
+  return useMutation({
+    mutationFn: (input: UpdateShoppingItemInput) => api.updateShoppingItem(input),
+    // Optimistic: checking off groceries in the store must not wait on a round-trip (QW2).
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: qk.shopping })
+      const prev = qc.getQueryData(qk.shopping)
+      const { item_id, ...patch } = input
+      qc.setQueryData<{ id: string }[]>(qk.shopping, (rows) =>
+        rows?.map((r) => (r.id === item_id ? { ...r, ...patch } : r)),
+      )
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev !== undefined) qc.setQueryData(qk.shopping, ctx.prev)
+    },
+    onSettled: () => bumpKitchen(qc),
+  })
 }
 export function useDeleteShoppingItem() {
   const qc = useQueryClient()

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   ArrowLeftRight,
@@ -26,8 +27,6 @@ import {
   useDeleteAccount,
   useDeleteBudget,
   useDeleteLedger,
-  useDeleteSettlement,
-  useDeleteTransaction,
   useLedger,
   useLedgers,
   useLedgerSummary,
@@ -42,9 +41,14 @@ import {
   useSettlements,
   useSplitTxnIds,
   useSubscriptions,
-  useDeleteSubscription,
   usePostDueSubscriptions,
 } from '@/lib/hooks'
+import {
+  deleteSettlement as apiDeleteSettlement,
+  deleteSubscription as apiDeleteSubscription,
+  deleteTransaction as apiDeleteTransaction,
+} from '@/lib/api'
+import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
 import { useI18n, useT } from '@/lib/i18n'
 import type { BudgetStatusItem, LedgerAccount, LedgerCategory, LedgerDetail, MemberBalanceItem } from '@/lib/api'
 import type { TransactionRow, SubscriptionRow } from '@/lib/database.types'
@@ -53,6 +57,15 @@ import { ACCOUNT_TYPE_LABEL, addMonths, fmtLedgerDate, fmtMoney, monthRange } fr
 import { shortRecurrenceLabel } from '@/lib/recurrence'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,6 +81,25 @@ import { MemberDialog } from '@/components/galleon/MemberDialog'
 import { SplitExpenseDialog } from '@/components/galleon/SplitExpenseDialog'
 import { SubscriptionDialog } from '@/components/galleon/SubscriptionDialog'
 import { SortableList } from '@/components/common/SortableList'
+
+/** Awaitable mirror of hooks.ts' bumpGalleon, for undoable-delete onSettled. */
+const GALLEON_KEYS = [
+  'ledgers',
+  'ledger',
+  'ledger-txns',
+  'ledger-summary',
+  'budget-status',
+  'recurring',
+  'monthly-trend',
+  'ledger-balances',
+  'ledger-settlements',
+  'ledger-split-ids',
+  'subscriptions',
+  'upcoming-subscriptions',
+] as const
+function bumpAllGalleon(qc: QueryClient) {
+  return Promise.all(GALLEON_KEYS.map((k) => qc.invalidateQueries({ queryKey: [k] })))
+}
 
 type View = 'overview' | 'transactions' | 'accounts' | 'budgets' | 'reports' | 'split' | 'subscriptions'
 const VIEWS: { k: View; en: string; zh: string }[] = [
@@ -103,6 +135,7 @@ export function GalleonScreen() {
   const [memberDialog, setMemberDialog] = useState<{ open: boolean; member?: MemberBalanceItem }>({ open: false })
   const [splitDialog, setSplitDialog] = useState(false)
   const [subDialog, setSubDialog] = useState<{ open: boolean; subscription?: SubscriptionRow }>({ open: false })
+  const [confirmLedgerDelete, setConfirmLedgerDelete] = useState(false)
   const runDue = useRunDueRecurring()
   const postSubs = usePostDueSubscriptions()
 
@@ -216,7 +249,7 @@ export function GalleonScreen() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive [&_svg]:text-destructive"
-                    onSelect={() => void deleteLedgerFlow()}
+                    onSelect={() => setConfirmLedgerDelete(true)}
                   >
                     <Trash2 /> {t('Delete ledger', '刪除帳本')}
                   </DropdownMenuItem>
@@ -325,15 +358,26 @@ export function GalleonScreen() {
           />
         </>
       ) : null}
+      <ConfirmDialog
+        open={confirmLedgerDelete}
+        onOpenChange={setConfirmLedgerDelete}
+        title={t(`Delete ledger “${activeLedger?.name ?? ''}”?`, `刪除帳本「${activeLedger?.name ?? ''}」?`)}
+        description={t(
+          'Every account, transaction, budget and split in it is deleted with it. This cannot be undone.',
+          '其中所有帳戶、交易、預算與分帳都會一併刪除,無法復原。',
+        )}
+        confirmLabel={t('Delete ledger', '刪除帳本')}
+        cancelLabel={t('Cancel', '取消')}
+        onConfirm={() => {
+          if (!activeLedger) return
+          deleteLedger.mutate(activeLedger.id, {
+            onSuccess: () => setSearch({ ledger: active.find((l) => l.id !== activeLedger.id)?.id }),
+            onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to delete ledger', '刪除帳本失敗')),
+          })
+        }}
+      />
     </>
   )
-
-  async function deleteLedgerFlow() {
-    if (!activeLedger) return
-    if (!confirm(t(`Delete ledger “${activeLedger.name}” and everything in it?`, `刪除帳本「${activeLedger.name}」與其中所有資料?`))) return
-    await deleteLedger.mutateAsync(activeLedger.id)
-    setSearch({ ledger: active.find((l) => l.id !== activeLedger.id)?.id })
-  }
 }
 
 function amountColor(type: string): string {
@@ -448,14 +492,16 @@ function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTx
   const { lang } = useI18n()
   const { data: txns, isLoading } = useLedgerTransactions({ ledgerId: ledger.id, limit: 300 })
   const { data: splitIds } = useSplitTxnIds(ledger.id)
+  const hiddenKeys = useHiddenKeys()
   const splitSet = new Set(splitIds ?? [])
+  const visible = (txns ?? []).filter((tx) => !hiddenKeys.has(`txn:${tx.id}`))
   if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card" />
-  if (!(txns ?? []).length) {
+  if (!visible.length) {
     return <EmptyState icon={<Coins className="size-6" />} title={t('No transactions yet', '還沒有交易')} description={t('Tap “Add” to log one, or let your AI do it.', '點「記一筆」新增,或讓你的 AI 幫你記。')} />
   }
   // group by date
   const groups: { date: string; rows: TransactionRow[] }[] = []
-  for (const tx of txns ?? []) {
+  for (const tx of visible) {
     const g = groups[groups.length - 1]
     if (g && g.date === tx.txn_date) g.rows.push(tx)
     else groups.push({ date: tx.txn_date, rows: [tx] })
@@ -477,7 +523,7 @@ function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTx
 }
 
 function TxnRow({ tx, ledger, onEdit, t, withMenu, isSplit }: { tx: TransactionRow; ledger: LedgerDetail; onEdit: () => void; t: Tr; withMenu?: boolean; isSplit?: boolean }) {
-  const del = useDeleteTransaction()
+  const qc = useQueryClient()
   const cat = ledger.categories.find((c) => c.id === tx.category_id)
   const acc = ledger.accounts.find((a) => a.id === tx.account_id)
   const toAcc = ledger.accounts.find((a) => a.id === tx.transfer_account_id)
@@ -519,7 +565,19 @@ function TxnRow({ tx, ledger, onEdit, t, withMenu, isSplit }: { tx: TransactionR
               <Pencil /> {t('Edit', '編輯')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive [&_svg]:text-destructive" onSelect={() => del.mutate(tx.id)}>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive [&_svg]:text-destructive"
+              onSelect={() =>
+                undoableDelete({
+                  key: `txn:${tx.id}`,
+                  message: t(`Deleted ${fmtMoney(tx.amount, tx.currency)}`, `已刪除 ${fmtMoney(tx.amount, tx.currency)}`),
+                  undoLabel: t('Undo', '復原'),
+                  errorMessage: t('Delete failed — the transaction is back', '刪除失敗,交易已還原'),
+                  commit: () => apiDeleteTransaction(tx.id),
+                  onSettled: () => bumpAllGalleon(qc),
+                })
+              }
+            >
               <Trash2 /> {t('Delete', '刪除')}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -545,6 +603,7 @@ function Accounts({
   const del = useDeleteAccount()
   const reorder = useReorderAccounts()
   const accounts = ledger.accounts
+  const [confirmAcct, setConfirmAcct] = useState<LedgerAccount | null>(null)
   const netWorth = accounts.filter((a) => !a.is_archived).reduce((s, a) => s + Number(a.balance), 0)
   const renderCard = (a: LedgerAccount, handle?: ReactNode) => (
     <div className={`group rounded-xl border border-border bg-card p-3.5 shadow-soft ${a.is_archived ? 'opacity-50' : ''}`}>
@@ -569,20 +628,7 @@ function Accounts({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive [&_svg]:text-destructive"
-              onSelect={() => {
-                const other = accounts.find((x) => x.id !== a.id && !x.is_archived)
-                const n = a.txn_count ?? 0
-                if (n > 0) {
-                  if (!confirm(t(`Delete “${a.name}”? Its ${n} transaction(s) will lose their account link.`, `刪除「${a.name}」?此帳戶的 ${n} 筆交易將失去帳戶歸屬。`))) return
-                  if (other && confirm(t(`Reassign those ${n} transaction(s) to “${other.name}”? Cancel keeps them unassigned.`, `把這 ${n} 筆交易改派到「${other.name}」?取消則維持無歸屬。`))) {
-                    del.mutate({ id: a.id, reassignTo: other.id })
-                    return
-                  }
-                  del.mutate({ id: a.id })
-                  return
-                }
-                if (confirm(t(`Delete account “${a.name}”?`, `刪除帳戶「${a.name}」?`))) del.mutate({ id: a.id })
-              }}
+              onSelect={() => setConfirmAcct(a)}
             >
               <Trash2 /> {t('Delete', '刪除')}
             </DropdownMenuItem>
@@ -624,6 +670,69 @@ function Accounts({
           {newBtn}
         </div>
       )}
+      {/* Account delete needs a real choice (reassign vs unassign), so it gets a
+          dialog rather than an undo toast. */}
+      <Dialog
+        open={confirmAcct !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirmAcct(null)
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          {(() => {
+            if (!confirmAcct) return null
+            const a = confirmAcct
+            const other = accounts.find((x) => x.id !== a.id && !x.is_archived)
+            const n = a.txn_count ?? 0
+            const close = () => setConfirmAcct(null)
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-base">{t(`Delete account “${a.name}”?`, `刪除帳戶「${a.name}」?`)}</DialogTitle>
+                  {n > 0 ? (
+                    <DialogDescription>
+                      {other
+                        ? t(
+                            `It has ${n} transaction(s). You can move them to “${other.name}”, or delete and leave them unassigned.`,
+                            `此帳戶有 ${n} 筆交易。可以改派到「${other.name}」,或直接刪除讓它們維持無歸屬。`,
+                          )
+                        : t(
+                            `Its ${n} transaction(s) will lose their account link.`,
+                            `此帳戶的 ${n} 筆交易將失去帳戶歸屬。`,
+                          )}
+                    </DialogDescription>
+                  ) : null}
+                </DialogHeader>
+                <DialogFooter className="flex-col gap-2 sm:flex-row">
+                  <Button variant="ghost" onClick={close}>
+                    {t('Cancel', '取消')}
+                  </Button>
+                  {n > 0 && other ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        close()
+                        del.mutate({ id: a.id, reassignTo: other.id })
+                      }}
+                    >
+                      {t(`Move to “${other.name}” & delete`, `改派到「${other.name}」並刪除`)}
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      close()
+                      del.mutate({ id: a.id })
+                    }}
+                  >
+                    {t('Delete', '刪除')}
+                  </Button>
+                </DialogFooter>
+              </>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -805,7 +914,9 @@ function Split({
   const { data: settlements } = useSettlements(ledger.id)
   const removeMember = useRemoveLedgerMember()
   const recordSettlement = useRecordSettlement()
-  const delSettlement = useDeleteSettlement()
+  const qc = useQueryClient()
+  const hiddenKeys = useHiddenKeys()
+  const [confirmMember, setConfirmMember] = useState<MemberBalanceItem | null>(null)
   const cur = ledger.base_currency
   const list = members ?? []
   const nameOf = (mid: string) => list.find((m) => m.member_id === mid)?.display_name ?? '—'
@@ -881,7 +992,7 @@ function Split({
                           toast.error(t('Settle their balance before removing them.', '請先結清餘額再移除。'))
                           return
                         }
-                        if (confirm(t(`Remove ${m.display_name}?`, `移除「${m.display_name}」?`))) removeMember.mutate(m.member_id)
+                        setConfirmMember(m)
                       }}
                     >
                       <Trash2 /> {t('Remove', '移除')}
@@ -939,13 +1050,15 @@ function Split({
       </div>
 
       {/* Settlement history */}
-      {(settlements ?? []).length ? (
+      {(settlements ?? []).filter((s) => !hiddenKeys.has(`settlement:${s.id}`)).length ? (
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
           <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 sm:px-4">
             <Undo2 className="size-3.5 text-muted-foreground" />
             <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">{t('Recorded settlements', '已記錄的結算')}</span>
           </div>
-          {(settlements ?? []).map((s) => (
+          {(settlements ?? [])
+            .filter((s) => !hiddenKeys.has(`settlement:${s.id}`))
+            .map((s) => (
             <div key={s.id} className="group flex items-center gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13.5px]">
@@ -961,9 +1074,16 @@ function Split({
               <span className="shrink-0 text-[13px] font-medium tabular-nums">{fmtMoney(s.amount, s.currency)}</span>
               {canEdit ? (
                 <button
-                  onClick={() => {
-                    if (confirm(t('Undo this settlement?', '撤銷這筆結算?'))) delSettlement.mutate(s.id)
-                  }}
+                  onClick={() =>
+                    undoableDelete({
+                      key: `settlement:${s.id}`,
+                      message: t('Settlement removed', '已撤銷結算'),
+                      undoLabel: t('Undo', '復原'),
+                      errorMessage: t('Failed — the settlement is back', '撤銷失敗,結算已還原'),
+                      commit: () => apiDeleteSettlement(s.id),
+                      onSettled: () => bumpAllGalleon(qc),
+                    })
+                  }
                   className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-destructive group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                   aria-label={t('Undo', '撤銷')}
                 >
@@ -974,6 +1094,19 @@ function Split({
           ))}
         </div>
       ) : null}
+      <ConfirmDialog
+        open={confirmMember !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirmMember(null)
+        }}
+        title={t(`Remove ${confirmMember?.display_name ?? ''}?`, `移除「${confirmMember?.display_name ?? ''}」?`)}
+        description={t('They lose access to this ledger. Past split expenses keep their name.', '對方將失去這本帳本的存取權;過去的分帳記錄會保留名字。')}
+        confirmLabel={t('Remove', '移除')}
+        cancelLabel={t('Cancel', '取消')}
+        onConfirm={() => {
+          if (confirmMember) removeMember.mutate(confirmMember.member_id)
+        }}
+      />
     </div>
   )
 }
@@ -992,8 +1125,10 @@ function Subscriptions({
   t: Tr
 }) {
   const { lang } = useI18n()
-  const { data: subs = [] } = useSubscriptions(ledger.id)
-  const del = useDeleteSubscription()
+  const { data: allSubs = [] } = useSubscriptions(ledger.id)
+  const qc = useQueryClient()
+  const hiddenKeys = useHiddenKeys()
+  const subs = allSubs.filter((s) => !hiddenKeys.has(`sub:${s.id}`))
 
   // Rough monthly cost across active subs (yearly /12, weekly ×52/12).
   const monthly = subs
@@ -1043,7 +1178,20 @@ function Subscriptions({
                 </button>
                 <span className="shrink-0 text-[13px] font-medium tabular-nums text-foreground">{fmtMoney(Number(s.amount), s.currency)}</span>
                 {canEdit ? (
-                  <button onClick={() => del.mutate(s.id)} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-destructive group-hover:opacity-100" aria-label={t('Delete', '刪除')}>
+                  <button
+                    onClick={() =>
+                      undoableDelete({
+                        key: `sub:${s.id}`,
+                        message: t(`Deleted “${s.name}”`, `已刪除「${s.name}」`),
+                        undoLabel: t('Undo', '復原'),
+                        errorMessage: t('Delete failed — the subscription is back', '刪除失敗,訂閱已還原'),
+                        commit: () => apiDeleteSubscription(s.id),
+                        onSettled: () => bumpAllGalleon(qc),
+                      })
+                    }
+                    className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-destructive group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                    aria-label={t('Delete', '刪除')}
+                  >
                     <Trash2 className="size-4" />
                   </button>
                 ) : null}

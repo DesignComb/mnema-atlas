@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   CalendarDays,
   CheckCircle2,
@@ -20,18 +22,20 @@ import {
   useCheckIn,
   useCompleteTask,
   useCreateTask,
-  useDeleteTask,
   useDeleteTaskList,
   useReorderTasks,
   useTaskLists,
   useTasks,
   useUncompleteTask,
 } from '@/lib/hooks'
+import { deleteTask as apiDeleteTask } from '@/lib/api'
+import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
 import { useT } from '@/lib/i18n'
 import type { TaskListRow, TaskRow } from '@/lib/database.types'
 import { computeOccurrence, habitTodayISO, shortRecurrenceLabel } from '@/lib/recurrence'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,11 +94,13 @@ export function TempoScreen() {
   const [draft, setDraft] = useState('')
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; task?: TaskRow }>({ open: false })
   const [listDialog, setListDialog] = useState<{ open: boolean; list?: TaskListRow }>({ open: false })
+  const [confirmList, setConfirmList] = useState<TaskListRow | null>(null)
 
+  const qc = useQueryClient()
+  const hiddenKeys = useHiddenKeys()
   const createTask = useCreateTask()
   const complete = useCompleteTask()
   const uncomplete = useUncompleteTask()
-  const del = useDeleteTask()
   const checkIn = useCheckIn()
   const delList = useDeleteTaskList()
   const reorder = useReorderTasks()
@@ -122,6 +128,7 @@ export function TempoScreen() {
   }, [search.new, navigate])
 
   const filtered = (tasks ?? []).filter((task) => {
+    if (hiddenKeys.has(`task:${task.id}`)) return false // pending undoable delete
     if (listSel === 'inbox' && task.list_id !== null) return false
     if (listSel !== 'all' && listSel !== 'inbox' && task.list_id !== listSel) return false
     if (view === 'habits') return task.kind === 'habit'
@@ -182,6 +189,7 @@ export function TempoScreen() {
     }
     if (task.recurrence_rule) {
       // Compute the next occurrence (full RRULE) so BYDAY etc. advance correctly.
+      // No Undo here: uncomplete_task can't rewind the recurrence roll.
       const base = task.recurrence_after_completion
         ? today
         : task.next_occurrence ?? task.due_date ?? task.scheduled_date ?? today
@@ -189,18 +197,30 @@ export function TempoScreen() {
       complete.mutate({ taskId: task.id, nextOccurrence: next ?? undefined })
     } else {
       complete.mutate({ taskId: task.id })
+      toast(t('Completed', '已完成'), {
+        action: { label: t('Undo', '復原'), onClick: () => uncomplete.mutate(task.id) },
+        duration: 5000,
+      })
     }
   }
 
-  async function removeList(list: TaskListRow) {
-    if (
-      !confirm(
-        t(`Delete list “${list.name}”? Its tasks move to the Inbox.`, `刪除清單「${list.name}」?裡面的任務會移到收件匣。`),
-      )
-    )
-      return
-    await delList.mutateAsync(list.id)
-    navigate({ to: '/tempo', search: (p) => ({ ...p, list: undefined }), replace: true })
+  function removeTask(task: TaskRow) {
+    undoableDelete({
+      key: `task:${task.id}`,
+      message:
+        task.kind === 'habit'
+          ? t(`Deleted habit “${task.title}”`, `已刪除習慣「${task.title}」`)
+          : t(`Deleted “${task.title}”`, `已刪除「${task.title}」`),
+      undoLabel: t('Undo', '復原'),
+      errorMessage: t('Delete failed — the item is back', '刪除失敗,項目已還原'),
+      commit: () => apiDeleteTask(task.id),
+      onSettled: () =>
+        Promise.all([
+          qc.invalidateQueries({ queryKey: ['tasks'] }),
+          qc.invalidateQueries({ queryKey: ['task-lists'] }),
+          qc.invalidateQueries({ queryKey: ['checkins'] }),
+        ]),
+    })
   }
 
   return (
@@ -231,7 +251,7 @@ export function TempoScreen() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive [&_svg]:text-destructive"
-                    onSelect={() => void removeList(selectedList)}
+                    onSelect={() => setConfirmList(selectedList)}
                   >
                     <Trash2 /> {t('Delete list', '刪除清單')}
                   </DropdownMenuItem>
@@ -308,7 +328,7 @@ export function TempoScreen() {
                       habit={habit}
                       today={habitTodayISO(habit.reset_time, habit.tz)}
                       onEdit={() => setTaskDialog({ open: true, task: habit })}
-                      onDelete={() => del.mutate(habit.id)}
+                      onDelete={() => removeTask(habit)}
                     />
                   ))}
                 </div>
@@ -323,7 +343,7 @@ export function TempoScreen() {
                       task={task}
                       onToggle={() => toggle(task)}
                       onEdit={() => setTaskDialog({ open: true, task })}
-                      onDelete={() => del.mutate(task.id)}
+                      onDelete={() => removeTask(task)}
                       t={t}
                       today={today}
                       dragHandle={handle}
@@ -332,17 +352,26 @@ export function TempoScreen() {
                 />
               ) : (
                 <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
-                  {sorted.map((task) => (
-                    <TaskRowItem
-                      key={task.id}
-                      task={task}
-                      onToggle={() => toggle(task)}
-                      onEdit={() => setTaskDialog({ open: true, task })}
-                      onDelete={() => del.mutate(task.id)}
-                      t={t}
-                      today={today}
-                    />
-                  ))}
+                  <AnimatePresence initial={false}>
+                    {sorted.map((task) => (
+                      <motion.div
+                        key={task.id}
+                        layout
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="overflow-hidden"
+                      >
+                        <TaskRowItem
+                          task={task}
+                          onToggle={() => toggle(task)}
+                          onEdit={() => setTaskDialog({ open: true, task })}
+                          onDelete={() => removeTask(task)}
+                          t={t}
+                          today={today}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
               )}
 
@@ -371,6 +400,25 @@ export function TempoScreen() {
         open={listDialog.open}
         onOpenChange={(o) => setListDialog((s) => ({ ...s, open: o }))}
         list={listDialog.list}
+      />
+      <ConfirmDialog
+        open={confirmList !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirmList(null)
+        }}
+        title={t(`Delete list “${confirmList?.name ?? ''}”?`, `刪除清單「${confirmList?.name ?? ''}」?`)}
+        description={t('Its tasks move to the Inbox.', '裡面的任務會移到收件匣。')}
+        confirmLabel={t('Delete list', '刪除清單')}
+        cancelLabel={t('Cancel', '取消')}
+        onConfirm={() => {
+          const list = confirmList
+          if (!list) return
+          delList.mutate(list.id, {
+            onSuccess: () => navigate({ to: '/tempo', search: (p) => ({ ...p, list: undefined }), replace: true }),
+            onError: (e) =>
+              toast.error(e instanceof Error ? e.message : t('Failed to delete list', '刪除清單失敗')),
+          })
+        }}
       />
     </>
   )
@@ -402,7 +450,7 @@ function TaskRowItem({
       {dragHandle ? <div className="-ml-1 mt-0.5">{dragHandle}</div> : null}
       {isHabit ? (
         <div className="mt-0.5">
-          <HabitCheckButton habitId={task.id} today={today} iconClassName="size-5" />
+          <HabitCheckButton habitId={task.id} today={today} iconClassName="size-5" title={task.title} />
         </div>
       ) : (
         <button

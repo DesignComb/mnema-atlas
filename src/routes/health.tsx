@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Activity,
@@ -13,9 +14,6 @@ import {
   Trash2,
 } from 'lucide-react'
 import {
-  useDeleteHealthLog,
-  useDeleteJournalEntry,
-  useDeleteMedication,
   useHealthLogs,
   useHealthSettings,
   useJournalEntries,
@@ -25,6 +23,12 @@ import {
   useSetHealthSettings,
   useSetReviewPrefs,
 } from '@/lib/hooks'
+import {
+  deleteHealthLog as apiDeleteHealthLog,
+  deleteJournalEntry as apiDeleteJournalEntry,
+  deleteMedication as apiDeleteMedication,
+} from '@/lib/api'
+import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
 import { useI18n, useT } from '@/lib/i18n'
 import type { HealthLogKind, HealthModule } from '@shared/schemas'
 import type { HealthLogRow, JournalEntryRow, MedicationRow } from '@/lib/database.types'
@@ -43,6 +47,15 @@ import { LogHealthDialog } from '@/components/health/LogHealthDialog'
 import { JournalDialog } from '@/components/health/JournalDialog'
 import { MedicationDialog } from '@/components/health/MedicationDialog'
 
+/** Awaitable mirror of hooks.ts' bumpHealth, for undoable-delete onSettled. */
+function bumpAllHealth(qc: QueryClient) {
+  return Promise.all(
+    ['health-logs', 'journal-entries', 'journal-entry', 'medications'].map((k) =>
+      qc.invalidateQueries({ queryKey: [k] }),
+    ),
+  )
+}
+
 type Section = 'overview' | 'journal' | 'meds' | 'history' | 'settings'
 
 const QUICK_KINDS: HealthLogKind[] = ['weight', 'meal', 'workout', 'water', 'sleep', 'blood_pressure']
@@ -60,14 +73,27 @@ export function HealthScreen() {
   const hasJournal = enabled.includes('journal')
   const hasMeds = enabled.includes('meds')
 
-  const { data: logs = [] } = useHealthLogs({ limit: 200 })
-  const { data: journal = [] } = useJournalEntries()
-  const { data: meds = [] } = useMedications()
+  const qc = useQueryClient()
+  const hiddenKeys = useHiddenKeys()
+  const { data: allLogs = [] } = useHealthLogs({ limit: 200 })
+  const { data: allJournal = [] } = useJournalEntries()
+  const { data: allMeds = [] } = useMedications()
+  const logs = allLogs.filter((l) => !hiddenKeys.has(`hlog:${l.id}`))
+  const journal = allJournal.filter((j) => !hiddenKeys.has(`journal:${j.id}`))
+  const meds = allMeds.filter((m) => !hiddenKeys.has(`med:${m.id}`))
 
   const logHealth = useLogHealth()
-  const deleteLog = useDeleteHealthLog()
-  const deleteJournal = useDeleteJournalEntry()
-  const deleteMed = useDeleteMedication()
+
+  function removeHealthItem(key: string, message: string, commit: () => Promise<unknown>) {
+    undoableDelete({
+      key,
+      message,
+      undoLabel: t('Undo', '復原'),
+      errorMessage: t('Delete failed — the entry is back', '刪除失敗,紀錄已還原'),
+      commit,
+      onSettled: () => bumpAllHealth(qc),
+    })
+  }
   const setSettings = useSetHealthSettings()
   const { data: reviewPrefs } = useReviewPrefs()
   const setReviewPrefs = useSetReviewPrefs()
@@ -219,7 +245,13 @@ export function HealthScreen() {
                   {t('Recent', '最近')} {todayLogCount ? `· ${t(`${todayLogCount} today`, `今天 ${todayLogCount} 筆`)}` : ''}
                 </p>
                 {logs.length ? (
-                  <LogList logs={logs.slice(0, 12)} fmtDate={fmtDate} onEdit={(log) => setLogDialog({ open: true, log })} onDelete={(id) => deleteLog.mutate(id)} t={t} />
+                  <LogList
+                    logs={logs.slice(0, 12)}
+                    fmtDate={fmtDate}
+                    onEdit={(log) => setLogDialog({ open: true, log })}
+                    onDelete={(id) => removeHealthItem(`hlog:${id}`, t('Entry deleted', '已刪除紀錄'), () => apiDeleteHealthLog(id))}
+                    t={t}
+                  />
                 ) : (
                   <EmptyState
                     icon={<Activity className="size-5" />}
@@ -250,7 +282,11 @@ export function HealthScreen() {
                         <button onClick={() => setJournalDialog({ open: true, entry: j })} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
                           <Pencil className="size-3.5" />
                         </button>
-                        <button onClick={() => deleteJournal.mutate(j.id)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive">
+                        <button
+                          onClick={() => removeHealthItem(`journal:${j.id}`, t('Journal entry deleted', '已刪除日記'), () => apiDeleteJournalEntry(j.id))}
+                          className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
+                          aria-label={t('Delete', '刪除')}
+                        >
                           <Trash2 className="size-3.5" />
                         </button>
                       </div>
@@ -291,7 +327,11 @@ export function HealthScreen() {
                       <button onClick={() => setMedDialog({ open: true, medication: m })} className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
                         <Pencil className="size-4" />
                       </button>
-                      <button onClick={() => deleteMed.mutate(m.id)} className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-destructive">
+                      <button
+                        onClick={() => removeHealthItem(`med:${m.id}`, t(`Deleted “${m.name}”`, `已刪除「${m.name}」`), () => apiDeleteMedication(m.id))}
+                        className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-destructive"
+                        aria-label={t('Delete', '刪除')}
+                      >
                         <Trash2 className="size-4" />
                       </button>
                     </div>
@@ -313,7 +353,13 @@ export function HealthScreen() {
                 ))}
               </Select>
               {histLogs.length ? (
-                <LogList logs={histLogs} fmtDate={fmtDate} onEdit={(log) => setLogDialog({ open: true, log })} onDelete={(id) => deleteLog.mutate(id)} t={t} />
+                <LogList
+                  logs={histLogs}
+                  fmtDate={fmtDate}
+                  onEdit={(log) => setLogDialog({ open: true, log })}
+                  onDelete={(id) => removeHealthItem(`hlog:${id}`, t('Entry deleted', '已刪除紀錄'), () => apiDeleteHealthLog(id))}
+                  t={t}
+                />
               ) : (
                 <EmptyState icon={<History className="size-5" />} title={t('No entries', '沒有紀錄')} />
               )}

@@ -42,8 +42,8 @@ function dateOf(task: TaskRow): string | null {
 const isWeekend = (iso: string) => weekday(iso) === 0 || weekday(iso) === 6
 /** Sunday red, Saturday blue, holiday red — the common CJK calendar convention. */
 function numClass(iso: string, holiday: boolean): string {
-  if (holiday || weekday(iso) === 0) return 'text-red-500'
-  if (weekday(iso) === 6) return 'text-blue-500'
+  if (holiday || weekday(iso) === 0) return 'text-red-500 dark:text-red-400'
+  if (weekday(iso) === 6) return 'text-blue-500 dark:text-blue-400'
   return 'text-foreground'
 }
 
@@ -283,14 +283,25 @@ function MonthGrid({
           return (
             <div
               key={d}
+              // role+tabIndex instead of <button>: the cell contains task chips,
+              // and buttons can't nest. The global :focus-visible outline applies.
+              role="button"
+              tabIndex={0}
+              aria-label={d}
               onClick={() => onDayClick(d)}
-              className={`flex min-h-0 cursor-pointer flex-col overflow-hidden border-t border-r border-border/40 p-1 transition hover:bg-muted/30 ${
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onDayClick(d)
+                }
+              }}
+              className={`flex min-h-0 cursor-pointer flex-col overflow-hidden border-t border-r border-border/40 p-1 transition hover:bg-muted/30 focus-visible:-outline-offset-2 ${
                 isWeekend(d) ? 'bg-muted/20' : ''
               } ${inMonth ? '' : 'opacity-45'}`}
             >
               <div className="mb-0.5 flex shrink-0 items-center justify-between gap-1">
                 {holiday ? (
-                  <span className="truncate text-[10px] font-medium text-red-500" title={holiday}>
+                  <span className="truncate text-[10px] font-medium text-red-500 dark:text-red-400" title={holiday}>
                     {holiday}
                   </span>
                 ) : (
@@ -306,7 +317,7 @@ function MonthGrid({
               </div>
               <div className="min-h-0 flex-1 space-y-0.5 overflow-hidden">
                 {done.length > 0 ? (
-                  <div className="flex items-center gap-1 rounded bg-emerald-500/12 px-1.5 py-0.5 text-[10.5px] font-medium text-emerald-600">
+                  <div className="flex items-center gap-1 rounded bg-success-muted px-1.5 py-0.5 text-[10.5px] font-medium text-success">
                     <Check className="size-3 shrink-0" />
                     <span className="truncate">{t(`${done.length} done`, `完成 ${done.length}`)}</span>
                   </div>

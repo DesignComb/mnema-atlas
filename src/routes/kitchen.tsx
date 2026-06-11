@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Carrot,
@@ -16,10 +17,6 @@ import {
 import {
   useAddShoppingItems,
   useClearCheckedShopping,
-  useDeleteMealPlan,
-  useDeletePantryItem,
-  useDeleteRecipe,
-  useDeleteShoppingItem,
   useMealPlans,
   usePantry,
   useRecipes,
@@ -27,6 +24,13 @@ import {
   useUpdateRecipe,
   useUpdateShoppingItem,
 } from '@/lib/hooks'
+import {
+  deleteMealPlan as apiDeleteMealPlan,
+  deletePantryItem as apiDeletePantryItem,
+  deleteRecipe as apiDeleteRecipe,
+  deleteShoppingItem as apiDeleteShoppingItem,
+} from '@/lib/api'
+import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
 import { useI18n, useT } from '@/lib/i18n'
 import type { MealPlanRow, PantryItemRow, RecipeRow } from '@/lib/database.types'
 import type { RecipeIngredient } from '@shared/schemas'
@@ -37,6 +41,13 @@ import { Input } from '@/components/ui/input'
 import { RecipeDialog } from '@/components/kitchen/RecipeDialog'
 import { PantryDialog } from '@/components/kitchen/PantryDialog'
 import { MealPlanDialog } from '@/components/kitchen/MealPlanDialog'
+
+/** Awaitable mirror of hooks.ts' bumpKitchen, for undoable-delete onSettled. */
+function bumpAllKitchen(qc: QueryClient) {
+  return Promise.all(
+    ['recipes', 'recipe', 'pantry', 'shopping', 'meal-plans'].map((k) => qc.invalidateQueries({ queryKey: [k] })),
+  )
+}
 
 type Section = 'recipes' | 'pantry' | 'shopping' | 'plan'
 const SLOT_LABEL: Record<string, { en: string; zh: string }> = {
@@ -62,19 +73,32 @@ export function KitchenScreen() {
   const today = localTodayISO()
   const weekEnd = addDaysISO(today, 6)
 
-  const { data: recipes = [] } = useRecipes()
-  const { data: pantry = [] } = usePantry()
-  const { data: shopping = [] } = useShopping()
-  const { data: plans = [] } = useMealPlans(today, weekEnd)
+  const qc = useQueryClient()
+  const hiddenKeys = useHiddenKeys()
+  const { data: allRecipes = [] } = useRecipes()
+  const { data: allPantry = [] } = usePantry()
+  const { data: allShopping = [] } = useShopping()
+  const { data: allPlans = [] } = useMealPlans(today, weekEnd)
+  const recipes = allRecipes.filter((r) => !hiddenKeys.has(`recipe:${r.id}`))
+  const pantry = allPantry.filter((it) => !hiddenKeys.has(`pantry:${it.id}`))
+  const shopping = allShopping.filter((s) => !hiddenKeys.has(`shopitem:${s.id}`))
+  const plans = allPlans.filter((p) => !hiddenKeys.has(`mealplan:${p.id}`))
 
   const updateRecipe = useUpdateRecipe()
-  const deleteRecipe = useDeleteRecipe()
-  const deletePantry = useDeletePantryItem()
   const addShopping = useAddShoppingItems()
   const updateShopping = useUpdateShoppingItem()
-  const deleteShopping = useDeleteShoppingItem()
   const clearChecked = useClearCheckedShopping()
-  const deletePlan = useDeleteMealPlan()
+
+  function removeKitchenItem(key: string, message: string, commit: () => Promise<unknown>) {
+    undoableDelete({
+      key,
+      message,
+      undoLabel: t('Undo', '復原'),
+      errorMessage: t('Delete failed — the item is back', '刪除失敗,項目已還原'),
+      commit,
+      onSettled: () => bumpAllKitchen(qc),
+    })
+  }
 
   const [recipeDialog, setRecipeDialog] = useState<{ open: boolean; recipe?: RecipeRow }>({ open: false })
   const [pantryDialog, setPantryDialog] = useState<{ open: boolean; item?: PantryItemRow }>({ open: false })
@@ -202,7 +226,11 @@ export function KitchenScreen() {
                           <button onClick={() => addRecipeToShopping(r)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" title={t('Add to shopping', '加入購物清單')}>
                             <ListPlus className="size-4" />
                           </button>
-                          <button onClick={() => deleteRecipe.mutate(r.id)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive">
+                          <button
+                            onClick={() => removeKitchenItem(`recipe:${r.id}`, t(`Deleted “${r.title}”`, `已刪除「${r.title}」`), () => apiDeleteRecipe(r.id))}
+                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
+                            aria-label={t('Delete', '刪除')}
+                          >
                             <Trash2 className="size-4" />
                           </button>
                         </div>
@@ -243,7 +271,11 @@ export function KitchenScreen() {
                             <button onClick={() => setPantryDialog({ open: true, item: it })} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
                               <Pencil className="size-3.5" />
                             </button>
-                            <button onClick={() => deletePantry.mutate(it.id)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive">
+                            <button
+                              onClick={() => removeKitchenItem(`pantry:${it.id}`, t(`Deleted “${it.name}”`, `已刪除「${it.name}」`), () => apiDeletePantryItem(it.id))}
+                              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
+                              aria-label={t('Delete', '刪除')}
+                            >
                               <Trash2 className="size-3.5" />
                             </button>
                           </div>
@@ -298,7 +330,11 @@ export function KitchenScreen() {
                         {s.name}
                         {s.quantity ? <span className="text-muted-foreground"> · {s.quantity}</span> : null}
                       </span>
-                      <button onClick={() => deleteShopping.mutate(s.id)} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-accent hover:text-destructive group-hover:opacity-100">
+                      <button
+                        onClick={() => removeKitchenItem(`shopitem:${s.id}`, t(`Deleted “${s.name}”`, `已刪除「${s.name}」`), () => apiDeleteShoppingItem(s.id))}
+                        className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-accent hover:text-destructive group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                        aria-label={t('Delete', '刪除')}
+                      >
                         <Trash2 className="size-3.5" />
                       </button>
                     </div>
@@ -334,7 +370,11 @@ export function KitchenScreen() {
                               <button onClick={() => setPlanDialog({ open: true, plan: p })} className="min-w-0 flex-1 truncate text-left text-foreground hover:text-brand">
                                 {recipe?.title ?? p.title ?? '—'}
                               </button>
-                              <button onClick={() => deletePlan.mutate(p.id)} className="rounded p-0.5 text-muted-foreground opacity-0 transition hover:text-destructive group-hover:opacity-100">
+                              <button
+                                onClick={() => removeKitchenItem(`mealplan:${p.id}`, t('Meal removed', '已移除餐點'), () => apiDeleteMealPlan(p.id))}
+                                className="rounded p-0.5 text-muted-foreground opacity-0 transition hover:text-destructive group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                                aria-label={t('Delete', '刪除')}
+                              >
                                 <Trash2 className="size-3.5" />
                               </button>
                             </div>

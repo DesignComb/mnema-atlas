@@ -68,7 +68,7 @@ export function HabitCard({
   return (
     <div
       className={`rounded-xl border p-3.5 shadow-soft transition-colors sm:p-4 ${
-        checkedToday ? 'border-brand/40 bg-brand-muted/25' : atRisk ? 'border-amber-400/70 bg-amber-50' : 'border-border bg-card'
+        checkedToday ? 'border-brand/40 bg-brand-muted/25' : atRisk ? 'border-warning/60 bg-warning-muted/60' : 'border-border bg-card'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -102,7 +102,7 @@ export function HabitCard({
             ) : null}
           </p>
         </button>
-        <HabitCheckButton habitId={habit.id} today={today} iconClassName="size-8" onChange={setShown} />
+        <HabitCheckButton habitId={habit.id} today={today} iconClassName="size-8" title={habit.title} onChange={setShown} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="shrink-0 rounded p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t('Habit options', '習慣選項')}>
@@ -125,7 +125,7 @@ export function HabitCard({
       </div>
 
       {atRisk && minsLeft != null ? (
-        <div className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-amber-100 px-2.5 py-1.5 text-[12px] font-semibold text-amber-700">
+        <div className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-warning-muted px-2.5 py-1.5 text-[12px] font-semibold text-warning">
           <AlarmClock className="size-3.5 shrink-0" />
           <span className="min-w-0 flex-1 truncate">
             {current > 0
