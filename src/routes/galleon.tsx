@@ -55,7 +55,7 @@ import type { TransactionRow, SubscriptionRow } from '@/lib/database.types'
 import { settleUp } from '@shared/settle'
 import { ACCOUNT_TYPE_LABEL, addMonths, fmtLedgerDate, fmtMoney, monthRange, netWorthByCurrency } from '@/lib/money'
 import { shortRecurrenceLabel } from '@/lib/recurrence'
-import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -118,7 +118,7 @@ export function GalleonScreen() {
   const search = useSearch({ strict: false }) as { section?: View; ledger?: string }
   const view: View = search.section ?? 'overview'
 
-  const { data: ledgers, isLoading } = useLedgers()
+  const { data: ledgers, isLoading, isError: ledgersError, refetch: refetchLedgers } = useLedgers()
   const active = (ledgers ?? []).filter((l) => !l.is_archived)
   const ledgerId = search.ledger && active.some((l) => l.id === search.ledger) ? search.ledger : active[0]?.id ?? ''
 
@@ -163,6 +163,18 @@ export function GalleonScreen() {
         <PageHeader title={t('Money', '記帳')} icon={<Coins className="size-4" />} />
         <div className="mx-auto max-w-3xl px-4 py-6">
           <div className="h-40 animate-pulse rounded-xl bg-card" />
+        </div>
+      </>
+    )
+  }
+
+  // A failed fetch is not "you have no ledgers" (A5).
+  if (ledgersError) {
+    return (
+      <>
+        <PageHeader title={t('Money', '記帳')} icon={<Coins className="size-4" />} />
+        <div className="flex-1 overflow-y-auto">
+          <ErrorState onRetry={() => void refetchLedgers()} />
         </div>
       </>
     )
@@ -497,12 +509,13 @@ function Overview({ ledger, onEditTxn, onSeeAll, t }: { ledger: LedgerDetail; on
 
 function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTxn: (t: TransactionRow) => void; t: Tr }) {
   const { lang } = useI18n()
-  const { data: txns, isLoading } = useLedgerTransactions({ ledgerId: ledger.id, limit: 300 })
+  const { data: txns, isLoading, isError, refetch } = useLedgerTransactions({ ledgerId: ledger.id, limit: 300 })
   const { data: splitIds } = useSplitTxnIds(ledger.id)
   const hiddenKeys = useHiddenKeys()
   const splitSet = new Set(splitIds ?? [])
   const visible = (txns ?? []).filter((tx) => !hiddenKeys.has(`txn:${tx.id}`))
   if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card" />
+  if (isError) return <ErrorState onRetry={() => void refetch()} />
   if (!visible.length) {
     return <EmptyState icon={<Coins className="size-6" />} title={t('No transactions yet', '還沒有交易')} description={t('Tap “Add” to log one, or let your AI do it.', '點「記一筆」新增,或讓你的 AI 幫你記。')} />
   }

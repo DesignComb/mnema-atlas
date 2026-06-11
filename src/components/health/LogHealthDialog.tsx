@@ -12,12 +12,25 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
+function hm(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** Local date + HH:MM → ISO timestamp; undefined when either part is missing/invalid. */
+function buildLoggedAt(dateISO: string, time: string): string | undefined {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^\d{2}:\d{2}$/.test(time)) return undefined
+  const [y, m, d] = dateISO.split('-').map(Number)
+  const [h, min] = time.split(':').map(Number)
+  return new Date(y, m - 1, d, h, min).toISOString()
+}
+
 export function LogHealthDialog({
   open,
   onOpenChange,
   kinds = HEALTH_KINDS,
   defaultKind,
   log,
+  weightUnit,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
@@ -25,6 +38,8 @@ export function LogHealthDialog({
   kinds?: KindMeta[]
   defaultKind?: HealthLogKind
   log?: HealthLogRow
+  /** The user's weight-unit preference (health_settings) — honoured for weight logs (A10). */
+  weightUnit?: string
 }) {
   const { t } = useI18n()
   const editing = Boolean(log)
@@ -37,6 +52,7 @@ export function LogHealthDialog({
   const [textValue, setTextValue] = useState('')
   const [unit, setUnit] = useState('')
   const [date, setDate] = useState(localTodayISO())
+  const [time, setTime] = useState('')
   const [note, setNote] = useState('')
 
   useEffect(() => {
@@ -48,12 +64,16 @@ export function LogHealthDialog({
     setTextValue(log?.text_value ?? '')
     setUnit(log?.unit ?? '')
     setDate(log?.logged_date ?? localTodayISO())
+    // Time matters (fasting vs post-meal glucose) — keep it editable, default now (A10).
+    setTime(hm(log?.logged_at ? new Date(log.logged_at) : new Date()))
     setNote(log?.note ?? '')
   }, [open, log, defaultKind, kinds])
 
   const meta = useMemo(() => kindMeta(kind), [kind])
   const fields = meta?.fields ?? ['value']
   const pending = logHealth.isPending || updateLog.isPending
+  /** Unit actually applied when the field is left blank — weight honours the setting. */
+  const defaultUnit = kind === 'weight' && weightUnit ? weightUnit : meta?.unit
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -71,6 +91,7 @@ export function LogHealthDialog({
           text_value: textValue.trim() || undefined,
           unit: unit.trim() || undefined,
           logged_date: date || undefined,
+          logged_at: buildLoggedAt(date, time),
           note: note.trim() || undefined,
         })
       } else {
@@ -79,8 +100,9 @@ export function LogHealthDialog({
           value: fields.includes('value') ? num(value) : undefined,
           value2: fields.includes('value2') ? num(value2) : undefined,
           text_value: fields.includes('text') ? textValue.trim() || undefined : undefined,
-          unit: unit.trim() || meta?.unit || undefined,
+          unit: unit.trim() || defaultUnit || undefined,
           logged_date: date || undefined,
+          logged_at: buildLoggedAt(date, time),
           note: note.trim() || undefined,
         })
       }
@@ -152,7 +174,7 @@ export function LogHealthDialog({
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="hl-value">
                     {kind === 'blood_pressure' ? t('Systolic', '收縮壓') : t('Value', '數值')}
-                    {meta?.unit ? <span className="text-muted-foreground"> ({meta.unit})</span> : null}
+                    {defaultUnit ? <span className="text-muted-foreground"> ({defaultUnit})</span> : null}
                   </Label>
                   <Input
                     id="hl-value"
@@ -178,10 +200,14 @@ export function LogHealthDialog({
               <Label htmlFor="hl-date">{t('Date', '日期')}</Label>
               <Input id="hl-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
-            {meta && meta.unit ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hl-time">{t('Time', '時間')}</Label>
+              <Input id="hl-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            </div>
+            {defaultUnit ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="hl-unit">{t('Unit', '單位')}</Label>
-                <Input id="hl-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={meta.unit} />
+                <Input id="hl-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={defaultUnit} />
               </div>
             ) : null}
           </div>

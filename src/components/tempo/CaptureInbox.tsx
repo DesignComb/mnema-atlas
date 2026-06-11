@@ -28,6 +28,21 @@ const SOURCE_LABEL: Record<string, [string, string]> = {
   rest: ['API', 'API'],
 }
 
+/** What a capture became after triage (A6) — localized; unknown kinds fall through raw. */
+const RESOLVED_KIND_LABEL: Record<string, [string, string]> = {
+  task: ['task', '任務'],
+  habit: ['habit', '習慣'],
+  note: ['note', '筆記'],
+  card: ['flashcard', '字卡'],
+  transaction: ['transaction', '記帳'],
+  itinerary: ['trip', '行程'],
+  event: ['event', '行事曆'],
+  reminder: ['reminder', '提醒'],
+  recipe: ['recipe', '食譜'],
+  health_log: ['health log', '健康紀錄'],
+  journal: ['journal', '日記'],
+}
+
 // Locale-free MM/DD HH:MM so we never touch OS locale formatting.
 function shortStamp(iso: string): string {
   const d = new Date(iso)
@@ -197,7 +212,9 @@ export function CaptureInbox({
                     {c.resolved_kind ? (
                       <>
                         <span>·</span>
-                        <span className="text-brand">→ {c.resolved_kind}</span>
+                        <span className="text-brand">
+                          → {t(...(RESOLVED_KIND_LABEL[c.resolved_kind] ?? [c.resolved_kind, c.resolved_kind]))}
+                        </span>
                       </>
                     ) : null}
                   </p>

@@ -9,6 +9,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { getLastRoute } from '@/lib/last-route'
 import { AppLayout } from '@/components/app-shell/AppLayout'
+import { RouteErrorScreen } from '@/components/app-shell/RouteError'
 import { LandingScreen } from '@/routes/landing'
 import { HomeScreen } from '@/routes/home'
 import { NotesScreen } from '@/routes/notes'
@@ -247,6 +248,9 @@ export const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   scrollRestoration: true,
+  // A route crash (e.g. an unexpected record shape from an AI write) gets a calm
+  // recovery card, never a white screen (audit A5).
+  defaultErrorComponent: ({ error }) => <RouteErrorScreen error={error} />,
   // Honour the GitHub Pages sub-path (Vite injects BASE_URL from `base`).
   basepath: import.meta.env.BASE_URL,
 })

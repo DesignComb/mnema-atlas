@@ -40,12 +40,18 @@ import {
   kindsForModules,
   localTodayISO,
 } from '@/lib/health'
-import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { LogHealthDialog } from '@/components/health/LogHealthDialog'
 import { JournalDialog } from '@/components/health/JournalDialog'
 import { MedicationDialog } from '@/components/health/MedicationDialog'
+
+/** HH:MM (24h) of a timestamp, in local time. */
+function hmOf(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 /** Awaitable mirror of hooks.ts' bumpHealth, for undoable-delete onSettled. */
 function bumpAllHealth(qc: QueryClient) {
@@ -75,9 +81,13 @@ export function HealthScreen() {
 
   const qc = useQueryClient()
   const hiddenKeys = useHiddenKeys()
-  const { data: allLogs = [] } = useHealthLogs({ limit: 200 })
-  const { data: allJournal = [] } = useJournalEntries()
-  const { data: allMeds = [] } = useMedications()
+  const { data: allLogs = [], isError: logsError, refetch: refetchLogs } = useHealthLogs({ limit: 200 })
+  const { data: allJournal = [], isError: journalError, refetch: refetchJournal } = useJournalEntries()
+  const { data: allMeds = [], isError: medsError, refetch: refetchMeds } = useMedications()
+  // The active section's failed fetch must not render as "empty" (A5).
+  const sectionError =
+    section === 'journal' ? journalError : section === 'meds' ? medsError : logsError
+  const sectionRetry = section === 'journal' ? refetchJournal : section === 'meds' ? refetchMeds : refetchLogs
   const logs = allLogs.filter((l) => !hiddenKeys.has(`hlog:${l.id}`))
   const journal = allJournal.filter((j) => !hiddenKeys.has(`journal:${j.id}`))
   const meds = allMeds.filter((m) => !hiddenKeys.has(`med:${m.id}`))
@@ -159,8 +169,9 @@ export function HealthScreen() {
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-2xl px-4 py-5 sm:px-6">
+          {sectionError && section !== 'settings' ? <ErrorState onRetry={() => void sectionRetry()} /> : null}
           {/* ── Overview ───────────────────────────────────────────── */}
-          {section === 'overview' ? (
+          {section === 'overview' && !sectionError ? (
             <div className="flex flex-col gap-5">
               {hasJournal ? (
                 <button
@@ -208,30 +219,63 @@ export function HealthScreen() {
                     {meds
                       .filter((m) => m.is_active)
                       .map((m) => {
-                        const takenToday = logs.some(
+                        // Each scheduled time is its own dose — "took the morning one"
+                        // must not read as done for the evening one (A9).
+                        const takenCount = logs.filter(
                           (l) => l.kind === 'meds' && l.logged_date === today && l.text_value === m.name,
-                        )
+                        ).length
+                        const totalDoses = Math.max(m.times.length, 1)
+                        const allTaken = takenCount >= totalDoses
+                        const nowHM = hmOf(new Date().toISOString())
+                        const dueByNow = m.times.filter((x) => x.slice(0, 5) <= nowHM).length
+                        const overdue = !allTaken && takenCount < dueByNow
                         return (
-                          <div key={m.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-                            <Pill className="size-4 shrink-0 text-muted-foreground" />
+                          <div
+                            key={m.id}
+                            className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${
+                              overdue ? 'border-warning/60 bg-warning-muted/50' : 'border-border bg-card'
+                            }`}
+                          >
+                            <Pill className={`size-4 shrink-0 ${overdue ? 'text-warning' : 'text-muted-foreground'}`} />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[13.5px] font-medium text-foreground">{m.name}</p>
+                              <p className="truncate text-[13.5px] font-medium text-foreground">
+                                {m.name}
+                                {totalDoses > 1 ? (
+                                  <span className="ml-1.5 tabular-nums text-[12px] font-normal text-muted-foreground">
+                                    {takenCount}/{totalDoses}
+                                  </span>
+                                ) : null}
+                              </p>
                               <p className="truncate text-[12px] text-muted-foreground">
-                                {[m.dosage, m.times.join(' · ')].filter(Boolean).join(' · ')}
+                                {m.dosage ? <span>{m.dosage}</span> : null}
+                                {m.times.map((x, i) => (
+                                  <span
+                                    key={`${x}-${i}`}
+                                    className={`ml-1.5 tabular-nums first:ml-0 ${
+                                      i < takenCount
+                                        ? 'text-success line-through'
+                                        : x.slice(0, 5) <= nowHM
+                                          ? 'font-medium text-warning'
+                                          : ''
+                                    }`}
+                                  >
+                                    {x.slice(0, 5)}
+                                  </span>
+                                ))}
                               </p>
                             </div>
                             <Button
                               size="sm"
-                              variant={takenToday ? 'ghost' : 'brand'}
-                              disabled={takenToday || logHealth.isPending}
+                              variant={allTaken ? 'ghost' : 'brand'}
+                              disabled={allTaken || logHealth.isPending}
                               onClick={() =>
                                 logHealth.mutate(
                                   { kind: 'meds', text_value: m.name },
-                                  { onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed') },
+                                  { onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to log', '記錄失敗')) },
                                 )
                               }
                             >
-                              <Check className="size-4" /> {takenToday ? t('Taken', '已服') : t('Take', '服用')}
+                              <Check className="size-4" /> {allTaken ? t('Taken', '已服') : t('Take', '服用')}
                             </Button>
                           </div>
                         )
@@ -264,7 +308,7 @@ export function HealthScreen() {
           ) : null}
 
           {/* ── Journal ────────────────────────────────────────────── */}
-          {section === 'journal' ? (
+          {section === 'journal' && !sectionError ? (
             <div className="flex flex-col gap-3">
               <div className="flex justify-end">
                 <Button variant="brand" size="sm" onClick={() => setJournalDialog({ open: true, entry: todayEntry })}>
@@ -308,7 +352,7 @@ export function HealthScreen() {
           ) : null}
 
           {/* ── Medications ────────────────────────────────────────── */}
-          {section === 'meds' ? (
+          {section === 'meds' && !sectionError ? (
             <div className="flex flex-col gap-3">
               <div className="flex justify-end">
                 <Button variant="brand" size="sm" onClick={() => setMedDialog({ open: true })}>
@@ -344,7 +388,7 @@ export function HealthScreen() {
           ) : null}
 
           {/* ── History ────────────────────────────────────────────── */}
-          {section === 'history' ? (
+          {section === 'history' && !sectionError ? (
             <div className="flex flex-col gap-3">
               <Select value={histKind} onChange={(e) => setHistKind(e.target.value)} className="w-52">
                 <option value="">{t('All metrics', '所有項目')}</option>
@@ -440,6 +484,7 @@ export function HealthScreen() {
         kinds={visibleKinds}
         defaultKind={logDialog.kind}
         log={logDialog.log}
+        weightUnit={settings?.weight_unit ?? 'kg'}
       />
       <JournalDialog open={journalDialog.open} onOpenChange={(v) => setJournalDialog((s) => ({ ...s, open: v }))} entry={journalDialog.entry} />
       <MedicationDialog open={medDialog.open} onOpenChange={(v) => setMedDialog((s) => ({ ...s, open: v }))} medication={medDialog.medication} />
@@ -473,7 +518,9 @@ function LogList({
               </p>
               {l.note ? <p className="truncate text-[12px] text-muted-foreground">{l.note}</p> : null}
             </div>
-            <span className="shrink-0 text-[11.5px] text-muted-foreground">{fmtDate(l.logged_date)}</span>
+            <span className="shrink-0 text-[11.5px] tabular-nums text-muted-foreground">
+              {fmtDate(l.logged_date)} {hmOf(l.logged_at)}
+            </span>
             <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
               <button onClick={() => onEdit(l)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
                 <Pencil className="size-3.5" />

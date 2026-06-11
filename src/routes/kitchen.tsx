@@ -35,7 +35,7 @@ import { useI18n, useT } from '@/lib/i18n'
 import type { MealPlanRow, PantryItemRow, RecipeRow } from '@/lib/database.types'
 import type { RecipeIngredient } from '@shared/schemas'
 import { localTodayISO } from '@/lib/health'
-import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { RecipeDialog } from '@/components/kitchen/RecipeDialog'
@@ -75,10 +75,15 @@ export function KitchenScreen() {
 
   const qc = useQueryClient()
   const hiddenKeys = useHiddenKeys()
-  const { data: allRecipes = [] } = useRecipes()
-  const { data: allPantry = [] } = usePantry()
-  const { data: allShopping = [] } = useShopping()
-  const { data: allPlans = [] } = useMealPlans(today, weekEnd)
+  const { data: allRecipes = [], isError: recipesError, refetch: refetchRecipes } = useRecipes()
+  const { data: allPantry = [], isError: pantryError, refetch: refetchPantry } = usePantry()
+  const { data: allShopping = [], isError: shoppingError, refetch: refetchShopping } = useShopping()
+  const { data: allPlans = [], isError: plansError, refetch: refetchPlans } = useMealPlans(today, weekEnd)
+  // The active section's failed fetch must not render as "empty" (A5).
+  const sectionError =
+    section === 'recipes' ? recipesError : section === 'pantry' ? pantryError : section === 'shopping' ? shoppingError : plansError
+  const sectionRetry =
+    section === 'recipes' ? refetchRecipes : section === 'pantry' ? refetchPantry : section === 'shopping' ? refetchShopping : refetchPlans
   const recipes = allRecipes.filter((r) => !hiddenKeys.has(`recipe:${r.id}`))
   const pantry = allPantry.filter((it) => !hiddenKeys.has(`pantry:${it.id}`))
   const shopping = allShopping.filter((s) => !hiddenKeys.has(`shopitem:${s.id}`))
@@ -194,8 +199,9 @@ export function KitchenScreen() {
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-2xl px-4 py-5 sm:px-6">
+          {sectionError ? <ErrorState onRetry={() => void sectionRetry()} /> : null}
           {/* ── Recipes ────────────────────────────────────────────── */}
-          {section === 'recipes' ? (
+          {section === 'recipes' && !sectionError ? (
             recipes.length ? (
               <div className="flex flex-col gap-2.5">
                 {recipes.map((r) => {
@@ -250,7 +256,7 @@ export function KitchenScreen() {
           ) : null}
 
           {/* ── Pantry ─────────────────────────────────────────────── */}
-          {section === 'pantry' ? (
+          {section === 'pantry' && !sectionError ? (
             pantry.length ? (
               <div className="flex flex-col gap-4">
                 {pantryByCat.map(([cat, items]) => (
@@ -291,7 +297,7 @@ export function KitchenScreen() {
           ) : null}
 
           {/* ── Shopping ───────────────────────────────────────────── */}
-          {section === 'shopping' ? (
+          {section === 'shopping' && !sectionError ? (
             <div className="flex flex-col gap-3">
               <div className="flex gap-2">
                 <Input
@@ -347,7 +353,7 @@ export function KitchenScreen() {
           ) : null}
 
           {/* ── Meal plan (this week) ──────────────────────────────── */}
-          {section === 'plan' ? (
+          {section === 'plan' && !sectionError ? (
             <div className="flex flex-col gap-3">
               {days.map((d) => {
                 const todays = plans.filter((p) => p.plan_date === d)

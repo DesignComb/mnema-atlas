@@ -33,7 +33,7 @@ import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
 import { useT } from '@/lib/i18n'
 import type { TaskListRow, TaskRow } from '@/lib/database.types'
 import { computeOccurrence, habitTodayISO, shortRecurrenceLabel } from '@/lib/recurrence'
-import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -90,7 +90,7 @@ export function TempoScreen() {
 
   const { data: lists } = useTaskLists()
   const [showDone, setShowDone] = useState(false)
-  const { data: tasks, isLoading } = useTasks({ status: showDone ? 'done' : 'todo', limit: 500 })
+  const { data: tasks, isLoading, isError, refetch } = useTasks({ status: showDone ? 'done' : 'todo', limit: 500 })
   const [draft, setDraft] = useState('')
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; task?: TaskRow }>({ open: false })
   const [listDialog, setListDialog] = useState<{ open: boolean; list?: TaskListRow }>({ open: false })
@@ -301,6 +301,8 @@ export function TempoScreen() {
                     <div key={i} className="h-12 animate-pulse rounded-lg bg-card" />
                   ))}
                 </div>
+              ) : isError ? (
+                <ErrorState onRetry={() => void refetch()} />
               ) : sorted.length === 0 ? (
                 <EmptyState
                   icon={view === 'habits' ? <Flame className="size-6" /> : <ListTodo className="size-6" />}

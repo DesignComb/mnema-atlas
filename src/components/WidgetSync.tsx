@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 import { useTasks, useCheckInsInRange } from '@/lib/hooks'
 import { habitTodayISO } from '@/lib/recurrence'
 import { router } from '@/router'
@@ -38,6 +39,8 @@ export function WidgetSync() {
 
 function WidgetSyncInner({ token }: { token: string }) {
   const qc = useQueryClient()
+  // The widget renders these strings verbatim — follow the app language (A6).
+  const { lang } = useI18n()
   // Re-render each minute so localToday()/the range roll over live at midnight or
   // a habit's reset_time (otherwise frozen at first-render's day).
   const [, setTick] = useState(0)
@@ -91,8 +94,8 @@ function WidgetSyncInner({ token }: { token: string }) {
       .sort((a, b) => b.priority - a.priority || cmpDate(a.due_date, b.due_date) || a.sort_order - b.sort_order)
 
     const sub = (t: (typeof todays)[number]): string => {
-      if (t.due_date != null && t.due_date < today) return '逾期'
-      if (t.due_date === today || t.scheduled_date === today) return '今天'
+      if (t.due_date != null && t.due_date < today) return lang === 'zh' ? '逾期' : 'Overdue'
+      if (t.due_date === today || t.scheduled_date === today) return lang === 'zh' ? '今天' : 'Today'
       return t.due_date ?? ''
     }
 
@@ -106,7 +109,7 @@ function WidgetSyncInner({ token }: { token: string }) {
     if (key === lastRef.current) return
     lastRef.current = key
     void pushTodayWidget(snap)
-  }, [tasks])
+  }, [tasks, lang])
 
   // Habit widget: today's habits + their (reset-aware) checked state.
   useEffect(() => {

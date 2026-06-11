@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateRecipe, useUpdateRecipe } from '@/lib/hooks'
 import { useI18n } from '@/lib/i18n'
@@ -11,17 +11,27 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-/** Display an ingredient row as one line (qty name unit). */
+/** Display an ingredient row as one line, natural reading order: qty unit name. */
 function ingredientToLine(i: RecipeIngredient): string {
-  return [i.quantity, i.name, i.unit].filter(Boolean).join(' ').trim()
+  return [i.quantity, i.unit, i.name].filter(Boolean).join(' ').trim()
 }
-/** Each non-empty line becomes one ingredient (free-text name). */
-function linesToIngredients(text: string): RecipeIngredient[] {
-  return text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((name) => ({ name: name.slice(0, 120) }))
+
+/**
+ * Best-effort parse of a hand-typed line back into {quantity, unit, name}.
+ * Only used for NEW or EDITED lines — untouched lines keep their original
+ * structured object exactly (see linesToIngredients), so an AI-written
+ * `{quantity: '2', unit: 'cups', name: 'flour'}` survives a human re-save (A4).
+ */
+function parseIngredientLine(line: string): RecipeIngredient {
+  const clamp = (s: string) => s.slice(0, 120)
+  const m = line.match(/^([\d¼½¾⅓⅔.,/\-–~×x]+)\s+(.+)$/u)
+  if (!m) return { name: clamp(line) }
+  const quantity = m[1].slice(0, 60)
+  const rest = m[2].trim()
+  // A short first token followed by more words is usually the unit ("cup rice" / "杯 牛奶").
+  const um = rest.match(/^(\p{L}{1,8})\s+(.+)$/u)
+  if (um) return { quantity, unit: um[1].slice(0, 40), name: clamp(um[2]) }
+  return { quantity, name: clamp(rest) }
 }
 
 export function RecipeDialog({
@@ -46,11 +56,21 @@ export function RecipeDialog({
   const [tags, setTags] = useState<string[]>([])
   const [sourceUrl, setSourceUrl] = useState('')
   const [favorite, setFavorite] = useState(false)
+  // rendered line → the original structured ingredient(s) behind it
+  const originalByLine = useRef<Map<string, RecipeIngredient[]>>(new Map())
 
   useEffect(() => {
     if (!open) return
     setTitle(recipe?.title ?? '')
     const ings = (recipe?.ingredients as RecipeIngredient[] | null) ?? []
+    const map = new Map<string, RecipeIngredient[]>()
+    if (Array.isArray(ings)) {
+      for (const i of ings) {
+        const line = ingredientToLine(i)
+        map.set(line, [...(map.get(line) ?? []), i])
+      }
+    }
+    originalByLine.current = map
     setIngredients(Array.isArray(ings) ? ings.map(ingredientToLine).join('\n') : '')
     setInstructions(recipe?.instructions ?? '')
     setServings(recipe?.servings != null ? String(recipe.servings) : '')
@@ -61,6 +81,20 @@ export function RecipeDialog({
   }, [open, recipe])
 
   const pending = create.isPending || update.isPending
+
+  /** Untouched lines reuse their exact original object; only changed/new lines are parsed. */
+  function linesToIngredients(text: string): RecipeIngredient[] {
+    const pool = new Map([...originalByLine.current].map(([k, v]) => [k, [...v]]))
+    return text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const originals = pool.get(line)
+        if (originals?.length) return originals.shift()!
+        return parseIngredientLine(line)
+      })
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
