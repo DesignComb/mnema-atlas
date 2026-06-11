@@ -32,6 +32,13 @@
   --color-brand-muted: var(--brand-muted);
   --color-brand-strong: var(--brand-strong);
 
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-muted: var(--warning-muted);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
@@ -80,6 +87,15 @@
   --destructive: oklch(0.585 0.2 24);
   --destructive-foreground: oklch(0.99 0.003 95);
 
+  /* Status tokens — the only sanctioned warning/success colours (danger = --destructive).
+     Each has a -muted wash for chips/banners so dark mode never gets a near-white bg-*-50. */
+  --warning: oklch(0.62 0.14 65);
+  --warning-foreground: oklch(0.99 0.003 95);
+  --warning-muted: oklch(0.965 0.045 85);
+  --success: oklch(0.56 0.12 150);
+  --success-foreground: oklch(0.99 0.003 95);
+  --success-muted: oklch(0.95 0.045 150);
+
   --border: oklch(0.922 0.004 75);
   --input: oklch(0.922 0.004 75);
   --ring: oklch(0.62 0.09 250);
@@ -122,6 +138,13 @@
 
   --destructive: oklch(0.62 0.19 24);
   --destructive-foreground: oklch(0.98 0.003 95);
+
+  --warning: oklch(0.78 0.13 75);
+  --warning-foreground: oklch(0.25 0.05 75);
+  --warning-muted: oklch(0.32 0.055 75);
+  --success: oklch(0.7 0.12 150);
+  --success-foreground: oklch(0.2 0.02 150);
+  --success-muted: oklch(0.31 0.05 150);
 
   --border: oklch(0.32 0.01 72);
   --input: oklch(0.32 0.01 72);
@@ -281,6 +304,34 @@
   h1, h2, h3, h4 {
     text-wrap: balance;
   }
+
+  /* Keyboard-focus safety net: anything not already styling its own
+     focus-visible ring (shadcn controls set focus-visible:outline-none and draw
+     a ring) gets a visible outline, so no interactive element is ever ringless. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Reduce-motion users get a calm app everywhere, not just the landing page:
+     collapse CSS animations/transitions to a frame. Motion-driven (JS) springs
+     are handled by <MotionConfig reducedMotion="user"> in src/main.tsx. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Sonner renders top-center on phones (see AppToaster); clear the status bar /
+   notch. !important because sonner injects its stylesheet at runtime, after ours. */
+[data-sonner-toaster][data-y-position='top'] {
+  top: max(16px, calc(env(safe-area-inset-top, 0px) + 10px)) !important;
 }
 
 @layer utilities {

@@ -2,6 +2,37 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
+    <!-- Apply the saved theme before first paint so dark-mode users never see a
+         white flash. Must mirror getInitial() in src/lib/theme.tsx exactly. -->
+    <script>
+      ;(function () {
+        try {
+          var t = localStorage.getItem('theme')
+          var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var root = document.documentElement
+          if (dark) root.classList.add('dark')
+          root.style.colorScheme = dark ? 'dark' : 'light'
+        } catch (e) {}
+      })()
+    </script>
+    <style>
+      /* First-paint shell: page colour + a branded loader before the bundle runs.
+         Colours mirror --background/--foreground/--brand in src/index.css. */
+      html { background-color: oklch(0.994 0.003 95); }
+      html.dark { background-color: oklch(0.205 0.012 70); }
+      #boot {
+        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; gap: 12px;
+        font-family: 'Lora', 'Noto Serif TC', Georgia, serif;
+      }
+      #boot .boot-dot { width: 9px; height: 9px; border-radius: 9999px; background: oklch(0.58 0.13 250); }
+      html.dark #boot .boot-dot { background: oklch(0.72 0.12 250); }
+      #boot .boot-word { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; color: oklch(0.27 0.012 60); }
+      html.dark #boot .boot-word { color: oklch(0.92 0.008 85); }
+      @media (prefers-reduced-motion: no-preference) {
+        #boot .boot-dot { animation: boot-pulse 1.2s ease-in-out infinite; }
+        @keyframes boot-pulse { 0%, 100% { transform: scale(1); opacity: 0.55; } 50% { transform: scale(1.4); opacity: 1; } }
+      }
+    </style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
@@ -21,7 +52,10 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Replaced by React on mount; keeps the first frame branded, never blank. -->
+      <div id="boot" aria-hidden="true"><span class="boot-dot"></span><span class="boot-word">Mnema</span></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -2,13 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'sonner'
+import { MotionConfig } from 'motion/react'
 import { AuthProvider } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
 import { I18nProvider } from '@/lib/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { queryClient } from '@/lib/queryClient'
 import { router } from '@/router'
+import { AppToaster } from '@/components/AppToaster'
 import { WidgetSync } from '@/components/WidgetSync'
 import { OtaUpdater } from '@/components/OtaUpdater'
 import { FcmRegister } from '@/components/FcmRegister'
@@ -26,11 +27,13 @@ createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <TooltipProvider delayDuration={200}>
-              <RouterProvider router={router} />
-              <WidgetSync />
-              <OtaUpdater />
-              <FcmRegister />
-              <Toaster position="bottom-right" toastOptions={{ className: 'font-sans' }} richColors />
+              <MotionConfig reducedMotion="user">
+                <RouterProvider router={router} />
+                <WidgetSync />
+                <OtaUpdater />
+                <FcmRegister />
+                <AppToaster />
+              </MotionConfig>
             </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>
