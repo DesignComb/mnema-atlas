@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import { AlertTriangle, Check, FastForward, Keyboard, Loader2, PartyPopper, Sparkles } from 'lucide-react'
+import { AlertTriangle, Check, FastForward, Keyboard, Loader2, PartyPopper, Sparkles, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDecks, useDueCards } from '@/lib/hooks'
 import { listAheadCards, recordReviewSafe } from '@/lib/api'
-import { grade, previewIntervals, RATING_META, type IntervalHint } from '@/lib/srs'
+import { grade, previewIntervals, Rating, RATING_META, type IntervalHint } from '@/lib/srs'
 import type { Grade } from 'ts-fsrs'
 import type { CardRow } from '@/lib/database.types'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
@@ -15,10 +15,11 @@ import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 
 const TONE: Record<string, string> = {
-  again: 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100',
-  hard: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
-  good: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
-  easy: 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100',
+  again:
+    'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20',
+  hard: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20',
+  good: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20',
+  easy: 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-400 dark:hover:bg-sky-500/20',
 }
 
 export function StudyScreen() {
@@ -38,6 +39,8 @@ export function StudyScreen() {
   const [unsaved, setUnsaved] = useState(0) // reviews that failed every retry
   const [cram, setCram] = useState(false) // studying ahead (not-yet-due cards)
   const [cramLoading, setCramLoading] = useState(false)
+  // One-level undo (A12): the pre-grade row + where it sat in the queue.
+  const [lastGrade, setLastGrade] = useState<{ row: CardRow; index: number; requeued: boolean } | null>(null)
 
   // Reset the whole session when the filter (deck or tag) changes — the route
   // component is reused across /study, /study/$deckId, and /study?tag=…
@@ -48,6 +51,7 @@ export function StudyScreen() {
     setFlipped(false)
     setUnsaved(0)
     setCram(false)
+    setLastGrade(null)
   }, [deckId, tag])
 
   // Snapshot the due queue once so grading doesn't reshuffle mid-session.
@@ -74,12 +78,60 @@ export function StudyScreen() {
           { duration: 6000 },
         )
       })
+      // A11: an Again card re-enters this session with its updated FSRS state,
+      // so the "1m" hint it showed is actually honoured.
+      const requeued = rating === Rating.Again
+      if (requeued) {
+        const updated = { ...current, ...card } as CardRow
+        setQueue((q) => (q ? [...q, updated] : q))
+      }
+      setLastGrade({ row: current, index: idx, requeued })
       setReviewed((r) => r + 1)
       setFlipped(false)
       setIdx((i) => i + 1)
     },
-    [current, t],
+    [current, idx, t],
   )
+
+  // A12: one-level undo — a misclick must not silently rewrite FSRS state.
+  const undoLast = useCallback(() => {
+    if (!lastGrade) return
+    const { row, index, requeued } = lastGrade
+    setLastGrade(null)
+    // Restore the server to the pre-grade snapshot. record_review always writes
+    // a review_logs row — rating 0 (Manual) marks it as an undo, not a review.
+    const cardJson = {
+      state: row.state,
+      due: row.due,
+      stability: row.stability,
+      difficulty: row.difficulty,
+      elapsed_days: row.elapsed_days,
+      scheduled_days: row.scheduled_days,
+      learning_steps: row.learning_steps,
+      reps: row.reps,
+      lapses: row.lapses,
+      last_review: row.last_review,
+    }
+    const undoLog = {
+      rating: 0,
+      state: row.state,
+      due: row.due,
+      stability: row.stability ?? 0,
+      difficulty: row.difficulty ?? 0,
+      elapsed_days: 0,
+      last_elapsed_days: 0,
+      scheduled_days: 0,
+      learning_steps: row.learning_steps,
+      review: new Date().toISOString(),
+    }
+    recordReviewSafe(row.id, cardJson, undoLog).catch(() => {
+      toast.error(t('Couldn’t undo on the server — the grade may stick.', '伺服器端復原失敗,原評分可能仍生效。'))
+    })
+    if (requeued) setQueue((q) => (q ? q.slice(0, -1) : q))
+    setReviewed((r) => Math.max(0, r - 1))
+    setFlipped(false)
+    setIdx(index)
+  }, [lastGrade, t])
 
   // Study-ahead: pull not-yet-due cards into a fresh queue (cramming).
   const startCram = useCallback(async () => {
@@ -96,6 +148,7 @@ export function StudyScreen() {
       setFlipped(false)
       setUnsaved(0)
       setCram(true)
+      setLastGrade(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('Failed to load cards', '載入卡片失敗'))
     } finally {
@@ -112,9 +165,15 @@ export function StudyScreen() {
     }
   }, [done, reviewed, qc])
 
-  // Keyboard: space/enter reveals, 1–4 grade, space grades Good when revealed.
+  // Keyboard: space/enter reveals, 1–4 grade, space grades Good when revealed,
+  // Z/U undoes the last grade (works on the done screen too).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if ((e.key === 'z' || e.key === 'u') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        undoLast()
+        return
+      }
       if (!current) return
       if (!flipped) {
         if (e.key === ' ' || e.key === 'Enter') {
@@ -134,7 +193,7 @@ export function StudyScreen() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [current, flipped, gradeCurrent])
+  }, [current, flipped, gradeCurrent, undoLast])
 
   const hints: IntervalHint[] = current && flipped ? previewIntervals(current) : []
 
@@ -145,11 +204,18 @@ export function StudyScreen() {
         subtitle={cram ? t('Studying ahead', '超前複習') : tag ? `#${tag}` : (deckName ?? undefined)}
         icon={<Sparkles className="size-4" />}
         actions={
-          total > 0 && !done ? (
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {Math.min(idx + 1, total)} / {total}
-            </span>
-          ) : null
+          <div className="flex items-center gap-2">
+            {lastGrade ? (
+              <Button variant="ghost" size="sm" onClick={undoLast} title={t('Undo last grade (Z)', '復原上一筆評分 (Z)')}>
+                <Undo2 className="size-4" /> {t('Undo', '復原')}
+              </Button>
+            ) : null}
+            {total > 0 && !done ? (
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {Math.min(idx + 1, total)} / {total}
+              </span>
+            ) : null}
+          </div>
         }
       />
 
@@ -287,7 +353,7 @@ export function StudyScreen() {
                         )}
                       >
                         <span className="flex items-center gap-1">
-                          <kbd className="rounded bg-white/60 px-1 text-[10px]">{meta.key}</kbd>
+                          <kbd className="rounded bg-white/60 px-1 text-[10px] dark:bg-white/10">{meta.key}</kbd>
                           {meta.label}
                         </span>
                         <span className="text-[11px] opacity-70">{h.label}</span>
@@ -300,7 +366,7 @@ export function StudyScreen() {
 
             <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
               <Keyboard className="size-3.5" />
-              {t('Space to reveal · 1–4 to grade', '空白鍵顯示答案 · 1–4 評分')}
+              {t('Space to reveal · 1–4 to grade · Z to undo', '空白鍵顯示答案 · 1–4 評分 · Z 復原')}
             </p>
           </div>
         ) : null}
