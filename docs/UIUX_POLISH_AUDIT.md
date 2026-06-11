@@ -12,6 +12,16 @@ deep-dives read the real components, then a completeness critic + a synthesis pa
 **Benchmarks.** Notion · TickTick · Duolingo · Linear · Things 3 · Superhuman · Splitwise · Apple Health ·
 Anki · Obsidian · Paprika · Stripe/Vercel onboarding · Gmail.
 
+> **Status (2026-06-11).** Sections A + B are **shipped** (commits `0894ec2…628f706`, 8 commits):
+> ✅ A1–A12 all fixed (A8 via QW1's undo toasts) · ✅ QW1–QW16 all shipped.
+> Partials: QW13 has spring + haptics + milestone toasts but **no confetti**; QW9 ships tasks/habits/meals
+> sections but **no budget pace line**; QW10's chip covers tasks/transactions/recipes/health logs —
+> **notes have no `created_via` column** (needs a migration before notes can be attributed).
+> New shared primitives: `src/lib/undoable.ts` (deferred-commit undo deletes), `ConfirmDialog`,
+> `ErrorState`/`RouteErrorScreen`, `AiChip` + `useNewSince`, `ConnectAiLink`, `humanizeError`,
+> `relativeDayLabel`/`fmtDayDate`, `lib/today.ts`. Section **C (bets) is untouched** — that's the
+> next arc, each behind its own PR.
+
 **Product DNA the recommendations respect.** BYO-AI (users connect their *own* external AI via MCP — **no
 in-app generation**; the win is *surfacing/attributing/reviewing* what the AI wrote). Calm Scandinavian
 aesthetic, serif headings + sans body, full dark/light, fully bilingual en/繁中, web + PWA + Capacitor Android.
