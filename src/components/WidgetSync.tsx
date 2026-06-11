@@ -5,6 +5,7 @@ import { App as CapApp } from '@capacitor/app'
 import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/lib/i18n'
 import { useTasks, useCheckInsInRange } from '@/lib/hooks'
+import { todayTasks } from '@/lib/today'
 import { habitTodayISO } from '@/lib/recurrence'
 import { router } from '@/router'
 import { pushHabitsWidget, pushTodayWidget, pushWidgetAuth, type HabitsSnapshot, type TodaySnapshot } from '@/lib/widget'
@@ -18,12 +19,6 @@ function addDaysISO(iso: string, n: number): string {
   const [y, m, d] = iso.split('-').map(Number)
   const dt = new Date(Date.UTC(y, m - 1, d + n))
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`
-}
-function cmpDate(a: string | null, b: string | null): number {
-  if (a === b) return 0
-  if (!a) return 1
-  if (!b) return -1
-  return a < b ? -1 : 1
 }
 
 /**
@@ -89,9 +84,7 @@ function WidgetSyncInner({ token }: { token: string }) {
   useEffect(() => {
     if (!tasks) return
     const today = localToday()
-    const todays = tasks
-      .filter((t) => t.kind !== 'habit' && ((t.due_date != null && t.due_date <= today) || t.scheduled_date === today))
-      .sort((a, b) => b.priority - a.priority || cmpDate(a.due_date, b.due_date) || a.sort_order - b.sort_order)
+    const todays = todayTasks(tasks, today)
 
     const sub = (t: (typeof todays)[number]): string => {
       if (t.due_date != null && t.due_date < today) return lang === 'zh' ? '逾期' : 'Overdue'

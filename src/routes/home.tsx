@@ -1,13 +1,43 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useSearch } from '@tanstack/react-router'
 import { motion } from 'motion/react'
-import { ArrowRight, FilePlus2, FileText, GraduationCap, Layers, NotebookPen, Sparkles } from 'lucide-react'
-import { useDecks, useDueCards, useJournalEntries, useNewNote, useNotes, useSeedSample } from '@/lib/hooks'
+import {
+  ArrowRight,
+  CheckCircle2,
+  Circle,
+  FilePlus2,
+  FileText,
+  Flame,
+  GraduationCap,
+  Layers,
+  ListTodo,
+  NotebookPen,
+  Sparkles,
+  Utensils,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  useCheckInsInRange,
+  useCompleteTask,
+  useDecks,
+  useDueCards,
+  useJournalEntries,
+  useMealPlans,
+  useNewNote,
+  useNotes,
+  useSeedSample,
+  useTasks,
+  useUncompleteTask,
+} from '@/lib/hooks'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
+import { HabitCheckButton } from '@/components/tempo/HabitCheckButton'
 import { useI18n } from '@/lib/i18n'
 import { fmtLocalDate, modKey, relativeDue } from '@/lib/utils'
 import { localTodayISO, MOOD_FACES } from '@/lib/health'
+import { greeting, todayTasks } from '@/lib/today'
+import { computeOccurrence, habitTodayISO, minutesUntilReset } from '@/lib/recurrence'
+import type { TaskRow } from '@/lib/database.types'
 import { JournalDialog } from '@/components/health/JournalDialog'
 
 export function HomeScreen() {
@@ -44,7 +74,7 @@ export function HomeScreen() {
 
   return (
     <>
-      <PageHeader title={t('Today', '今天')} subtitle={today} />
+      <PageHeader title={t('Today', '今天')} subtitle={`${greeting(lang)} · ${today}`} />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
           {!todayEntry ? (
@@ -80,6 +110,9 @@ export function HomeScreen() {
               </Button>
             </section>
           )}
+
+          <TodayAcrossSpaces />
+
           {isNew ? (
             <motion.section
               initial={{ opacity: 0, y: 10 }}
@@ -191,6 +224,156 @@ export function HomeScreen() {
       />
     </>
   )
+}
+
+const SLOT_LABEL: Record<string, [string, string]> = {
+  breakfast: ['Breakfast', '早餐'],
+  lunch: ['Lunch', '午餐'],
+  dinner: ['Dinner', '晚餐'],
+  snack: ['Snack', '點心'],
+}
+
+/**
+ * Today is a cross-space day (audit QW9): tasks due, habits left (at-risk
+ * surfaced), and today's planned meals — every section hidden when empty, with
+ * inline complete/check so the screen is actionable, not just a report.
+ */
+function TodayAcrossSpaces() {
+  const { t } = useI18n()
+  const todayIso = localTodayISO()
+  // Shares cache keys with Tempo/Kitchen — no duplicate fetches once visited.
+  const { data: tasks } = useTasks({ status: 'todo', limit: 500 })
+  const { data: checkins } = useCheckInsInRange(addDaysIso(todayIso, -1), addDaysIso(todayIso, 1))
+  const { data: meals = [] } = useMealPlans(todayIso, todayIso)
+  const complete = useCompleteTask()
+  const uncomplete = useUncompleteTask()
+
+  const dueToday = todayTasks(tasks ?? [], todayIso).slice(0, 5)
+  const done = new Set((checkins ?? []).map((c) => `${c.task_id}|${c.checkin_date}`))
+  const habitsLeft = (tasks ?? [])
+    .filter((h) => h.kind === 'habit' && !done.has(`${h.id}|${habitTodayISO(h.reset_time, h.tz)}`))
+    .slice(0, 4)
+
+  async function completeTask(task: TaskRow) {
+    if (task.recurrence_rule) {
+      // Same roll as Tempo's toggle; no Undo (uncomplete can't rewind the roll).
+      const base = task.recurrence_after_completion
+        ? todayIso
+        : task.next_occurrence ?? task.due_date ?? task.scheduled_date ?? todayIso
+      const next = await computeOccurrence(task.recurrence_rule, base, false)
+      complete.mutate({ taskId: task.id, nextOccurrence: next ?? undefined })
+    } else {
+      complete.mutate({ taskId: task.id })
+      toast(t('Completed', '已完成'), {
+        action: { label: t('Undo', '復原'), onClick: () => uncomplete.mutate(task.id) },
+        duration: 5000,
+      })
+    }
+  }
+
+  if (!dueToday.length && !habitsLeft.length && !meals.length) return null
+
+  return (
+    <section className="space-y-3">
+      {dueToday.length ? (
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+          <div className="flex items-center justify-between border-b border-border/60 px-4 py-2">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+              <ListTodo className="size-3.5" /> {t('Due today', '今天到期')}
+            </span>
+            <Link to="/tempo" search={{ view: 'today' }} className="text-xs font-medium text-brand hover:underline">
+              {t('Open Tempo', '打開 Tempo')}
+            </Link>
+          </div>
+          {dueToday.map((task) => {
+            const overdue = task.due_date != null && task.due_date < todayIso
+            return (
+              <div key={task.id} className="flex items-center gap-3 border-b border-border/60 px-4 py-2.5 last:border-b-0">
+                <button
+                  onClick={() => void completeTask(task)}
+                  className="shrink-0 text-muted-foreground transition hover:text-brand"
+                  aria-label={t('Complete', '完成')}
+                >
+                  {task.status === 'done' ? <CheckCircle2 className="size-5 text-brand" /> : <Circle className="size-5" />}
+                </button>
+                <span className="min-w-0 flex-1 truncate text-[14px] text-foreground">{task.title}</span>
+                {overdue ? (
+                  <span className="shrink-0 text-[11.5px] font-medium text-red-500 dark:text-red-400">
+                    {t('Overdue', '逾期')}
+                  </span>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+
+      {habitsLeft.length ? (
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+          <div className="flex items-center justify-between border-b border-border/60 px-4 py-2">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+              <Flame className="size-3.5" /> {t('Habits left today', '今天還沒打卡')}
+            </span>
+            <Link to="/tempo" search={{ view: 'habits' }} className="text-xs font-medium text-brand hover:underline">
+              {t('All habits', '所有習慣')}
+            </Link>
+          </div>
+          {habitsLeft.map((h) => {
+            const minsLeft = minutesUntilReset(h.reset_time, h.tz)
+            const atRisk = minsLeft != null && minsLeft <= 180
+            return (
+              <div
+                key={h.id}
+                className={`flex items-center gap-3 border-b border-border/60 px-4 py-2.5 last:border-b-0 ${
+                  atRisk ? 'bg-warning-muted/50' : ''
+                }`}
+              >
+                <HabitCheckButton habitId={h.id} today={habitTodayISO(h.reset_time, h.tz)} iconClassName="size-5" title={h.title} />
+                <span className="min-w-0 flex-1 truncate text-[14px] text-foreground">{h.title}</span>
+                {h.current_streak > 0 ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-orange-500">
+                    <Flame className="size-3" /> {h.current_streak}
+                  </span>
+                ) : null}
+                {atRisk && minsLeft != null ? (
+                  <span className="shrink-0 text-[11.5px] font-semibold text-warning">
+                    {minsLeft < 60 ? t(`${minsLeft}m left`, `剩 ${minsLeft} 分`) : t(`${Math.floor(minsLeft / 60)}h left`, `剩 ${Math.floor(minsLeft / 60)} 小時`)}
+                  </span>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+
+      {meals.length ? (
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+          <div className="flex items-center justify-between border-b border-border/60 px-4 py-2">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+              <Utensils className="size-3.5" /> {t('Today’s meals', '今日菜單')}
+            </span>
+            <Link to="/kitchen" search={{ ksection: 'plan' }} className="text-xs font-medium text-brand hover:underline">
+              {t('Open Kitchen', '打開廚房')}
+            </Link>
+          </div>
+          {meals.map((p) => (
+            <div key={p.id} className="flex items-center gap-3 border-b border-border/60 px-4 py-2.5 last:border-b-0 text-[14px]">
+              <span className="w-12 shrink-0 text-[12.5px] text-muted-foreground">
+                {t(...(SLOT_LABEL[p.slot] ?? [p.slot, p.slot]))}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-foreground">{p.title ?? '—'}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function addDaysIso(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + n))
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`
 }
 
 function StatTile({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
