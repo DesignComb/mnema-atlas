@@ -13,8 +13,31 @@ export function fmtMoney(amount: number | string | null, currency = 'TWD'): stri
       maximumFractionDigits: currency === 'TWD' || currency === 'JPY' ? 0 : 2,
     }).format(n)
   } catch {
-    return `${currency} ${n.toLocaleString()}`
+    return `${currency} ${n.toLocaleString('en-US')}`
   }
+}
+
+export interface CurrencyTotal {
+  currency: string
+  total: number
+}
+
+/**
+ * Net worth grouped per currency — NT$ and ¥ must never be blind-summed into
+ * one number (audit A3). Sorted largest absolute total first.
+ */
+export function netWorthByCurrency(
+  accounts: { currency: string | null; balance: number | string }[],
+  fallbackCurrency = 'TWD',
+): CurrencyTotal[] {
+  const map = new Map<string, number>()
+  for (const a of accounts) {
+    const c = a.currency || fallbackCurrency
+    map.set(c, (map.get(c) ?? 0) + Number(a.balance))
+  }
+  return [...map.entries()]
+    .map(([currency, total]) => ({ currency, total }))
+    .sort((x, y) => Math.abs(y.total) - Math.abs(x.total))
 }
 
 /** Decimal places a currency uses — TWD/JPY are whole-unit (no minor unit). */

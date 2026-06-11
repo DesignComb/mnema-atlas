@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { BookOpenCheck, CalendarRange, ExternalLink, Eye, MapPin } from 'lucide-react'
@@ -14,6 +15,17 @@ export function SharedTripScreen() {
     enabled: !!token,
     retry: false,
   })
+
+  // The browser tab (and anything that reads the live DOM title) should carry
+  // the trip's name, not the app default (A2).
+  useEffect(() => {
+    if (!data?.title) return
+    const prev = document.title
+    document.title = `${data.title} · Mnema`
+    return () => {
+      document.title = prev
+    }
+  }, [data?.title])
 
   return (
     <div className="theme-voyage min-h-dvh bg-background text-foreground">

@@ -362,7 +362,7 @@ export function BudgetTab({ trip }: { trip: ItineraryTree }) {
                 <div key={cat} className="flex items-center gap-2 text-sm">
                   <span className={`size-2 rounded-full ${meta.dot}`} />
                   <span className="flex-1 text-muted-foreground">{t(meta.en, meta.zh)}</span>
-                  <span className="tabular-nums text-foreground">{total.toLocaleString()}</span>
+                  <span className="tabular-nums text-foreground">{total.toLocaleString('en-US')}</span>
                 </div>
               )
             })}

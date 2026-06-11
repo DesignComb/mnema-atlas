@@ -1,7 +1,7 @@
 {
-  "name": "Mnema Atlas",
+  "name": "Mnema",
   "short_name": "Mnema",
-  "description": "Turn study notes into spaced-repetition flashcards and a living knowledge graph — any AI can fill your decks.",
+  "description": "The quiet workspace your own AI fills — notes & flashcards, trips, tasks & habits, money, health, and kitchen.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

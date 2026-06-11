@@ -2,19 +2,37 @@ import { type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   BookOpenCheck,
-  Coins,
   FileText,
   GraduationCap,
   Layers,
-  ListTodo,
-  Map as MapIcon,
   Share2,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react'
 import { PageHeader } from '@/components/app-shell/PageHeader'
+import { SPACES, type SpaceKey } from '@/components/app-shell/spaces'
 import { useT } from '@/lib/i18n'
 import { modKey } from '@/lib/utils'
+
+/* Per-space copy for the guide. Keyed by SpaceKey so adding a space to
+   spaces.ts without a blurb is a TYPE ERROR — the guide can never drift from
+   the rail again (audit A1). */
+const SPACE_TITLE: Record<SpaceKey, [string, string]> = {
+  study: ['Study · Atlas', '讀書 · Atlas'],
+  travel: ['Travel · Voyage', '旅遊 · Voyage'],
+  tempo: ['Tasks · Tempo', '任務 · Tempo'],
+  galleon: ['Money · Galleon', '記帳 · Galleon'],
+  health: ['Health · Vitals', '健康 · Vitals'],
+  kitchen: ['Kitchen', '廚房 · Kitchen'],
+}
+const SPACE_BLURB: Record<SpaceKey, [string, string]> = {
+  study: ['Notes, flashcards (spaced repetition), and a knowledge graph.', '筆記、字卡(間隔重複)與知識圖譜。'],
+  travel: ['Multi-day trips: days, activities, reservations, packing — shareable.', '多天行程:日期、活動、訂位、打包 —— 可分享。'],
+  tempo: ['To-dos & lists, habits, a calendar, recurrence, and reminders.', '待辦與清單、習慣、行事曆、重複與提醒。'],
+  galleon: ['Ledgers, accounts & balances, budgets, and Splitwise-style bill-splitting.', '帳本、帳戶與結餘、預算,以及 Splitwise 式分帳結算。'],
+  health: ['Vitals, medications, journal & mood — a private health log.', '生命徵象、用藥、日記與心情 —— 你的私人健康紀錄。'],
+  kitchen: ['Recipes, pantry, shopping lists, and a weekly meal plan.', '食譜、庫存、購物清單與每週菜單。'],
+}
 
 export function GuideScreen() {
   const t = useT()
@@ -34,35 +52,18 @@ export function GuideScreen() {
             </p>
           </section>
 
-          {/* Spaces */}
+          {/* Spaces — rendered from SPACES so the guide always matches the rail. */}
           <section className="space-y-3">
-            <h2 className="font-serif text-xl text-foreground">{t('Four spaces', '四大區塊')}</h2>
+            <h2 className="font-serif text-xl text-foreground">{t('The spaces', '所有區塊')}</h2>
             <div className="grid gap-2.5 sm:grid-cols-2">
-              <Step
-                icon={<BookOpenCheck />}
-                title={t('Study · Atlas', '讀書 · Atlas')}
-                body={t('Notes, flashcards (spaced repetition), and a knowledge graph.', '筆記、字卡(間隔重複)與知識圖譜。')}
-              />
-              <Step
-                icon={<MapIcon />}
-                title={t('Travel · Voyage', '旅遊 · Voyage')}
-                body={t('Multi-day trips: days, activities, reservations, packing — shareable.', '多天行程:日期、活動、訂位、打包 —— 可分享。')}
-              />
-              <Step
-                icon={<ListTodo />}
-                title={t('Tasks · Tempo', '任務 · Tempo')}
-                body={t('To-dos & lists, habits, a calendar, recurrence, and reminders.', '待辦與清單、習慣、行事曆、重複與提醒。')}
-              />
-              <Step
-                icon={<Coins />}
-                title={t('Money · Galleon', '記帳 · Galleon')}
-                body={t('Ledgers, accounts & balances, budgets, and Splitwise-style bill-splitting.', '帳本、帳戶與結餘、預算,以及 Splitwise 式分帳結算。')}
-              />
+              {SPACES.map((s) => (
+                <Step key={s.key} icon={<s.icon />} title={t(...SPACE_TITLE[s.key])} body={t(...SPACE_BLURB[s.key])} />
+              ))}
             </div>
             <p className="text-[13px] text-muted-foreground">
               {t(
-                'Switch spaces from the name at the top-left. More may arrive over time — and your connected AI can work in any of them.',
-                '從左上角的名稱切換區塊。未來可能還會加入更多 —— 而你連接的 AI 在每個區塊都能幫你做事。',
+                'Switch spaces from the rail on the left (or the tabs below on a phone). More may arrive over time — and your connected AI can work in any of them.',
+                '從左側的空間列(手機則是下方分頁)切換區塊。未來可能還會加入更多 —— 而你連接的 AI 在每個區塊都能幫你做事。',
               )}
             </p>
           </section>

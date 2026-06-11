@@ -138,9 +138,11 @@ export function safeHttps(url: string | null): string | null {
 export function fmtCost(cost: number | null, currency: string | null): string {
   if (cost == null) return ''
   const n = Number(cost)
+  // Explicit locale: grouping is identical for en/zh-TW, and the OS locale
+  // (e.g. de-DE's 1.234,56) must never leak into the app (audit A7).
   const s = Number.isInteger(n)
-    ? n.toLocaleString()
-    : n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ? n.toLocaleString('en-US')
+    : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return `${currency ? currency + ' ' : ''}${s}`
 }
 

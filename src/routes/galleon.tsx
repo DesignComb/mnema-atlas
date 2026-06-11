@@ -53,7 +53,7 @@ import { useI18n, useT } from '@/lib/i18n'
 import type { BudgetStatusItem, LedgerAccount, LedgerCategory, LedgerDetail, MemberBalanceItem } from '@/lib/api'
 import type { TransactionRow, SubscriptionRow } from '@/lib/database.types'
 import { settleUp } from '@shared/settle'
-import { ACCOUNT_TYPE_LABEL, addMonths, fmtLedgerDate, fmtMoney, monthRange } from '@/lib/money'
+import { ACCOUNT_TYPE_LABEL, addMonths, fmtLedgerDate, fmtMoney, monthRange, netWorthByCurrency } from '@/lib/money'
 import { shortRecurrenceLabel } from '@/lib/recurrence'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -399,7 +399,7 @@ function Overview({ ledger, onEditTxn, onSeeAll, t }: { ledger: LedgerDetail; on
   const expense = Number(summary?.expense ?? 0)
   const cur = ledger.base_currency
   const accounts = ledger.accounts.filter((a) => !a.is_archived)
-  const netWorth = accounts.reduce((s, a) => s + Number(a.balance), 0)
+  const netWorth = netWorthByCurrency(accounts, cur)
   const maxCat = Math.max(1, ...(summary?.by_category ?? []).map((c) => Number(c.total)))
 
   return (
@@ -429,11 +429,18 @@ function Overview({ ledger, onEditTxn, onSeeAll, t }: { ledger: LedgerDetail; on
         </div>
       </div>
 
-      {/* Net worth + accounts */}
+      {/* Net worth + accounts — one line per currency, never blind-summed (A3). */}
       <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-start justify-between gap-3">
           <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">{t('Net worth', '淨資產')}</span>
-          <span className="text-[15px] font-semibold tabular-nums">{fmtMoney(netWorth, cur)}</span>
+          <span className="text-right">
+            {netWorth.map((n) => (
+              <span key={n.currency} className="block text-[15px] font-semibold tabular-nums">
+                {fmtMoney(n.total, n.currency)}
+              </span>
+            ))}
+            {!netWorth.length ? <span className="text-[15px] font-semibold tabular-nums">{fmtMoney(0, cur)}</span> : null}
+          </span>
         </div>
         <div className="space-y-1">
           {accounts.map((a) => (
@@ -604,7 +611,10 @@ function Accounts({
   const reorder = useReorderAccounts()
   const accounts = ledger.accounts
   const [confirmAcct, setConfirmAcct] = useState<LedgerAccount | null>(null)
-  const netWorth = accounts.filter((a) => !a.is_archived).reduce((s, a) => s + Number(a.balance), 0)
+  const netWorth = netWorthByCurrency(
+    accounts.filter((a) => !a.is_archived),
+    ledger.base_currency,
+  )
   const renderCard = (a: LedgerAccount, handle?: ReactNode) => (
     <div className={`group rounded-xl border border-border bg-card p-3.5 shadow-soft ${a.is_archived ? 'opacity-50' : ''}`}>
       <div className="flex items-start justify-between gap-2">
@@ -648,9 +658,16 @@ function Accounts({
   )
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-soft">
+      <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-soft">
         <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/80">{t('Net worth', '淨資產')}</span>
-        <span className="text-[16px] font-semibold tabular-nums">{fmtMoney(netWorth, ledger.base_currency)}</span>
+        <span className="text-right">
+          {netWorth.map((n) => (
+            <span key={n.currency} className="block text-[16px] font-semibold tabular-nums">
+              {fmtMoney(n.total, n.currency)}
+            </span>
+          ))}
+          {!netWorth.length ? <span className="text-[16px] font-semibold tabular-nums">{fmtMoney(0, ledger.base_currency)}</span> : null}
+        </span>
       </div>
       {canEdit && accounts.length > 1 ? (
         <div className="space-y-2.5">
