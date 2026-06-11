@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import {
   Bed,
@@ -210,7 +211,7 @@ function BookingDialog({
       else await create.mutateAsync({ itinerary_id: itineraryId, ...fields })
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save', '儲存失敗'))
+      toast.error(humanizeError(err, ['Failed to save', '儲存失敗']))
     }
   }
 
@@ -392,7 +393,7 @@ export function PackingTab({ trip, canEdit }: { trip: ItineraryTree; canEdit: bo
       await create.mutateAsync({ itinerary_id: trip.id, kind, text })
       setDraft((d) => ({ ...d, [kind]: '' }))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed', '失敗'))
+      toast.error(humanizeError(err, ['Failed', '失敗']))
     }
   }
 

@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -85,7 +86,7 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
       else if (data.notes.length) navigate({ to: '/notes' })
       else navigate({ to: '/cards' })
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('Import failed', '匯入失敗'))
+      toast.error(humanizeError(e, ['Import failed', '匯入失敗']))
     } finally {
       setBusy(false)
     }

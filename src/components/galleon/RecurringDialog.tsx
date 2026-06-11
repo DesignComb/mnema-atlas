@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useState } from 'react'
 import { Plus, Repeat, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -50,7 +51,7 @@ export function RecurringDialog({ open, onOpenChange, ledger }: { open: boolean;
       setPayee('')
       toast.success(t('Recurring added', '已加入定期'))
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('Failed', '失敗'))
+      toast.error(humanizeError(e, ['Failed', '失敗']))
     }
   }
 

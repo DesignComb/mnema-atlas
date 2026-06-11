@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateItem, useSetItemAssignees, useSetItemDay, useSetItemStatus, useUpdateItem } from '@/lib/hooks'
@@ -135,7 +136,7 @@ export function ItemDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save activity', '儲存活動失敗'))
+      toast.error(humanizeError(err, ['Failed to save activity', '儲存活動失敗']))
     }
   }
 

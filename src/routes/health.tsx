@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
@@ -41,6 +42,8 @@ import {
   localTodayISO,
 } from '@/lib/health'
 import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
+import { AiChip, useNewSince } from '@/components/common/AiChip'
+import { ConnectAiLink } from '@/components/common/ConnectAiLink'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { LogHealthDialog } from '@/components/health/LogHealthDialog'
@@ -81,6 +84,7 @@ export function HealthScreen() {
 
   const qc = useQueryClient()
   const hiddenKeys = useHiddenKeys()
+  const isNew = useNewSince('health')
   const { data: allLogs = [], isError: logsError, refetch: refetchLogs } = useHealthLogs({ limit: 200 })
   const { data: allJournal = [], isError: journalError, refetch: refetchJournal } = useJournalEntries()
   const { data: allMeds = [], isError: medsError, refetch: refetchMeds } = useMedications()
@@ -271,7 +275,7 @@ export function HealthScreen() {
                               onClick={() =>
                                 logHealth.mutate(
                                   { kind: 'meds', text_value: m.name },
-                                  { onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to log', '記錄失敗')) },
+                                  { onError: (e) => toast.error(humanizeError(e, ['Failed to log', '記錄失敗'])) },
                                 )
                               }
                             >
@@ -295,12 +299,21 @@ export function HealthScreen() {
                     onEdit={(log) => setLogDialog({ open: true, log })}
                     onDelete={(id) => removeHealthItem(`hlog:${id}`, t('Entry deleted', '已刪除紀錄'), () => apiDeleteHealthLog(id))}
                     t={t}
+                    isNew={isNew}
                   />
                 ) : (
                   <EmptyState
                     icon={<Activity className="size-5" />}
                     title={t('Nothing logged yet', '還沒有任何紀錄')}
                     description={t('Tap “Log”, or just tell your AI — “午餐吃了雞腿便當”.', '點「記錄」,或直接跟你的 AI 說「午餐吃了雞腿便當」。')}
+                    action={
+                      <div className="flex flex-col items-center gap-2">
+                        <Button variant="brand" size="sm" onClick={() => setLogDialog({ open: true })}>
+                          <Plus className="size-4" /> {t('Log health', '記錄健康')}
+                        </Button>
+                        <ConnectAiLink />
+                      </div>
+                    }
                   />
                 )}
               </div>
@@ -346,7 +359,16 @@ export function HealthScreen() {
                   </div>
                 ))
               ) : (
-                <EmptyState icon={<NotebookPen className="size-5" />} title={t('No journal entries yet', '還沒有日記')} description={t('Reflect on your day — mood, energy, a few words.', '記下今天的心情、精力與幾句話。')} />
+                <EmptyState
+                  icon={<NotebookPen className="size-5" />}
+                  title={t('No journal entries yet', '還沒有日記')}
+                  description={t('Reflect on your day — mood, energy, a few words.', '記下今天的心情、精力與幾句話。')}
+                  action={
+                    <Button variant="brand" size="sm" onClick={() => setJournalDialog({ open: true, entry: todayEntry })}>
+                      <NotebookPen className="size-4" /> {t('Write today', '寫今天')}
+                    </Button>
+                  }
+                />
               )}
             </div>
           ) : null}
@@ -382,7 +404,16 @@ export function HealthScreen() {
                   </div>
                 ))
               ) : (
-                <EmptyState icon={<Pill className="size-5" />} title={t('No medications yet', '還沒有用藥')} description={t('Track what you take and when.', '記下你在吃的藥與時間。')} />
+                <EmptyState
+                  icon={<Pill className="size-5" />}
+                  title={t('No medications yet', '還沒有用藥')}
+                  description={t('Track what you take and when.', '記下你在吃的藥與時間。')}
+                  action={
+                    <Button variant="brand" size="sm" onClick={() => setMedDialog({ open: true })}>
+                      <Plus className="size-4" /> {t('Add medication', '新增用藥')}
+                    </Button>
+                  }
+                />
               )}
             </div>
           ) : null}
@@ -403,6 +434,7 @@ export function HealthScreen() {
                   onEdit={(log) => setLogDialog({ open: true, log })}
                   onDelete={(id) => removeHealthItem(`hlog:${id}`, t('Entry deleted', '已刪除紀錄'), () => apiDeleteHealthLog(id))}
                   t={t}
+                  isNew={isNew}
                 />
               ) : (
                 <EmptyState icon={<History className="size-5" />} title={t('No entries', '沒有紀錄')} />
@@ -430,7 +462,7 @@ export function HealthScreen() {
                               : enabled.filter((x) => x !== m.key)
                             setSettings.mutate(
                               { enabled_modules: next },
-                              { onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed') },
+                              { onError: (err) => toast.error(humanizeError(err)) },
                             )
                           }}
                           className="size-4 accent-[var(--brand)]"
@@ -464,7 +496,7 @@ export function HealthScreen() {
                   <input
                     type="checkbox"
                     checked={reviewPrefs?.is_enabled ?? false}
-                    onChange={(e) => setReviewPrefs.mutate(e.target.checked, { onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed') })}
+                    onChange={(e) => setReviewPrefs.mutate(e.target.checked, { onError: (err) => toast.error(humanizeError(err)) })}
                     className="size-4 accent-[var(--brand)]"
                   />
                   <span className="text-[13.5px] text-foreground">{t('Remind me each evening', '每天晚上提醒我')}</span>
@@ -498,12 +530,14 @@ function LogList({
   onEdit,
   onDelete,
   t,
+  isNew,
 }: {
   logs: HealthLogRow[]
   fmtDate: (iso: string) => string
   onEdit: (log: HealthLogRow) => void
   onDelete: (id: string) => void
   t: (en: string, zh: string) => string
+  isNew?: (createdAt: string | null | undefined) => boolean
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -512,9 +546,10 @@ function LogList({
         return (
           <div key={l.id} className="group flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13.5px] text-foreground">
+              <p className="flex items-center gap-1.5 truncate text-[13.5px] text-foreground">
                 <span className="font-medium">{meta ? t(meta.en, meta.zh) : l.kind}</span>
-                <span className="text-muted-foreground"> · {formatLogValue(l)}</span>
+                <span className="truncate text-muted-foreground">· {formatLogValue(l)}</span>
+                {l.created_via === 'mcp' ? <AiChip isNew={isNew?.(l.created_at)} /> : null}
               </p>
               {l.note ? <p className="truncate text-[12px] text-muted-foreground">{l.note}</p> : null}
             </div>

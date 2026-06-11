@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useState } from 'react'
 import { UserPlus, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -39,7 +40,7 @@ export function MembersDialog({
       setEmail('')
       toast.success(t('Collaborator added', '已加入協作者'))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to add collaborator', '加入協作者失敗'))
+      toast.error(humanizeError(err, ['Failed to add collaborator', '加入協作者失敗']))
     }
   }
 
@@ -47,7 +48,7 @@ export function MembersDialog({
     try {
       await removeMember.mutateAsync({ itineraryId, memberUserId: userId })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to remove', '移除失敗'))
+      toast.error(humanizeError(err, ['Failed to remove', '移除失敗']))
     }
   }
 

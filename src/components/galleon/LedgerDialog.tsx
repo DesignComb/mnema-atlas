@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateLedger, useUpdateLedger } from '@/lib/hooks'
@@ -48,7 +49,7 @@ export function LedgerDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save ledger', '儲存帳本失敗'))
+      toast.error(humanizeError(err, ['Failed to save ledger', '儲存帳本失敗']))
     }
   }
 

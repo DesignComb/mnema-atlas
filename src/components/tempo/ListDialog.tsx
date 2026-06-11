@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateTaskList, useUpdateTaskList } from '@/lib/hooks'
@@ -43,7 +44,7 @@ export function ListDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save list', '儲存清單失敗'))
+      toast.error(humanizeError(err, ['Failed to save list', '儲存清單失敗']))
     }
   }
 

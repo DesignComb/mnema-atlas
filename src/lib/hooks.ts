@@ -1,3 +1,4 @@
+import { untitledLabel } from '@/lib/utils'
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -1156,7 +1157,7 @@ export function useNewNote() {
     isPending: create.isPending,
     run: async () => {
       try {
-        const note = await create.mutateAsync({ title: 'Untitled', body: '' })
+        const note = await create.mutateAsync({ title: untitledLabel(), body: '' })
         navigate({ to: '/notes/$noteId', params: { noteId: note.id } })
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Failed to create note')

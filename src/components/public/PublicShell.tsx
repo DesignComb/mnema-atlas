@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { MotionConfig } from 'motion/react'
@@ -25,7 +26,6 @@ export function GoogleIcon({ className }: { className?: string }) {
 
 /** One-tap Google sign-in (full-page redirect), shared by every public page. */
 export function useGoogleSignIn() {
-  const { t } = useI18n()
   const { signInWithGoogle } = useAuth()
   const [busy, setBusy] = useState(false)
   async function google() {
@@ -33,7 +33,7 @@ export function useGoogleSignIn() {
     try {
       await signInWithGoogle()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Could not start Google sign-in', '無法啟動 Google 登入'))
+      toast.error(humanizeError(err, ['Could not start Google sign-in', '無法啟動 Google 登入']))
       setBusy(false)
     }
   }

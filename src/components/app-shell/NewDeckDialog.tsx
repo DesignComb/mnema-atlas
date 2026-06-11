@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateDeck, useUpdateDeck } from '@/lib/hooks'
@@ -55,7 +56,7 @@ export function NewDeckDialog({
       setDescription('')
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save deck', '儲存牌組失敗'))
+      toast.error(humanizeError(err, ['Failed to save deck', '儲存牌組失敗']))
     }
   }
 

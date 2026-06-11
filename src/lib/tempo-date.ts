@@ -47,6 +47,41 @@ export function yearOf(iso: string): number {
 export function dayNum(iso: string): number {
   return Number(iso.slice(8, 10))
 }
+/** Days from `today` to `iso` (negative = past). Pure string math, UTC-safe. */
+export function dayDiff(iso: string, today: string): number {
+  return Math.round((parseISO(iso).getTime() - parseISO(today).getTime()) / 86_400_000)
+}
+
+const WD_EN_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WD_ZH_SHORT = ['週日', '週一', '週二', '週三', '週四', '週五', '週六']
+const MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** Bilingual absolute day label: "Jun 14 (Sat)" / "6月14日(週六)"; adds the year when it differs (QW7). */
+export function fmtDayDate(iso: string, lang: 'en' | 'zh', today: string = todayISO()): string {
+  const y = yearOf(iso)
+  const m = monthOf(iso)
+  const d = dayNum(iso)
+  const wd = weekday(iso)
+  const sameYear = y === yearOf(today)
+  if (lang === 'zh') return `${sameYear ? '' : `${y}年`}${m + 1}月${d}日(${WD_ZH_SHORT[wd]})`
+  return `${MON_EN[m]} ${d}${sameYear ? '' : `, ${y}`} (${WD_EN_SHORT[wd]})`
+}
+
+/**
+ * Bilingual relative day label (QW7): Today/Tomorrow/Yesterday, a weekday for
+ * the coming week, otherwise a short date. Overdue ≥2 days appends "· Nd".
+ */
+export function relativeDayLabel(iso: string, today: string, lang: 'en' | 'zh'): string {
+  const diff = dayDiff(iso, today)
+  if (diff === 0) return lang === 'zh' ? '今天' : 'Today'
+  if (diff === 1) return lang === 'zh' ? '明天' : 'Tomorrow'
+  if (diff === -1) return lang === 'zh' ? '昨天' : 'Yesterday'
+  if (diff > 1 && diff <= 6) return lang === 'zh' ? WD_ZH_SHORT[weekday(iso)] : WD_EN_SHORT[weekday(iso)]
+  const base = fmtDayDate(iso, lang, today)
+  if (diff <= -2) return lang === 'zh' ? `${base} · 逾期 ${-diff} 天` : `${base} · ${-diff}d late`
+  return base
+}
+
 /** 'HH:MM' (24h) → minutes since midnight, or null. */
 export function timeToMin(time: string | null): number | null {
   if (!time) return null

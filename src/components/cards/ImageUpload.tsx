@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useRef, useState } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,7 +17,7 @@ export function ImageUpload({ value, onChange }: { value: string | null; onChang
     try {
       onChange(await uploadImage(file))
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('Upload failed', '上傳失敗'))
+      toast.error(humanizeError(e, ['Upload failed', '上傳失敗']))
     } finally {
       setBusy(false)
       if (ref.current) ref.current.value = ''

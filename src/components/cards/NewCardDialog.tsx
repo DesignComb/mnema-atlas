@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -90,7 +91,7 @@ export function NewCardDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save card', '儲存字卡失敗'))
+      toast.error(humanizeError(err, ['Failed to save card', '儲存字卡失敗']))
     }
   }
 
@@ -105,7 +106,7 @@ export function NewCardDialog({
       toast.success(t('Flashcard deleted', '已刪除字卡'))
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to delete card', '刪除字卡失敗'))
+      toast.error(humanizeError(err, ['Failed to delete card', '刪除字卡失敗']))
     }
   }
 

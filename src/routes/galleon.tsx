@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
@@ -56,6 +57,8 @@ import { settleUp } from '@shared/settle'
 import { ACCOUNT_TYPE_LABEL, addMonths, fmtLedgerDate, fmtMoney, monthRange, netWorthByCurrency } from '@/lib/money'
 import { shortRecurrenceLabel } from '@/lib/recurrence'
 import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
+import { AiChip, useNewSince } from '@/components/common/AiChip'
+import { ConnectAiLink } from '@/components/common/ConnectAiLink'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -384,7 +387,7 @@ export function GalleonScreen() {
           if (!activeLedger) return
           deleteLedger.mutate(activeLedger.id, {
             onSuccess: () => setSearch({ ledger: active.find((l) => l.id !== activeLedger.id)?.id }),
-            onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to delete ledger', '刪除帳本失敗')),
+            onError: (e) => toast.error(humanizeError(e, ['Failed to delete ledger', '刪除帳本失敗'])),
           })
         }}
       />
@@ -512,12 +515,20 @@ function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTx
   const { data: txns, isLoading, isError, refetch } = useLedgerTransactions({ ledgerId: ledger.id, limit: 300 })
   const { data: splitIds } = useSplitTxnIds(ledger.id)
   const hiddenKeys = useHiddenKeys()
+  const isNew = useNewSince('galleon')
   const splitSet = new Set(splitIds ?? [])
   const visible = (txns ?? []).filter((tx) => !hiddenKeys.has(`txn:${tx.id}`))
   if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card" />
   if (isError) return <ErrorState onRetry={() => void refetch()} />
   if (!visible.length) {
-    return <EmptyState icon={<Coins className="size-6" />} title={t('No transactions yet', '還沒有交易')} description={t('Tap “Add” to log one, or let your AI do it.', '點「記一筆」新增,或讓你的 AI 幫你記。')} />
+    return (
+      <EmptyState
+        icon={<Coins className="size-6" />}
+        title={t('No transactions yet', '還沒有交易')}
+        description={t('Tap “Add” to log one, or let your AI do it.', '點「記一筆」新增,或讓你的 AI 幫你記。')}
+        action={<ConnectAiLink />}
+      />
+    )
   }
   // group by date
   const groups: { date: string; rows: TransactionRow[] }[] = []
@@ -533,7 +544,7 @@ function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTx
           <p className="mb-1 px-1 text-[12px] font-semibold text-muted-foreground">{fmtLedgerDate(g.date, lang)}</p>
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
             {g.rows.map((tx) => (
-              <TxnRow key={tx.id} tx={tx} ledger={ledger} onEdit={() => onEditTxn(tx)} t={t} withMenu isSplit={splitSet.has(tx.id)} />
+              <TxnRow key={tx.id} tx={tx} ledger={ledger} onEdit={() => onEditTxn(tx)} t={t} withMenu isSplit={splitSet.has(tx.id)} isNew={isNew} />
             ))}
           </div>
         </div>
@@ -542,7 +553,23 @@ function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTx
   )
 }
 
-function TxnRow({ tx, ledger, onEdit, t, withMenu, isSplit }: { tx: TransactionRow; ledger: LedgerDetail; onEdit: () => void; t: Tr; withMenu?: boolean; isSplit?: boolean }) {
+function TxnRow({
+  tx,
+  ledger,
+  onEdit,
+  t,
+  withMenu,
+  isSplit,
+  isNew,
+}: {
+  tx: TransactionRow
+  ledger: LedgerDetail
+  onEdit: () => void
+  t: Tr
+  withMenu?: boolean
+  isSplit?: boolean
+  isNew?: (createdAt: string | null | undefined) => boolean
+}) {
   const qc = useQueryClient()
   const cat = ledger.categories.find((c) => c.id === tx.category_id)
   const acc = ledger.accounts.find((a) => a.id === tx.account_id)
@@ -562,6 +589,7 @@ function TxnRow({ tx, ledger, onEdit, t, withMenu, isSplit }: { tx: TransactionR
           <span className="flex items-center gap-1.5 text-[14px] text-foreground">
             <span className="truncate">{label}</span>
             {isSplit ? <HandCoins className="size-3 shrink-0 text-brand" aria-label={t('Split', '分帳')} /> : null}
+            {tx.created_via === 'mcp' ? <AiChip isNew={isNew?.(tx.created_at)} /> : null}
           </span>
           <span className="block truncate text-[12px] text-muted-foreground">
             {acc?.name}

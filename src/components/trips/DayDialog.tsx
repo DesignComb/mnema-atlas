@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateDay, useUpdateDay } from '@/lib/hooks'
@@ -55,7 +56,7 @@ export function DayDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save day', '儲存日期失敗'))
+      toast.error(humanizeError(err, ['Failed to save day', '儲存日期失敗']))
     }
   }
 

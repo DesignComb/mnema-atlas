@@ -8,7 +8,7 @@ import { NewCardDialog } from '@/components/cards/NewCardDialog'
 import { NewDeckDialog } from '@/components/app-shell/NewDeckDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { Button } from '@/components/ui/button'
-import { relativeDue } from '@/lib/utils'
+import { relativeDue, humanizeError, untitledLabel } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 
 export function DeckScreen() {
@@ -37,7 +37,7 @@ export function DeckScreen() {
       )
       navigate({ to: '/cards' })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to delete deck', '刪除牌組失敗'))
+      toast.error(humanizeError(err, ['Failed to delete deck', '刪除牌組失敗']))
     }
   }
 
@@ -47,10 +47,10 @@ export function DeckScreen() {
 
   async function newNote() {
     try {
-      const note = await createNote.mutateAsync({ title: 'Untitled', body: '', deck_id: deckId })
+      const note = await createNote.mutateAsync({ title: untitledLabel(), body: '', deck_id: deckId })
       navigate({ to: '/notes/$noteId', params: { noteId: note.id } })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to create note', '建立筆記失敗'))
+      toast.error(humanizeError(err, ['Failed to create note', '建立筆記失敗']))
     }
   }
 

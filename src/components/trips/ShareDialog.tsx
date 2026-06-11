@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useState } from 'react'
 import { Check, Copy, Link2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -52,7 +53,7 @@ export function ShareDialog({
       const link = await createLink.mutateAsync({ itineraryId, hideCosts })
       await copy(link.token)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to create link', '建立連結失敗'))
+      toast.error(humanizeError(err, ['Failed to create link', '建立連結失敗']))
     }
   }
 
@@ -61,7 +62,7 @@ export function ShareDialog({
       await revokeLink.mutateAsync({ id, itineraryId })
       toast.success(t('Link revoked', '已撤銷連結'))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to revoke link', '撤銷連結失敗'))
+      toast.error(humanizeError(err, ['Failed to revoke link', '撤銷連結失敗']))
     }
   }
 

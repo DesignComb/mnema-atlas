@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
@@ -69,7 +70,8 @@ import {
   safeHttps,
   statusOf,
 } from '@/lib/itinerary'
-import { useT } from '@/lib/i18n'
+import { useI18n, useT } from '@/lib/i18n'
+import { fmtDayDate } from '@/lib/tempo-date'
 
 export function TripScreen() {
   const { tripId } = useParams({ strict: false }) as { tripId: string }
@@ -111,7 +113,7 @@ export function TripScreen() {
       toast.success(t('Trip deleted', '已刪除行程'))
       navigate({ to: '/trips' })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to delete trip', '刪除行程失敗'))
+      toast.error(humanizeError(err, ['Failed to delete trip', '刪除行程失敗']))
     }
   }
 
@@ -137,7 +139,7 @@ export function TripScreen() {
       await deleteDay.mutateAsync(day.id)
       toast.success(t('Day removed — activities moved to Unscheduled', '已移除這一天——活動移至未排程'))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to remove day', '移除日期失敗'))
+      toast.error(humanizeError(err, ['Failed to remove day', '移除日期失敗']))
     }
   }
 
@@ -145,7 +147,7 @@ export function TripScreen() {
     try {
       await deleteItem.mutateAsync(item.id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to delete activity', '刪除活動失敗'))
+      toast.error(humanizeError(err, ['Failed to delete activity', '刪除活動失敗']))
     }
   }
 
@@ -666,8 +668,10 @@ function DaySection({
   onDeleteItem: (item: ItineraryItem) => void
   onMoveItem: (index: number, dir: -1 | 1) => void
 }) {
-  const heading = day.label || day.day_date || t(`Day ${dayIndex + 1}`, `第 ${dayIndex + 1} 天`)
-  const sub = day.label && day.day_date ? day.day_date : null
+  // Day headers read as humans say them — 「6月14日(週六)」, not raw ISO (QW7).
+  const { lang } = useI18n()
+  const heading = day.label || (day.day_date ? fmtDayDate(day.day_date, lang) : t(`Day ${dayIndex + 1}`, `第 ${dayIndex + 1} 天`))
+  const sub = day.label && day.day_date ? fmtDayDate(day.day_date, lang) : null
   const costByCur: Record<string, number> = {}
   day.items.forEach((i) => {
     if (i.cost != null) costByCur[i.currency || '?'] = (costByCur[i.currency || '?'] ?? 0) + Number(i.cost)

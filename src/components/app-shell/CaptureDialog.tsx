@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Sparkles } from 'lucide-react'
@@ -34,7 +35,7 @@ export function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       toast.success(t('Saved to your inbox', '已存到暫存區'))
       onOpenChange(false)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('Failed to capture', '暫存失敗'))
+      toast.error(humanizeError(e, ['Failed to capture', '暫存失敗']))
     }
   }
 

@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { useCreateNote, useNotes } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
-import { downloadText, relativeDue } from '@/lib/utils'
+import { downloadText, relativeDue, humanizeError, untitledLabel } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 
 export function NotesScreen() {
@@ -15,10 +15,10 @@ export function NotesScreen() {
 
   async function newNote() {
     try {
-      const note = await createNote.mutateAsync({ title: 'Untitled', body: '' })
+      const note = await createNote.mutateAsync({ title: untitledLabel(), body: '' })
       navigate({ to: '/notes/$noteId', params: { noteId: note.id } })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to create note', '建立筆記失敗'))
+      toast.error(humanizeError(err, ['Failed to create note', '建立筆記失敗']))
     }
   }
 

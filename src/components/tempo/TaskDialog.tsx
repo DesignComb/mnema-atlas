@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useAddReminder, useCreateTask, useSetRecurrence, useSetTaskUrl, useUpdateTask } from '@/lib/hooks'
@@ -199,7 +200,7 @@ export function TaskDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save task', '儲存任務失敗'))
+      toast.error(humanizeError(err, ['Failed to save task', '儲存任務失敗']))
     }
   }
 

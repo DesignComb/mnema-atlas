@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -86,7 +87,7 @@ export function TripDialog({
         navigate({ to: '/trips/$tripId', params: { tripId: row.id } })
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save trip', '儲存行程失敗'))
+      toast.error(humanizeError(err, ['Failed to save trip', '儲存行程失敗']))
     }
   }
 

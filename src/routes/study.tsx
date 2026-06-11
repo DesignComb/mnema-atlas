@@ -11,7 +11,7 @@ import type { Grade } from 'ts-fsrs'
 import type { CardRow } from '@/lib/database.types'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, humanizeError } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 
 const TONE: Record<string, string> = {
@@ -150,7 +150,7 @@ export function StudyScreen() {
       setCram(true)
       setLastGrade(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to load cards', '載入卡片失敗'))
+      toast.error(humanizeError(err, ['Failed to load cards', '載入卡片失敗']))
     } finally {
       setCramLoading(false)
     }

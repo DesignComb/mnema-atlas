@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
@@ -36,6 +37,8 @@ import type { MealPlanRow, PantryItemRow, RecipeRow } from '@/lib/database.types
 import type { RecipeIngredient } from '@shared/schemas'
 import { localTodayISO } from '@/lib/health'
 import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
+import { AiChip, useNewSince } from '@/components/common/AiChip'
+import { ConnectAiLink } from '@/components/common/ConnectAiLink'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { RecipeDialog } from '@/components/kitchen/RecipeDialog'
@@ -75,6 +78,7 @@ export function KitchenScreen() {
 
   const qc = useQueryClient()
   const hiddenKeys = useHiddenKeys()
+  const isNew = useNewSince('kitchen')
   const { data: allRecipes = [], isError: recipesError, refetch: refetchRecipes } = useRecipes()
   const { data: allPantry = [], isError: pantryError, refetch: refetchPantry } = usePantry()
   const { data: allShopping = [], isError: shoppingError, refetch: refetchShopping } = useShopping()
@@ -136,7 +140,7 @@ export function KitchenScreen() {
       { items: ings.map((i) => ({ name: i.name, quantity: i.quantity, recipe_id: r.id })) },
       {
         onSuccess: () => toast.success(t('Added to shopping list', '已加入購物清單')),
-        onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed'),
+        onError: (e) => toast.error(humanizeError(e)),
       },
     )
   }
@@ -145,7 +149,7 @@ export function KitchenScreen() {
     const name = newShop.trim()
     if (!name) return
     setNewShop('')
-    addShopping.mutate({ items: [{ name }] }, { onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed') })
+    addShopping.mutate({ items: [{ name }] }, { onError: (e) => toast.error(humanizeError(e)) })
   }
 
   // Pantry grouped by category.
@@ -210,7 +214,10 @@ export function KitchenScreen() {
                     <div key={r.id} className="group rounded-xl border border-border bg-card p-4">
                       <div className="flex items-start gap-2">
                         <button onClick={() => setRecipeDialog({ open: true, recipe: r })} className="min-w-0 flex-1 text-left">
-                          <p className="truncate text-[15px] font-semibold text-foreground">{r.title}</p>
+                          <p className="flex items-center gap-1.5 text-[15px] font-semibold text-foreground">
+                            <span className="truncate">{r.title}</span>
+                            {r.created_via === 'mcp' ? <AiChip isNew={isNew(r.created_at)} /> : null}
+                          </p>
                           <p className="truncate text-[12.5px] text-muted-foreground">
                             {[
                               r.servings ? t(`${r.servings} servings`, `${r.servings} 份`) : '',
@@ -250,7 +257,12 @@ export function KitchenScreen() {
                 icon={<Soup className="size-5" />}
                 title={t('No recipes yet', '還沒有食譜')}
                 description={t('Add one, or tell your AI “幫我存這份食譜”.', '新增一份,或跟你的 AI 說「幫我存這份食譜」。')}
-                action={<Button variant="brand" size="sm" onClick={() => setRecipeDialog({ open: true })}><Plus className="size-4" /> {t('New recipe', '新增食譜')}</Button>}
+                action={
+                  <div className="flex flex-col items-center gap-2">
+                    <Button variant="brand" size="sm" onClick={() => setRecipeDialog({ open: true })}><Plus className="size-4" /> {t('New recipe', '新增食譜')}</Button>
+                    <ConnectAiLink />
+                  </div>
+                }
               />
             )
           ) : null}
@@ -292,7 +304,19 @@ export function KitchenScreen() {
                 ))}
               </div>
             ) : (
-              <EmptyState icon={<Carrot className="size-5" />} title={t('Pantry is empty', '庫存是空的')} description={t('Track what you have so your AI can suggest meals.', '記下現有食材,讓 AI 幫你想菜。')} />
+              <EmptyState
+                icon={<Carrot className="size-5" />}
+                title={t('Pantry is empty', '庫存是空的')}
+                description={t('Track what you have so your AI can suggest meals.', '記下現有食材,讓 AI 幫你想菜。')}
+                action={
+                  <div className="flex flex-col items-center gap-2">
+                    <Button variant="brand" size="sm" onClick={() => setPantryDialog({ open: true })}>
+                      <Plus className="size-4" /> {t('Add item', '新增項目')}
+                    </Button>
+                    <ConnectAiLink />
+                  </div>
+                }
+              />
             )
           ) : null}
 
@@ -347,7 +371,12 @@ export function KitchenScreen() {
                   ))}
                 </div>
               ) : (
-                <EmptyState icon={<ShoppingCart className="size-5" />} title={t('Nothing to buy', '沒有要買的東西')} description={t('Add items, or fill it from a recipe.', '新增項目,或從食譜帶入。')} />
+                <EmptyState
+                  icon={<ShoppingCart className="size-5" />}
+                  title={t('Nothing to buy', '沒有要買的東西')}
+                  description={t('Add items above, or fill it from a recipe.', '在上方新增項目,或從食譜帶入。')}
+                  action={<ConnectAiLink />}
+                />
               )}
             </div>
           ) : null}

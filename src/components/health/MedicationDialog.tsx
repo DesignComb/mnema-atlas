@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateMedication, useUpdateMedication } from '@/lib/hooks'
@@ -77,7 +78,7 @@ export function MedicationDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save', '儲存失敗'))
+      toast.error(humanizeError(err, ['Failed to save', '儲存失敗']))
     }
   }
 

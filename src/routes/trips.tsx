@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { CalendarRange, MapPin, Plus, Sparkles, Map as MapIcon } from 'lucide-react'
@@ -49,7 +50,7 @@ export function TripsScreen() {
       toast.success(t('Sample trip added', '已加入範例行程'))
       navigate({ to: '/trips/$tripId', params: { tripId: tree.id } })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to add sample trip', '加入範例行程失敗'))
+      toast.error(humanizeError(err, ['Failed to add sample trip', '加入範例行程失敗']))
     }
   }
 

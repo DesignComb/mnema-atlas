@@ -8,7 +8,7 @@ import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Capacitor } from '@capacitor/core'
-import { cn, relativeDue } from '@/lib/utils'
+import { cn, relativeDue, humanizeError } from '@/lib/utils'
 import { useDigestPrefs, useSetDigestPrefs, useSetHabitReminderPref } from '@/lib/hooks'
 import { formatVersion, checkForUpdate, applyUpdate } from '@/lib/ota'
 import { useT } from '@/lib/i18n'
@@ -67,7 +67,7 @@ function ReminderCard() {
         toast.success(t('Reminders enabled', '已開啟提醒'))
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('Could not change reminders', '無法變更提醒'))
+      toast.error(humanizeError(e, ['Could not change reminders', '無法變更提醒']))
     } finally {
       setBusy(false)
     }
@@ -211,7 +211,7 @@ export function IntegrationsScreen() {
       setName('')
       qc.invalidateQueries({ queryKey: ['api-keys'] })
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to create key', '建立金鑰失敗')),
+    onError: (e) => toast.error(humanizeError(e, ['Failed to create key', '建立金鑰失敗'])),
   })
   const revoke = useMutation({
     mutationFn: (id: string) => revokeApiKey(id),

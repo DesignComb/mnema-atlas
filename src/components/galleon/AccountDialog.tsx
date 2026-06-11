@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateAccount, useUpdateAccount } from '@/lib/hooks'
@@ -58,7 +59,7 @@ export function AccountDialog({
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('Failed to save account', '儲存帳戶失敗'))
+      toast.error(humanizeError(err, ['Failed to save account', '儲存帳戶失敗']))
     }
   }
 

@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
@@ -30,9 +31,12 @@ import {
 } from '@/lib/hooks'
 import { deleteTask as apiDeleteTask } from '@/lib/api'
 import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
-import { useT } from '@/lib/i18n'
+import { useI18n } from '@/lib/i18n'
 import type { TaskListRow, TaskRow } from '@/lib/database.types'
 import { computeOccurrence, habitTodayISO, shortRecurrenceLabel } from '@/lib/recurrence'
+import { relativeDayLabel } from '@/lib/tempo-date'
+import { AiChip, useNewSince } from '@/components/common/AiChip'
+import { ConnectAiLink } from '@/components/common/ConnectAiLink'
 import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -81,7 +85,7 @@ function cmpDate(a: string | null, b: string | null): number {
 }
 
 export function TempoScreen() {
-  const t = useT()
+  const { t, lang } = useI18n()
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as { view?: ViewKey; list?: string; new?: 'list'; capture?: string }
   // A shared-in capture (?capture=…) always lands in the Capture view so it gets filed.
@@ -98,6 +102,7 @@ export function TempoScreen() {
 
   const qc = useQueryClient()
   const hiddenKeys = useHiddenKeys()
+  const isNew = useNewSince('tempo')
   const createTask = useCreateTask()
   const complete = useCompleteTask()
   const uncomplete = useUncompleteTask()
@@ -170,7 +175,7 @@ export function TempoScreen() {
         kind: view === 'habits' ? 'habit' : 'task',
       })
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('Failed to add task', '新增任務失敗'))
+      toast.error(humanizeError(e, ['Failed to add task', '新增任務失敗']))
     }
   }
 
@@ -321,6 +326,16 @@ export function TempoScreen() {
                           '在上方新增任務,或讓連接的 AI 幫你新增與整理。',
                         )
                   }
+                  action={
+                    <div className="flex flex-col items-center gap-2">
+                      {!showDone ? (
+                        <Button variant="brand" size="sm" onClick={() => setTaskDialog({ open: true })}>
+                          <Plus className="size-4" /> {view === 'habits' ? t('New habit', '新增習慣') : t('New task', '新增任務')}
+                        </Button>
+                      ) : null}
+                      <ConnectAiLink />
+                    </div>
+                  }
                 />
               ) : view === 'habits' ? (
                 <div className="grid gap-2.5 sm:grid-cols-2">
@@ -347,6 +362,8 @@ export function TempoScreen() {
                       onEdit={() => setTaskDialog({ open: true, task })}
                       onDelete={() => removeTask(task)}
                       t={t}
+                      lang={lang}
+                      isNew={isNew}
                       today={today}
                       dragHandle={handle}
                     />
@@ -369,6 +386,8 @@ export function TempoScreen() {
                           onEdit={() => setTaskDialog({ open: true, task })}
                           onDelete={() => removeTask(task)}
                           t={t}
+                          lang={lang}
+                          isNew={isNew}
                           today={today}
                         />
                       </motion.div>
@@ -418,7 +437,7 @@ export function TempoScreen() {
           delList.mutate(list.id, {
             onSuccess: () => navigate({ to: '/tempo', search: (p) => ({ ...p, list: undefined }), replace: true }),
             onError: (e) =>
-              toast.error(e instanceof Error ? e.message : t('Failed to delete list', '刪除清單失敗')),
+              toast.error(humanizeError(e, ['Failed to delete list', '刪除清單失敗'])),
           })
         }}
       />
@@ -432,6 +451,8 @@ function TaskRowItem({
   onEdit,
   onDelete,
   t,
+  lang,
+  isNew,
   today,
   dragHandle,
 }: {
@@ -440,6 +461,8 @@ function TaskRowItem({
   onEdit: () => void
   onDelete: () => void
   t: (en: string, zh: string) => string
+  lang: 'en' | 'zh'
+  isNew: (createdAt: string | null | undefined) => boolean
   today: string
   dragHandle?: ReactNode
 }) {
@@ -470,12 +493,13 @@ function TaskRowItem({
           <span className={`truncate text-[14.5px] ${done ? 'text-muted-foreground line-through' : 'font-medium text-foreground'}`}>
             {task.title}
           </span>
+          {task.created_via === 'mcp' ? <AiChip isNew={isNew(task.created_at)} /> : null}
         </div>
         {task.due_date || task.recurrence_rule || (isHabit && task.current_streak > 0) || (task.labels ?? []).length ? (
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-muted-foreground">
             {task.due_date ? (
-              <span className={`inline-flex items-center gap-1 ${overdue ? 'text-red-500' : ''}`}>
-                <CalendarDays className="size-3" /> {task.due_date}
+              <span className={`inline-flex items-center gap-1 ${overdue ? 'text-red-500 dark:text-red-400' : ''}`}>
+                <CalendarDays className="size-3" /> {relativeDayLabel(task.due_date, today, lang)}
                 {task.due_time ? ` ${task.due_time.slice(0, 5)}` : ''}
               </span>
             ) : null}

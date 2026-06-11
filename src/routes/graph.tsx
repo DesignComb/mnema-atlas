@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -234,7 +235,7 @@ function GraphCanvas({
             { source_note_id: linkSource, target_note_id: n.id, link_type: 'related', weight: 1 },
             {
               onSuccess: () => toast.success(t(`Linked “${src?.title ?? '…'}” ↔ “${n.title}”`, `已連結「${src?.title ?? '…'}」↔「${n.title}」`)),
-              onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to link', '建立關聯失敗')),
+              onError: (e) => toast.error(humanizeError(e, ['Failed to link', '建立關聯失敗'])),
             },
           )
           setLinkSource(null)
@@ -257,7 +258,7 @@ function GraphCanvas({
         { a: s.id, b: tg.id },
         {
           onSuccess: () => toast.success(t('Association removed', '已移除關聯')),
-          onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to remove', '移除失敗')),
+          onError: (e) => toast.error(humanizeError(e, ['Failed to remove', '移除失敗'])),
         },
       )
     },
@@ -486,7 +487,7 @@ function GraphCanvas({
                     { source_note_id: focusNode.id, target_note_id: tid, link_type: 'related', weight: 1 },
                     {
                       onSuccess: () => toast.success(t('Connected', '已連結')),
-                      onError: (err) => toast.error(err instanceof Error ? err.message : t('Failed to link', '建立關聯失敗')),
+                      onError: (err) => toast.error(humanizeError(err, ['Failed to link', '建立關聯失敗'])),
                     },
                   )
                 }}

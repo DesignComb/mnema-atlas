@@ -5,7 +5,7 @@ import { Check, Cloud, Copy, Download, Layers, Loader2, MoreHorizontal, Plus, Sp
 import { toast } from 'sonner'
 import * as api from '@/lib/api'
 import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useUpdateNote } from '@/lib/hooks'
-import { downloadText, safeFilename } from '@/lib/utils'
+import { downloadText, safeFilename, humanizeError } from '@/lib/utils'
 import { TagEditor } from '@/components/editor/TagEditor'
 import {
   DropdownMenu,
@@ -109,7 +109,7 @@ export function NoteScreen() {
           },
           onError: (err) => {
             setStatus('idle')
-            toast.error(err instanceof Error ? err.message : t('Failed to save', '儲存失敗'))
+            toast.error(humanizeError(err, ['Failed to save', '儲存失敗']))
           },
         },
       )
@@ -193,7 +193,7 @@ export function NoteScreen() {
                   toast.success(t('Note deleted', '已刪除筆記'))
                   navigate({ to: '/notes' })
                 } catch (err) {
-                  toast.error(err instanceof Error ? err.message : t('Failed to delete note', '刪除筆記失敗'))
+                  toast.error(humanizeError(err, ['Failed to delete note', '刪除筆記失敗']))
                 }
               }}
             >

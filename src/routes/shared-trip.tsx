@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { BookOpenCheck, CalendarRange, ExternalLink, Eye, MapPin } from 'lucide-react'
 import { getSharedItinerary, type ItineraryItem } from '@/lib/api'
 import { CATEGORY_META, categoryOf, fmtCost, fmtDateRange, fmtTimeRange, mapsUrl, safeHttps } from '@/lib/itinerary'
-import { useT } from '@/lib/i18n'
+import { fmtDayDate } from '@/lib/tempo-date'
+import { useI18n, useT } from '@/lib/i18n'
 
 export function SharedTripScreen() {
   const { token } = useParams({ strict: false }) as { token: string }
@@ -97,6 +98,7 @@ function SharedTripBody({
   data: NonNullable<Awaited<ReturnType<typeof getSharedItinerary>>>
   t: Tr
 }) {
+  const { lang } = useI18n()
   const dates = fmtDateRange(data.start_date, data.end_date)
   const subtitle = [data.destination, dates].filter(Boolean).join(' · ')
   const costEntries = Object.entries(data.cost_by_currency ?? {})
@@ -142,8 +144,10 @@ function SharedTripBody({
               {i + 1}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{day.label || day.day_date || t(`Day ${i + 1}`, `第 ${i + 1} 天`)}</p>
-              {day.label && day.day_date ? <p className="text-[11px] text-muted-foreground">{day.day_date}</p> : null}
+              <p className="truncate text-sm font-semibold">
+                {day.label || (day.day_date ? fmtDayDate(day.day_date, lang) : t(`Day ${i + 1}`, `第 ${i + 1} 天`))}
+              </p>
+              {day.label && day.day_date ? <p className="text-[11px] text-muted-foreground">{fmtDayDate(day.day_date, lang)}</p> : null}
             </div>
           </div>
           <div className="divide-y divide-border/60">

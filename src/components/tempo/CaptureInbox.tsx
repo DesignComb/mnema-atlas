@@ -1,3 +1,4 @@
+import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, RotateCcw, Sparkles, Trash2, X } from 'lucide-react'
@@ -77,7 +78,7 @@ export function CaptureInbox({
       { raw_text: text, source: 'share' },
       {
         onSuccess: () => toast.success(t('Added to your inbox', '已加入暫存區')),
-        onError: (e) => toast.error(e instanceof Error ? e.message : t('Failed to capture', '暫存失敗')),
+        onError: (e) => toast.error(humanizeError(e, ['Failed to capture', '暫存失敗'])),
       },
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,7 +91,7 @@ export function CaptureInbox({
     try {
       await create.mutateAsync({ raw_text: text, source: 'ui' })
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('Failed to capture', '暫存失敗'))
+      toast.error(humanizeError(e, ['Failed to capture', '暫存失敗']))
     }
   }
 
