@@ -103,7 +103,9 @@ export function HabitCheckButton({
     >
       {checked ? (
         <motion.span
-          initial={{ scale: 0.4 }}
+          // Spring only on an in-session check (optimistic is non-null then) —
+          // already-checked habits must mount statically on page load.
+          initial={optimistic === true ? { scale: 0.4 } : false}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 520, damping: 18 }}
           className="inline-flex"

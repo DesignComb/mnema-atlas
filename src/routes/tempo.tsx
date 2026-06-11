@@ -201,9 +201,11 @@ export function TempoScreen() {
       const next = await computeOccurrence(task.recurrence_rule, base, false)
       complete.mutate({ taskId: task.id, nextOccurrence: next ?? undefined })
     } else {
-      complete.mutate({ taskId: task.id })
+      // Keep the promise so Undo sequences AFTER the complete lands — otherwise
+      // a fast Undo could reach the server before the complete it reverts.
+      const completed = complete.mutateAsync({ taskId: task.id }).catch(() => {})
       toast(t('Completed', '已完成'), {
-        action: { label: t('Undo', '復原'), onClick: () => uncomplete.mutate(task.id) },
+        action: { label: t('Undo', '復原'), onClick: () => void completed.then(() => uncomplete.mutate(task.id)) },
         duration: 5000,
       })
     }
@@ -354,7 +356,7 @@ export function TempoScreen() {
                   items={sorted}
                   onReorder={(ids) => reorder.mutate({ listId: reorderListId, taskIds: ids })}
                   className="overflow-hidden rounded-xl border border-border bg-card shadow-soft"
-                  itemClassName="bg-card"
+                  itemClassName="bg-card border-b border-border/60 last:border-b-0"
                   renderItem={(task, handle) => (
                     <TaskRowItem
                       task={task}
@@ -378,7 +380,9 @@ export function TempoScreen() {
                         layout
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="overflow-hidden"
+                        // Separators live on this wrapper: the row's own div is
+                        // always :last-child inside it, so last: wouldn't work there.
+                        className="overflow-hidden border-b border-border/60 last:border-b-0"
                       >
                         <TaskRowItem
                           task={task}
@@ -471,7 +475,9 @@ function TaskRowItem({
   const overdue = !done && task.due_date != null && task.due_date < today
 
   return (
-    <div className="group flex items-start gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
+    // The row separator lives on the PARENT (motion wrapper / Reorder.Item) —
+    // this div is always :last-child inside it, so last: would kill every line.
+    <div className="group flex items-start gap-3 px-3 py-2.5 sm:px-4">
       {dragHandle ? <div className="-ml-1 mt-0.5">{dragHandle}</div> : null}
       {isHabit ? (
         <div className="mt-0.5">
@@ -499,8 +505,7 @@ function TaskRowItem({
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-muted-foreground">
             {task.due_date ? (
               <span className={`inline-flex items-center gap-1 ${overdue ? 'text-red-500 dark:text-red-400' : ''}`}>
-                <CalendarDays className="size-3" /> {relativeDayLabel(task.due_date, today, lang)}
-                {task.due_time ? ` ${task.due_time.slice(0, 5)}` : ''}
+                <CalendarDays className="size-3" /> {relativeDayLabel(task.due_date, today, lang, task.due_time)}
               </span>
             ) : null}
             {task.recurrence_rule ? (

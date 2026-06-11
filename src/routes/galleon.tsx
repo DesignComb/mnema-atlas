@@ -139,6 +139,9 @@ export function GalleonScreen() {
   const [splitDialog, setSplitDialog] = useState(false)
   const [subDialog, setSubDialog] = useState<{ open: boolean; subscription?: SubscriptionRow }>({ open: false })
   const [confirmLedgerDelete, setConfirmLedgerDelete] = useState(false)
+  // Stamped once per /galleon visit — section switches keep this screen mounted,
+  // so AI "new" dots survive flipping between Overview/Transactions.
+  const isNew = useNewSince('galleon')
   const runDue = useRunDueRecurring()
   const postSubs = usePostDueSubscriptions()
 
@@ -299,7 +302,7 @@ export function GalleonScreen() {
           {!ledger ? (
             <div className="h-40 animate-pulse rounded-xl bg-card" />
           ) : view === 'overview' ? (
-            <Overview ledger={ledger} onEditTxn={(txn) => setTxnDialog({ open: true, txn })} onSeeAll={() => setSearch({ view: 'transactions' })} t={t} />
+            <Overview ledger={ledger} onEditTxn={(txn) => setTxnDialog({ open: true, txn })} onSeeAll={() => setSearch({ view: 'transactions' })} t={t} isNew={isNew} />
           ) : view === 'accounts' ? (
             <Accounts
               ledger={ledger}
@@ -330,7 +333,7 @@ export function GalleonScreen() {
               t={t}
             />
           ) : (
-            <Transactions ledger={ledger} onEditTxn={(txn) => setTxnDialog({ open: true, txn })} t={t} />
+            <Transactions ledger={ledger} onEditTxn={(txn) => setTxnDialog({ open: true, txn })} t={t} isNew={isNew} />
           )}
         </div>
       </div>
@@ -404,11 +407,25 @@ function amountSign(type: string): string {
 
 type Tr = (en: string, zh: string) => string
 
-function Overview({ ledger, onEditTxn, onSeeAll, t }: { ledger: LedgerDetail; onEditTxn: (t: TransactionRow) => void; onSeeAll: () => void; t: Tr }) {
+function Overview({
+  ledger,
+  onEditTxn,
+  onSeeAll,
+  t,
+  isNew,
+}: {
+  ledger: LedgerDetail
+  onEditTxn: (t: TransactionRow) => void
+  onSeeAll: () => void
+  t: Tr
+  isNew: (createdAt: string | null | undefined) => boolean
+}) {
   const [cursor, setCursor] = useState(() => new Date())
   const range = useMemo(() => monthRange(cursor), [cursor])
   const { data: summary } = useLedgerSummary(ledger.id, range.from, range.to)
-  const { data: recent } = useLedgerTransactions({ ledgerId: ledger.id, from: range.from, to: range.to, limit: 8 })
+  const { data: recentAll } = useLedgerTransactions({ ledgerId: ledger.id, from: range.from, to: range.to, limit: 8 })
+  const hiddenKeys = useHiddenKeys()
+  const recent = (recentAll ?? []).filter((tx) => !hiddenKeys.has(`txn:${tx.id}`))
 
   const income = Number(summary?.income ?? 0)
   const expense = Number(summary?.expense ?? 0)
@@ -500,8 +517,8 @@ function Overview({ ledger, onEditTxn, onSeeAll, t }: { ledger: LedgerDetail; on
             {t('See all', '看全部')}
           </button>
         </div>
-        {(recent ?? []).length ? (
-          (recent ?? []).map((tx) => <TxnRow key={tx.id} tx={tx} ledger={ledger} onEdit={() => onEditTxn(tx)} t={t} />)
+        {recent.length ? (
+          recent.map((tx) => <TxnRow key={tx.id} tx={tx} ledger={ledger} onEdit={() => onEditTxn(tx)} t={t} isNew={isNew} />)
         ) : (
           <p className="px-4 py-6 text-center text-[12.5px] text-muted-foreground/70">{t('No transactions this month.', '本月還沒有交易。')}</p>
         )}
@@ -510,12 +527,21 @@ function Overview({ ledger, onEditTxn, onSeeAll, t }: { ledger: LedgerDetail; on
   )
 }
 
-function Transactions({ ledger, onEditTxn, t }: { ledger: LedgerDetail; onEditTxn: (t: TransactionRow) => void; t: Tr }) {
+function Transactions({
+  ledger,
+  onEditTxn,
+  t,
+  isNew,
+}: {
+  ledger: LedgerDetail
+  onEditTxn: (t: TransactionRow) => void
+  t: Tr
+  isNew: (createdAt: string | null | undefined) => boolean
+}) {
   const { lang } = useI18n()
   const { data: txns, isLoading, isError, refetch } = useLedgerTransactions({ ledgerId: ledger.id, limit: 300 })
   const { data: splitIds } = useSplitTxnIds(ledger.id)
   const hiddenKeys = useHiddenKeys()
-  const isNew = useNewSince('galleon')
   const splitSet = new Set(splitIds ?? [])
   const visible = (txns ?? []).filter((tx) => !hiddenKeys.has(`txn:${tx.id}`))
   if (isLoading) return <div className="h-40 animate-pulse rounded-xl bg-card" />

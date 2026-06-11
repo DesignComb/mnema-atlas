@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
 import { useCreateNote, useDueReminders } from '@/lib/hooks'
-import { cn, untitledLabel } from '@/lib/utils'
+import { cn, humanizeError, untitledLabel } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 import { MobileNavContext } from '@/lib/mobile-nav'
 import { saveLastRoute } from '@/lib/last-route'
@@ -66,7 +66,7 @@ export function AppLayout() {
       const note = await createNote.mutateAsync({ title: untitledLabel(), body: '' })
       navigate({ to: '/notes/$noteId', params: { noteId: note.id } })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create note')
+      toast.error(humanizeError(err, ['Failed to create note', '建立筆記失敗']))
     }
   }, [createNote, navigate])
 

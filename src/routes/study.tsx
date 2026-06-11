@@ -39,8 +39,14 @@ export function StudyScreen() {
   const [unsaved, setUnsaved] = useState(0) // reviews that failed every retry
   const [cram, setCram] = useState(false) // studying ahead (not-yet-due cards)
   const [cramLoading, setCramLoading] = useState(false)
-  // One-level undo (A12): the pre-grade row + where it sat in the queue.
-  const [lastGrade, setLastGrade] = useState<{ row: CardRow; index: number; requeued: boolean } | null>(null)
+  // One-level undo (A12): the pre-grade row, where it sat in the queue, and the
+  // grade's (settled) write promise so the undo can sequence after it.
+  const [lastGrade, setLastGrade] = useState<{
+    row: CardRow
+    index: number
+    requeued: boolean
+    write: Promise<unknown>
+  } | null>(null)
 
   // Reset the whole session when the filter (deck or tag) changes — the route
   // component is reused across /study, /study/$deckId, and /study?tag=…
@@ -69,7 +75,9 @@ export function StudyScreen() {
       const { card, log } = grade(current, rating)
       // Optimistically advance; persist in the background with retry so a blip
       // doesn't silently lose the grade. If every retry fails, flag it loudly.
-      recordReviewSafe(current.id, card, log).catch((err) => {
+      // Keep the (settled) promise so an undo can sequence AFTER this write —
+      // otherwise a retrying grade write could land after the restore.
+      const write = recordReviewSafe(current.id, card, log).catch((err) => {
         setUnsaved((u) => u + 1)
         toast.error(
           err instanceof Error
@@ -85,7 +93,7 @@ export function StudyScreen() {
         const updated = { ...current, ...card } as CardRow
         setQueue((q) => (q ? [...q, updated] : q))
       }
-      setLastGrade({ row: current, index: idx, requeued })
+      setLastGrade({ row: current, index: idx, requeued, write })
       setReviewed((r) => r + 1)
       setFlipped(false)
       setIdx((i) => i + 1)
@@ -96,7 +104,7 @@ export function StudyScreen() {
   // A12: one-level undo — a misclick must not silently rewrite FSRS state.
   const undoLast = useCallback(() => {
     if (!lastGrade) return
-    const { row, index, requeued } = lastGrade
+    const { row, index, requeued, write } = lastGrade
     setLastGrade(null)
     // Restore the server to the pre-grade snapshot. record_review always writes
     // a review_logs row — rating 0 (Manual) marks it as an undo, not a review.
@@ -124,9 +132,13 @@ export function StudyScreen() {
       learning_steps: row.learning_steps,
       review: new Date().toISOString(),
     }
-    recordReviewSafe(row.id, cardJson, undoLog).catch(() => {
-      toast.error(t('Couldn’t undo on the server — the grade may stick.', '伺服器端復原失敗,原評分可能仍生效。'))
-    })
+    // Sequence the restore after the grade write settles, so a retrying grade
+    // request can never land after (and overwrite) the undo.
+    void write
+      .then(() => recordReviewSafe(row.id, cardJson, undoLog))
+      .catch(() => {
+        toast.error(t('Couldn’t undo on the server — the grade may stick.', '伺服器端復原失敗,原評分可能仍生效。'))
+      })
     if (requeued) setQueue((q) => (q ? q.slice(0, -1) : q))
     setReviewed((r) => Math.max(0, r - 1))
     setFlipped(false)
@@ -169,7 +181,12 @@ export function StudyScreen() {
   // Z/U undoes the last grade (works on the done screen too).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // Never react to typing in an input (⌘K palette, capture dialog, …) —
+      // window-level shortcuts must not swallow text or fire side effects.
+      const el = e.target as HTMLElement | null
+      if (el?.closest('input, textarea, select, [contenteditable="true"]')) return
       if ((e.key === 'z' || e.key === 'u') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (!lastGrade) return
         e.preventDefault()
         undoLast()
         return
@@ -193,7 +210,7 @@ export function StudyScreen() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [current, flipped, gradeCurrent, undoLast])
+  }, [current, flipped, gradeCurrent, undoLast, lastGrade])
 
   const hints: IntervalHint[] = current && flipped ? previewIntervals(current) : []
 

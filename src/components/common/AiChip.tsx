@@ -10,16 +10,22 @@ import { useT } from '@/lib/i18n'
  */
 export function AiChip({ isNew = false, className }: { isNew?: boolean; className?: string }) {
   const t = useT()
+  const label = isNew
+    ? t('Added by your AI since your last visit', '你的 AI 在你上次來之後新增的')
+    : t('Added by your AI', '由你的 AI 新增')
   return (
     <span
       className={cn(
         'relative inline-flex shrink-0 items-center gap-0.5 rounded-full bg-brand-muted px-1.5 py-px text-[10px] font-medium text-brand',
         className,
       )}
-      title={isNew ? t('Added by your AI since your last visit', '你的 AI 在你上次來之後新增的') : t('Added by your AI', '由你的 AI 新增')}
+      title={label}
     >
-      <Sparkles className="size-2.5" />
-      AI
+      <Sparkles className="size-2.5" aria-hidden />
+      {/* Visible chip says "AI"; the full provenance (incl. the new-since state
+          the dot conveys by colour) is in the DOM for screen readers. */}
+      <span aria-hidden>AI</span>
+      <span className="sr-only">{label}</span>
       {isNew ? <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-brand" aria-hidden /> : null}
     </span>
   )

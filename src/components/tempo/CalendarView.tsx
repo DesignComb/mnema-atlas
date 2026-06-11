@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarRange, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCheckInsInRange, useScheduleTask } from '@/lib/hooks'
 import { useHolidays } from '@/lib/holidays'
-import { useT } from '@/lib/i18n'
+import { useI18n, useT } from '@/lib/i18n'
 import type { TaskRow } from '@/lib/database.types'
 import type { CheckInRow } from '@/lib/api'
 import { DayDetailSheet } from './DayDetailSheet'
@@ -16,6 +16,7 @@ import {
 import {
   addDays,
   dayNum,
+  fmtDayDate,
   minToTime,
   monthGrid,
   monthOf,
@@ -257,6 +258,7 @@ function MonthGrid({
   onEdit: (t: TaskRow) => void
   onDayClick: (d: string) => void
 }) {
+  const { lang } = useI18n()
   const days = monthGrid(yearOf(cursor), monthOf(cursor))
   const curMonth = monthOf(cursor)
   return (
@@ -283,19 +285,11 @@ function MonthGrid({
           return (
             <div
               key={d}
-              // role+tabIndex instead of <button>: the cell contains task chips,
-              // and buttons can't nest. The global :focus-visible outline applies.
-              role="button"
-              tabIndex={0}
-              aria-label={d}
+              // Mouse/touch affordance only — the day-number BUTTON below is the
+              // keyboard/SR entry point. (role="button" here would flatten the
+              // cell's content for ATs and hijack Enter/Space from the chips.)
               onClick={() => onDayClick(d)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  onDayClick(d)
-                }
-              }}
-              className={`flex min-h-0 cursor-pointer flex-col overflow-hidden border-t border-r border-border/40 p-1 transition hover:bg-muted/30 focus-visible:-outline-offset-2 ${
+              className={`flex min-h-0 cursor-pointer flex-col overflow-hidden border-t border-r border-border/40 p-1 transition hover:bg-muted/30 ${
                 isWeekend(d) ? 'bg-muted/20' : ''
               } ${inMonth ? '' : 'opacity-45'}`}
             >
@@ -307,13 +301,26 @@ function MonthGrid({
                 ) : (
                   <span />
                 )}
-                <span
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDayClick(d)
+                  }}
+                  aria-label={[
+                    fmtDayDate(d, lang, today),
+                    holiday,
+                    done.length ? t(`${done.length} done`, `完成 ${done.length}`) : null,
+                    items.length ? t(`${items.length} tasks`, `${items.length} 項任務`) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
                   className={`flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${
                     isToday ? 'bg-brand text-brand-foreground' : numClass(d, Boolean(holiday))
                   }`}
                 >
                   {dayNum(d)}
-                </span>
+                </button>
               </div>
               <div className="min-h-0 flex-1 space-y-0.5 overflow-hidden">
                 {done.length > 0 ? (

@@ -25,10 +25,12 @@ import {
   useMealPlans,
   useNewNote,
   useNotes,
+  useRecipes,
   useSeedSample,
   useTasks,
   useUncompleteTask,
 } from '@/lib/hooks'
+import { useHiddenKeys } from '@/lib/undoable'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { HabitCheckButton } from '@/components/tempo/HabitCheckButton'
@@ -245,12 +247,16 @@ function TodayAcrossSpaces() {
   const { data: tasks } = useTasks({ status: 'todo', limit: 500 })
   const { data: checkins } = useCheckInsInRange(addDaysIso(todayIso, -1), addDaysIso(todayIso, 1))
   const { data: meals = [] } = useMealPlans(todayIso, todayIso)
+  const { data: recipes = [] } = useRecipes()
+  const hiddenKeys = useHiddenKeys()
   const complete = useCompleteTask()
   const uncomplete = useUncompleteTask()
 
-  const dueToday = todayTasks(tasks ?? [], todayIso).slice(0, 5)
+  // Respect pending undoable deletes — a row mid-grace must not resurface here.
+  const visible = (tasks ?? []).filter((x) => !hiddenKeys.has(`task:${x.id}`))
+  const dueToday = todayTasks(visible, todayIso).slice(0, 5)
   const done = new Set((checkins ?? []).map((c) => `${c.task_id}|${c.checkin_date}`))
-  const habitsLeft = (tasks ?? [])
+  const habitsLeft = visible
     .filter((h) => h.kind === 'habit' && !done.has(`${h.id}|${habitTodayISO(h.reset_time, h.tz)}`))
     .slice(0, 4)
 
@@ -263,9 +269,11 @@ function TodayAcrossSpaces() {
       const next = await computeOccurrence(task.recurrence_rule, base, false)
       complete.mutate({ taskId: task.id, nextOccurrence: next ?? undefined })
     } else {
-      complete.mutate({ taskId: task.id })
+      // Keep the promise so Undo sequences AFTER the complete lands — otherwise
+      // a fast Undo could reach the server before the complete it reverts.
+      const completed = complete.mutateAsync({ taskId: task.id }).catch(() => {})
       toast(t('Completed', '已完成'), {
-        action: { label: t('Undo', '復原'), onClick: () => uncomplete.mutate(task.id) },
+        action: { label: t('Undo', '復原'), onClick: () => void completed.then(() => uncomplete.mutate(task.id)) },
         duration: 5000,
       })
     }
@@ -361,7 +369,9 @@ function TodayAcrossSpaces() {
               <span className="w-12 shrink-0 text-[12.5px] text-muted-foreground">
                 {t(...(SLOT_LABEL[p.slot] ?? [p.slot, p.slot]))}
               </span>
-              <span className="min-w-0 flex-1 truncate text-foreground">{p.title ?? '—'}</span>
+              <span className="min-w-0 flex-1 truncate text-foreground">
+                {recipes.find((r) => r.id === p.recipe_id)?.title ?? p.title ?? '—'}
+              </span>
             </div>
           ))}
         </div>

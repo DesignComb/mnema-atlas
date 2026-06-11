@@ -1,4 +1,4 @@
-import { untitledLabel } from '@/lib/utils'
+import { humanizeError, untitledLabel } from '@/lib/utils'
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -209,7 +209,7 @@ export function useSeedSample() {
       toast.success('Sample deck added — try a review!')
       navigate({ to: '/study/$deckId', params: { deckId } })
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to add sample deck'),
+    onError: (e) => toast.error(humanizeError(e, ['Failed to add sample deck', '加入範例牌組失敗'])),
   })
 }
 
@@ -1160,7 +1160,7 @@ export function useNewNote() {
         const note = await create.mutateAsync({ title: untitledLabel(), body: '' })
         navigate({ to: '/notes/$noteId', params: { noteId: note.id } })
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to create note')
+        toast.error(humanizeError(e, ['Failed to create note', '建立筆記失敗']))
       }
     },
   }

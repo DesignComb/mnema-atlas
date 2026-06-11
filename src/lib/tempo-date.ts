@@ -69,15 +69,17 @@ export function fmtDayDate(iso: string, lang: 'en' | 'zh', today: string = today
 
 /**
  * Bilingual relative day label (QW7): Today/Tomorrow/Yesterday, a weekday for
- * the coming week, otherwise a short date. Overdue ≥2 days appends "· Nd".
+ * the coming week, otherwise a short date. Overdue ≥2 days appends "· Nd late".
+ * Pass `time` ('HH:MM[:SS]') so it lands with the date, BEFORE any suffix.
  */
-export function relativeDayLabel(iso: string, today: string, lang: 'en' | 'zh'): string {
+export function relativeDayLabel(iso: string, today: string, lang: 'en' | 'zh', time?: string | null): string {
+  const tt = time ? ` ${time.slice(0, 5)}` : ''
   const diff = dayDiff(iso, today)
-  if (diff === 0) return lang === 'zh' ? '今天' : 'Today'
-  if (diff === 1) return lang === 'zh' ? '明天' : 'Tomorrow'
-  if (diff === -1) return lang === 'zh' ? '昨天' : 'Yesterday'
-  if (diff > 1 && diff <= 6) return lang === 'zh' ? WD_ZH_SHORT[weekday(iso)] : WD_EN_SHORT[weekday(iso)]
-  const base = fmtDayDate(iso, lang, today)
+  if (diff === 0) return (lang === 'zh' ? '今天' : 'Today') + tt
+  if (diff === 1) return (lang === 'zh' ? '明天' : 'Tomorrow') + tt
+  if (diff === -1) return (lang === 'zh' ? '昨天' : 'Yesterday') + tt
+  if (diff > 1 && diff <= 6) return (lang === 'zh' ? WD_ZH_SHORT[weekday(iso)] : WD_EN_SHORT[weekday(iso)]) + tt
+  const base = fmtDayDate(iso, lang, today) + tt
   if (diff <= -2) return lang === 'zh' ? `${base} · 逾期 ${-diff} 天` : `${base} · ${-diff}d late`
   return base
 }
