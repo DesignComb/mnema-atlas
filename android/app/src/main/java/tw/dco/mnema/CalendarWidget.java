@@ -150,6 +150,25 @@ public class CalendarWidget extends AppWidgetProvider {
     }
 
     private static void updateWidget(Context context, AppWidgetManager manager, int appWidgetId) {
+        try {
+            render(context, manager, appWidgetId);
+        } catch (Exception e) {
+            // NEVER let the launcher show "Can't load widget": fall back to a
+            // bare month label so the widget stays alive (next sync may heal it).
+            try {
+                RemoteViews fallback = new RemoteViews(context.getPackageName(), R.layout.calendar_widget);
+                Calendar now = Calendar.getInstance();
+                fallback.setTextViewText(R.id.cal_month,
+                    WidgetLang.isZh(context)
+                        ? now.get(Calendar.YEAR) + "年" + (now.get(Calendar.MONTH) + 1) + "月"
+                        : MONTHS_EN[now.get(Calendar.MONTH)] + " " + now.get(Calendar.YEAR));
+                manager.updateAppWidget(appWidgetId, fallback);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private static void render(Context context, AppWidgetManager manager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.calendar_widget);
         boolean zh = WidgetLang.isZh(context);
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -215,7 +234,11 @@ public class CalendarWidget extends AppWidgetProvider {
             if (day < 1 || day > daysInMonth) {
                 views.setTextViewText(CELL_IDS[i], "");
                 views.setInt(CELL_IDS[i], "setBackgroundResource", 0);
-                views.setOnClickPendingIntent(CELL_IDS[i], null);
+                // Each update builds a fresh RemoteViews, so no stale handler to
+                // clear — and a no-op reset broadcast keeps taps harmless.
+                views.setOnClickPendingIntent(CELL_IDS[i], broadcast(context, appWidgetId * 100 + i,
+                    new Intent(context, CalendarWidget.class).setAction(ACTION_SELECT)
+                        .putExtra(EXTRA_WIDGET, appWidgetId)));
                 continue;
             }
 

@@ -117,8 +117,10 @@
         <TextView android:id="@+id/cell41" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Agenda: the selected day's tasks (TickTick-style). -->
-    <View
+    <!-- Agenda: the selected day's tasks (TickTick-style). Divider is a
+         FrameLayout — a bare <View> is NOT RemoteViews-safe and kills the whole
+         widget with "Can't load widget". -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="6dp"

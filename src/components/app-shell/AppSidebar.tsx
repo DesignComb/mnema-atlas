@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Capacitor } from '@capacitor/core'
+import { App as CapApp } from '@capacitor/app'
+import { formatVersion } from '@/lib/ota'
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -420,8 +423,27 @@ export function AppSidebar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <VersionStamp />
       </div>
     </aside>
+  )
+}
+
+/** Build stamp so "is my version current?" is answerable at a glance —
+ *  web bundle version (+ APK versionName/code in the native shell). */
+function VersionStamp() {
+  const [apk, setApk] = useState<string | null>(null)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    CapApp.getInfo()
+      .then((i) => setApk(`APK ${i.version} (${i.build})`))
+      .catch(() => {})
+  }, [])
+  return (
+    <p className="select-text px-2 pt-1 text-[10.5px] tabular-nums text-muted-foreground/60">
+      v{formatVersion()}
+      {apk ? ` · ${apk}` : ''}
+    </p>
   )
 }
 
