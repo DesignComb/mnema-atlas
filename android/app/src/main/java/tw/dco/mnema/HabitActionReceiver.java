@@ -47,8 +47,10 @@ public class HabitActionReceiver extends BroadcastReceiver {
 
     // Optimistic flip for instant feedback (corrected below by the server's answer).
     flipSnapshot(prefs, habitId, !wasChecked);
+    flipAgendaSnapshot(prefs, habitId, !wasChecked);
     flipStreakSnapshot(prefs, habitId, !wasChecked);
     HabitsWidget.refreshAll(context);
+    TodayWidget.refreshAll(context);
     StreakWidget.refreshAll(context);
 
     final PendingResult pending = goAsync();
@@ -60,8 +62,10 @@ public class HabitActionReceiver extends BroadcastReceiver {
           Boolean nowChecked = toggle(a.optString("url"), a.optString("anonKey"), a.optString("token"), habitId);
           if (nowChecked != null) {
             flipSnapshot(prefs, habitId, nowChecked); // authoritative server state
+            flipAgendaSnapshot(prefs, habitId, nowChecked);
             flipStreakSnapshot(prefs, habitId, nowChecked);
             HabitsWidget.refreshAll(context);
+            TodayWidget.refreshAll(context);
             StreakWidget.refreshAll(context);
           }
         } catch (Exception ignored) {
@@ -84,6 +88,23 @@ public class HabitActionReceiver extends BroadcastReceiver {
         if (it != null && habitId.equals(it.optString("id"))) it.put("checked", checked);
       }
       prefs.edit().putString(HabitsWidget.KEY, snap.toString()).apply();
+    } catch (Exception ignored) {
+    }
+  }
+
+  /** Flip the habit's checked state inside the unified agenda snapshot. */
+  private static void flipAgendaSnapshot(SharedPreferences prefs, String habitId, boolean checked) {
+    try {
+      String raw = prefs.getString(TodayWidget.AGENDA_KEY, null);
+      if (raw == null) return;
+      JSONObject snap = new JSONObject(raw);
+      JSONArray habits = snap.optJSONArray("habits");
+      if (habits == null) return;
+      for (int i = 0; i < habits.length(); i++) {
+        JSONObject h = habits.optJSONObject(i);
+        if (h != null && habitId.equals(h.optString("id"))) h.put("checked", checked);
+      }
+      prefs.edit().putString(TodayWidget.AGENDA_KEY, snap.toString()).apply();
     } catch (Exception ignored) {
     }
   }

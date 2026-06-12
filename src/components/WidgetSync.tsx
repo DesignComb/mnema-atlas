@@ -10,6 +10,7 @@ import { todayTasks } from '@/lib/today'
 import { habitTodayISO } from '@/lib/recurrence'
 import { router } from '@/router'
 import {
+  pushAgendaWidget,
   pushCalendarWidget,
   pushHabitsWidget,
   pushJournalWidget,
@@ -17,6 +18,7 @@ import {
   pushTodayWidget,
   pushWidgetAuth,
   pushWidgetLang,
+  type AgendaSnapshot,
   type CalendarAgendaItem,
   type CalendarSnapshot,
   type HabitsSnapshot,
@@ -80,6 +82,7 @@ function WidgetSyncInner({ token }: { token: string }) {
   const { data: journal } = useJournalEntry(todayISO)
   const lastRef = useRef('')
   const habitsRef = useRef('')
+  const agendaRef = useRef('')
   const langRef = useRef('')
   const journalRef = useRef('')
   const calendarRef = useRef('')
@@ -157,12 +160,60 @@ function WidgetSyncInner({ token }: { token: string }) {
     const items = tasks
       .filter((t) => t.kind === 'habit')
       .slice(0, 6)
-      .map((h) => ({ id: h.id, title: h.title, checked: done.has(`${h.id}|${habitTodayISO(h.reset_time, h.tz)}`) }))
+      .map((h) => ({
+        id: h.id,
+        title: h.title,
+        checked: done.has(`${h.id}|${habitTodayISO(h.reset_time, h.tz)}`),
+        streak: h.current_streak,
+      }))
     const snap: HabitsSnapshot = { date: localToday(), items }
     const key = JSON.stringify(snap)
     if (key === habitsRef.current) return
     habitsRef.current = key
     void pushHabitsWidget(snap)
+  }, [tasks, checkins])
+
+  // Unified agenda (v5+ Today widget): sectioned Overdue / Today / Habits —
+  // the "what should I do, what's late" card. Unchecked habits float first.
+  useEffect(() => {
+    if (!tasks) return
+    const today = localToday()
+    const done = new Set((checkins ?? []).map((c) => `${c.task_id}|${c.checkin_date}`))
+    const real = tasks.filter((t) => t.kind !== 'habit')
+
+    const overdue = real
+      .filter((t) => t.due_date != null && t.due_date < today)
+      .sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1))
+      .map((t) => {
+        const [, m, d] = t.due_date!.split('-').map(Number)
+        return { id: t.id, title: t.title, d: `${m}/${d}` }
+      })
+
+    const todayList = real
+      .filter((t) => t.due_date === today || t.scheduled_date === today)
+      .map((t) => {
+        const time = t.due_date === today ? t.due_time : t.scheduled_time
+        return { id: t.id, title: t.title, hm: time ? time.slice(0, 5) : null }
+      })
+      .sort((a, b) =>
+        a.hm && b.hm ? a.hm.localeCompare(b.hm) : a.hm ? -1 : b.hm ? 1 : a.title.localeCompare(b.title),
+      )
+
+    const habits = tasks
+      .filter((t) => t.kind === 'habit')
+      .map((h) => ({
+        id: h.id,
+        title: h.title,
+        checked: done.has(`${h.id}|${habitTodayISO(h.reset_time, h.tz)}`),
+        streak: h.current_streak,
+      }))
+      .sort((a, b) => Number(a.checked) - Number(b.checked))
+
+    const snap: AgendaSnapshot = { date: today, overdue, today: todayList, habits }
+    const key = JSON.stringify(snap)
+    if (key === agendaRef.current) return
+    agendaRef.current = key
+    void pushAgendaWidget(snap)
   }, [tasks, checkins])
 
   // Journal widget: today's entry — mood/energy + a plain-text snippet.

@@ -76,9 +76,10 @@ public class HabitsWidget extends AppWidgetProvider {
             String id = it.optString("id", "");
             String title = it.optString("title", "");
             boolean checked = it.optBoolean("checked", false);
+            int streak = it.optInt("streak", 0);
             if (checked) doneCount++;
 
-            views.setTextViewText(TITLE_IDS[i], title);
+            views.setTextViewText(TITLE_IDS[i], streak > 0 ? title + "  🔥" + streak : title);
             views.setImageViewResource(CHECK_IDS[i], checked ? R.drawable.ic_widget_check_filled : R.drawable.ic_widget_check);
             views.setContentDescription(CHECK_IDS[i], zh ? "打卡" : "Check in");
             views.setViewVisibility(ROW_IDS[i], View.VISIBLE);

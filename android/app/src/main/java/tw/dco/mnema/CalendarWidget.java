@@ -127,13 +127,15 @@ public class CalendarWidget extends AppWidgetProvider {
         return PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
     }
 
-    /** Day number (optionally bold) + a shrunken dot line when the day has tasks. */
-    private static CharSequence cellText(int day, boolean busy, boolean boldNum) {
+    /** Day number (optionally bold) + a shrunken 1–3 dot line scaled to the
+     *  task count — Google Calendar's density language. */
+    private static CharSequence cellText(int day, int count, boolean boldNum) {
         String num = String.valueOf(day);
-        String text = busy ? num + "\n•" : num;
+        String dots = count <= 0 ? "" : count == 1 ? "•" : count == 2 ? "••" : "•••";
+        String text = dots.isEmpty() ? num : num + "\n" + dots;
         SpannableString span = new SpannableString(text);
         if (boldNum) span.setSpan(new StyleSpan(Typeface.BOLD), 0, num.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        if (busy) {
+        if (!dots.isEmpty()) {
             span.setSpan(new android.text.style.RelativeSizeSpan(0.55f),
                 num.length(), text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
@@ -248,11 +250,12 @@ public class CalendarWidget extends AppWidgetProvider {
             boolean isHoliday = holidays != null && holidays.has(dateKey);
             boolean isWeekend = i % 7 == 0 || i % 7 == 6;
             JSONArray items = days != null ? days.optJSONArray(dateKey) : null;
-            boolean busy = items != null && items.length() > 0;
+            int itemCount = items != null ? items.length() : 0;
+            boolean busy = itemCount > 0;
 
-            // Two lines: the number, then a small dot line for days with tasks
-            // (TickTick's grid language; a Spannable keeps it one TextView).
-            views.setTextViewText(CELL_IDS[i], cellText(day, busy, isToday || busy));
+            // Two lines: the number, then a small 1–3 dot line by task count
+            // (a Spannable keeps it one TextView).
+            views.setTextViewText(CELL_IDS[i], cellText(day, itemCount, isToday || busy));
 
             if (isToday) {
                 views.setTextColor(CELL_IDS[i], COLOR_TODAY);

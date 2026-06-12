@@ -16,6 +16,7 @@ const WidgetBridge = registerPlugin<WidgetBridgePlugin>('WidgetBridge')
 
 /** Keys shared with the native side (TodayWidget.java / HabitsWidget.java / receivers). */
 export const WIDGET_TODAY_KEY = 'widget_today'
+export const WIDGET_AGENDA_KEY = 'widget_agenda'
 export const WIDGET_HABITS_KEY = 'widget_habits'
 export const WIDGET_AUTH_KEY = 'widget_auth'
 export const WIDGET_LANG_KEY = 'widget_lang'
@@ -70,6 +71,8 @@ export interface WidgetHabit {
   title: string
   /** Whether the habit is checked in for its (reset-aware) today. */
   checked: boolean
+  /** Current streak — rendered as a 🔥 chip (old natives ignore it). */
+  streak?: number
 }
 export interface HabitsSnapshot {
   date: string
@@ -79,6 +82,24 @@ export interface HabitsSnapshot {
 /** Today's habits + checked state for the habit widget; tapping toggles check_in. */
 export async function pushHabitsWidget(snap: HabitsSnapshot): Promise<void> {
   await setKey(WIDGET_HABITS_KEY, JSON.stringify(snap))
+}
+
+/**
+ * Unified agenda (v5+ Today widget): sectioned Overdue / Today / Habits so the
+ * widget can say "this is late, this is due, this still needs a check-in".
+ * The legacy widget_today shape is still written for older natives.
+ */
+export interface AgendaSnapshot {
+  date: string
+  /** Open tasks past due, oldest first; d = "M/D" original due date. */
+  overdue: { id: string; title: string; d: string }[]
+  /** Due/scheduled today; hm = "HH:mm" or null for all-day. Timed first. */
+  today: { id: string; title: string; hm: string | null }[]
+  habits: WidgetHabit[]
+}
+
+export async function pushAgendaWidget(snap: AgendaSnapshot): Promise<void> {
+  await setKey(WIDGET_AGENDA_KEY, JSON.stringify(snap))
 }
 
 /** Today's journal entry (or its absence) for the journal widget. */

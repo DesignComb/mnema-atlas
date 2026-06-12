@@ -44,8 +44,9 @@ public class TaskActionReceiver extends BroadcastReceiver {
             return;
         }
 
-        // Optimistic: drop the task from both snapshots and redraw now.
+        // Optimistic: drop the task from every snapshot and redraw now.
         removeFromSnapshot(prefs, taskId);
+        removeFromAgendaSnapshot(prefs, taskId);
         removeFromCalendarSnapshot(prefs, taskId);
         TodayWidget.refreshAll(context);
         CalendarWidget.refreshAll(context);
@@ -84,6 +85,27 @@ public class TaskActionReceiver extends BroadcastReceiver {
             int count = snap.optInt("count", kept.length());
             snap.put("count", Math.max(0, count - 1));
             prefs.edit().putString(TodayWidget.KEY, snap.toString()).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Drop the task from the unified agenda's overdue + today sections. */
+    private static void removeFromAgendaSnapshot(SharedPreferences prefs, String taskId) {
+        try {
+            String raw = prefs.getString(TodayWidget.AGENDA_KEY, null);
+            if (raw == null) return;
+            JSONObject snap = new JSONObject(raw);
+            for (String section : new String[] { "overdue", "today" }) {
+                JSONArray items = snap.optJSONArray(section);
+                if (items == null) continue;
+                JSONArray kept = new JSONArray();
+                for (int i = 0; i < items.length(); i++) {
+                    JSONObject it = items.optJSONObject(i);
+                    if (it != null && !taskId.equals(it.optString("id"))) kept.put(it);
+                }
+                snap.put(section, kept);
+            }
+            prefs.edit().putString(TodayWidget.AGENDA_KEY, snap.toString()).apply();
         } catch (Exception ignored) {
         }
     }
