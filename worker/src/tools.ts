@@ -202,7 +202,9 @@ export const tools: ToolDef[] = [
       if (Array.isArray(a.tags) && a.tags.length) {
         await callRpc(ctx.env, ctx.userId, 'set_note_tags', { p_note_id: note.id, p_tags: a.tags })
       }
-      return { summary: `Created note “${note.title}” (${note.id})`, data: note }
+      // The row was captured before the tags RPC — reflect the tags we just wrote.
+      const tags = Array.isArray(a.tags) ? a.tags : []
+      return { summary: `Created note “${note.title}” (${note.id})`, data: { ...note, tags } }
     },
   },
   {
@@ -220,6 +222,7 @@ export const tools: ToolDef[] = [
       })
       if (a.tags !== undefined) {
         await callRpc(ctx.env, ctx.userId, 'set_note_tags', { p_note_id: a.note_id, p_tags: a.tags ?? [] })
+        return { summary: `Updated note “${note.title}”`, data: { ...note, tags: a.tags ?? [] } }
       }
       return { summary: `Updated note “${note.title}”`, data: note }
     },

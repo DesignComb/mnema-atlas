@@ -39,7 +39,9 @@ export function buildMcpServer(env: Env, userId: string, scopes: string[]): McpS
         }
         return {
           content: [{ type: 'text', text: result.summary }],
-          structuredContent: result.data,
+          // MCP spec: structuredContent must be a JSON object — list/bulk tools
+          // return bare arrays, which strict clients reject. Wrap as { items }.
+          structuredContent: Array.isArray(result.data) ? { items: result.data } : result.data,
         }
       },
     })
