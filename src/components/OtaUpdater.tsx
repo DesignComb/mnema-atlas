@@ -5,6 +5,7 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { toast } from 'sonner'
 import { useT } from '@/lib/i18n'
 import { applyUpdate, checkForUpdate, clearDismiss, dismissUpdate, type OtaManifest } from '@/lib/ota'
+import { checkForApkUpdate, clearApkDismiss, dismissApkUpdate, installApk, type ApkManifest } from '@/lib/apk-update'
 
 // One download at a time; don't re-prompt while one is running.
 let updating = false
@@ -14,6 +15,9 @@ let updating = false
  * bundle is published, surfaces a single (version-keyed) persistent toast — tap
  * "更新" to download + swap, or dismiss to skip that version. Renders nothing.
  * notifyAppReady() is called at JS entry in main.tsx, not here.
+ *
+ * A NATIVE update (new APK) takes priority over a web OTA: the APK already
+ * carries the newest web bundle, so when both exist only the APK is offered.
  */
 export function OtaUpdater() {
   const t = useT()
@@ -24,6 +28,20 @@ export function OtaUpdater() {
 
     async function promptIfUpdate() {
       if (updating) return
+      const apk = await checkForApkUpdate()
+      if (cancelled || updating) return
+      if (apk) {
+        const toastId = `apk-${apk.versionCode}`
+        toast(t('App update available', '有新版 APP 可更新'), {
+          id: toastId,
+          description: apk.notes || t('Includes native features (e.g. widgets).', '包含原生功能(例如小工具)。'),
+          duration: Infinity,
+          action: { label: t('Update', '更新'), onClick: () => void runApkUpdate(apk, toastId, t) },
+          cancel: { label: t('Later', '稍後'), onClick: () => void dismissApkUpdate(apk.versionCode) },
+          onDismiss: () => void dismissApkUpdate(apk.versionCode),
+        })
+        return // the APK bundles the latest web build — don't also offer the OTA
+      }
       const m = await checkForUpdate()
       if (cancelled || updating || !m) return
       const toastId = `ota-${m.version}`
@@ -46,6 +64,20 @@ export function OtaUpdater() {
   }, [t])
 
   return null
+}
+
+async function runApkUpdate(m: ApkManifest, toastId: string, t: (en: string, zh: string) => string) {
+  try {
+    await installApk(m)
+    toast.success(
+      t('Downloading — the install screen will open when it finishes.', '下載中 — 完成後會自動跳出安裝畫面。'),
+      { id: toastId, duration: 8000 },
+    )
+  } catch (err) {
+    void clearApkDismiss(m.versionCode)
+    console.error('[mnema] APK update failed', m.versionCode, m.url, err)
+    toast.error(t('Update failed — please try again', '更新失敗，請再試一次'), { id: toastId, duration: 5000 })
+  }
 }
 
 async function runUpdate(m: OtaManifest, toastId: string, t: (en: string, zh: string) => string) {
