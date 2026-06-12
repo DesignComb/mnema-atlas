@@ -5,6 +5,7 @@ import { App as CapApp } from '@capacitor/app'
 import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/lib/i18n'
 import { useTasks, useCheckInsInRange, useJournalEntry } from '@/lib/hooks'
+import { useHolidays } from '@/lib/holidays'
 import { todayTasks } from '@/lib/today'
 import { habitTodayISO } from '@/lib/recurrence'
 import { router } from '@/router'
@@ -16,6 +17,7 @@ import {
   pushTodayWidget,
   pushWidgetAuth,
   pushWidgetLang,
+  type CalendarAgendaItem,
   type CalendarSnapshot,
   type HabitsSnapshot,
   type JournalSnapshot,
@@ -116,6 +118,8 @@ function WidgetSyncInner({ token }: { token: string }) {
         void router.navigate({ to: '/tempo' })
       } else if (url.startsWith('tw.dco.mnema://journal')) {
         void router.navigate({ to: '/health', search: { section: 'journal' } })
+      } else if (url.startsWith('tw.dco.mnema://calendar')) {
+        void router.navigate({ to: '/tempo', search: { view: 'calendar' } })
       }
     })
     return () => {
@@ -180,36 +184,48 @@ function WidgetSyncInner({ token }: { token: string }) {
     void pushJournalWidget(snap)
   }, [journal])
 
-  // Calendar widget: per-day open-task counts for the current month. Same date
-  // logic as the today widget (isDueToday), generalized: a non-habit task counts
-  // on its due_date and on its scheduled_date — overdue stays on its own
-  // original date, no rollover.
+  // Calendar widget: every dated open task (the widget pages months natively),
+  // with title/time so the agenda pane can render + complete them — same date
+  // logic as the today widget: a non-habit task counts on its due_date and on
+  // its scheduled_date; overdue stays on its own original date, no rollover.
+  const yearNow = Number(localToday().slice(0, 4))
+  const { data: holidayMap } = useHolidays([yearNow, yearNow + 1], 'TW', true)
   useEffect(() => {
     if (!tasks) return
     const today = localToday()
-    const monthPrefix = today.slice(0, 8) // "YYYY-MM-"
-    const busy: Record<string, number> = {}
-    const bump = (d: string | null) => {
-      if (d && d.startsWith(monthPrefix)) busy[d] = (busy[d] ?? 0) + 1
+    const days: Record<string, CalendarAgendaItem[]> = {}
+    const hm = (time: string | null) => (time ? time.slice(0, 5) : null)
+    const add = (d: string | null, t: (typeof tasks)[number], time: string | null) => {
+      if (!d) return
+      const list = (days[d] ??= [])
+      if (list.some((x) => x.id === t.id)) return
+      list.push({ id: t.id, title: t.title, hm: hm(time) })
     }
     for (const t of tasks) {
       if (t.kind === 'habit') continue
-      bump(t.due_date)
-      if (t.scheduled_date !== t.due_date) bump(t.scheduled_date)
+      add(t.due_date, t, t.due_time)
+      if (t.scheduled_date !== t.due_date) add(t.scheduled_date, t, t.scheduled_time)
     }
-    const [y, m] = today.split('-').map(Number)
+    for (const list of Object.values(days)) {
+      // Timed first (ascending), then all-day, title tiebreak.
+      list.sort((a, b) =>
+        a.hm && b.hm ? a.hm.localeCompare(b.hm) || a.title.localeCompare(b.title)
+        : a.hm ? -1
+        : b.hm ? 1
+        : a.title.localeCompare(b.title),
+      )
+    }
     const snap: CalendarSnapshot = {
       date: today,
-      year: y,
-      month: m,
       // Sorted keys → deterministic JSON for the equality skip below.
-      busy: Object.fromEntries(Object.entries(busy).sort(([a], [b]) => (a < b ? -1 : 1))),
+      days: Object.fromEntries(Object.entries(days).sort(([a], [b]) => (a < b ? -1 : 1))),
+      holidays: Object.fromEntries([...(holidayMap ?? new Map<string, string>())].sort(([a], [b]) => (a < b ? -1 : 1))),
     }
     const key = JSON.stringify(snap)
     if (key === calendarRef.current) return
     calendarRef.current = key
     void pushCalendarWidget(snap)
-  }, [tasks])
+  }, [tasks, holidayMap])
 
   // Streak widget: the featured habit (highest current streak, then sort order)
   // + its last-28-days check-in history.

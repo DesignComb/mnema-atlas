@@ -48,6 +48,14 @@
                 <data android:scheme="tw.dco.mnema" android:host="journal" />
             </intent-filter>
 
+            <!-- Calendar-widget agenda tap → the in-app Tempo calendar. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tw.dco.mnema" android:host="calendar" />
+            </intent-filter>
+
         </activity>
 
         <provider

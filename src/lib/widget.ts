@@ -95,14 +95,25 @@ export async function pushJournalWidget(snap: JournalSnapshot): Promise<void> {
   await setKey(WIDGET_JOURNAL_KEY, JSON.stringify(snap))
 }
 
-/** Current-month busy map for the calendar widget. */
+/** One agenda row in the calendar widget. */
+export interface CalendarAgendaItem {
+  /** Task id — the widget's check circle completes it via TaskActionReceiver. */
+  id: string
+  title: string
+  /** "HH:mm" or null = all-day. */
+  hm: string | null
+}
+/**
+ * TickTick-style calendar widget data: open tasks per day (every dated open
+ * task, not just the current month — the widget can page months natively) +
+ * public-holiday names. Selection/month state lives on the native side.
+ */
 export interface CalendarSnapshot {
   date: string
-  year: number
-  /** 1-12, current local month. */
-  month: number
-  /** YYYY-MM-DD → task count, only days with ≥1 task due/scheduled. */
-  busy: Record<string, number>
+  /** YYYY-MM-DD → that day's open tasks (timed first, then all-day). */
+  days: Record<string, CalendarAgendaItem[]>
+  /** YYYY-MM-DD → holiday name (mirrors the in-app calendar's TW set). */
+  holidays: Record<string, string>
 }
 
 export async function pushCalendarWidget(snap: CalendarSnapshot): Promise<void> {

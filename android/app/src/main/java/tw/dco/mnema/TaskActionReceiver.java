@@ -44,9 +44,11 @@ public class TaskActionReceiver extends BroadcastReceiver {
             return;
         }
 
-        // Optimistic: drop the task from the snapshot and redraw now.
+        // Optimistic: drop the task from both snapshots and redraw now.
         removeFromSnapshot(prefs, taskId);
+        removeFromCalendarSnapshot(prefs, taskId);
         TodayWidget.refreshAll(context);
+        CalendarWidget.refreshAll(context);
 
         // Network completion off the main thread (goAsync keeps us alive briefly).
         final PendingResult pending = goAsync();
@@ -82,6 +84,35 @@ public class TaskActionReceiver extends BroadcastReceiver {
             int count = snap.optInt("count", kept.length());
             snap.put("count", Math.max(0, count - 1));
             prefs.edit().putString(TodayWidget.KEY, snap.toString()).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Drop the task from every day of the calendar snapshot (it may sit on
+     *  both its due and scheduled dates). */
+    private static void removeFromCalendarSnapshot(SharedPreferences prefs, String taskId) {
+        try {
+            String raw = prefs.getString(CalendarWidget.KEY, null);
+            if (raw == null) return;
+            JSONObject snap = new JSONObject(raw);
+            JSONObject days = snap.optJSONObject("days");
+            if (days == null) return;
+            java.util.Iterator<String> dates = days.keys();
+            java.util.List<String> emptied = new java.util.ArrayList<>();
+            while (dates.hasNext()) {
+                String date = dates.next();
+                JSONArray items = days.optJSONArray(date);
+                if (items == null) continue;
+                JSONArray kept = new JSONArray();
+                for (int i = 0; i < items.length(); i++) {
+                    JSONObject it = items.optJSONObject(i);
+                    if (it != null && !taskId.equals(it.optString("id"))) kept.put(it);
+                }
+                if (kept.length() == 0) emptied.add(date);
+                else days.put(date, kept);
+            }
+            for (String date : emptied) days.remove(date);
+            prefs.edit().putString(CalendarWidget.KEY, snap.toString()).apply();
         } catch (Exception ignored) {
         }
     }
