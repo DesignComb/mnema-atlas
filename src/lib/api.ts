@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { removeUploadedImage } from './upload'
+import type { LayoutSection } from './today'
 import type {
   ApiKeyRow,
   CardRow,
@@ -1982,4 +1983,52 @@ export async function postDueSubscriptions(ledgerId: string): Promise<number> {
 export async function getUpcomingSubscriptions(ledgerId: string, daysAhead = 14): Promise<UpcomingSubscription[]> {
   const data = unwrap(await supabase.rpc('get_upcoming_subscriptions', { p_user_id: null, p_ledger_id: ledgerId, p_days_ahead: daysAhead }))
   return (data ?? []) as unknown as UpcomingSubscription[]
+}
+
+// ── User layout (per-surface section order/visibility, migration 0041) ──
+
+/** Whole layout map: surface key → ordered sections. */
+export type UserLayoutMap = Record<string, LayoutSection[]>
+
+const LAYOUT_MIRROR_KEY = 'mnema.user-layout'
+
+/**
+ * localStorage mirror of the last known layout so a return visit renders in the
+ * user's order on the very first frame (no default-order flash while the
+ * user_layout query is in flight). Server stays the source of truth.
+ */
+export function readLayoutMirror(): UserLayoutMap {
+  try {
+    const raw = localStorage.getItem(LAYOUT_MIRROR_KEY)
+    const parsed: unknown = raw ? JSON.parse(raw) : null
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as UserLayoutMap) : {}
+  } catch {
+    return {}
+  }
+}
+export function writeLayoutMirror(map: UserLayoutMap): void {
+  try {
+    localStorage.setItem(LAYOUT_MIRROR_KEY, JSON.stringify(map))
+  } catch {
+    // Private mode / quota — the mirror is only a nicety.
+  }
+}
+
+export async function getUserLayout(): Promise<UserLayoutMap> {
+  // Column-subset selects defeat the client's type parser here (same as
+  // listSplitTxnIds) — cast to the shape we selected.
+  const row = unwrap(await supabase.from('user_layout').select('layout').maybeSingle()) as { layout: Json } | null
+  const layout = (row?.layout ?? {}) as unknown as UserLayoutMap
+  writeLayoutMirror(layout)
+  return layout
+}
+
+export async function setUserLayout(surface: string, sections: LayoutSection[]): Promise<void> {
+  unwrap(
+    await supabase.rpc('set_user_layout', {
+      p_user_id: null,
+      p_surface: surface,
+      p_sections: sections as unknown as Json,
+    }),
+  )
 }

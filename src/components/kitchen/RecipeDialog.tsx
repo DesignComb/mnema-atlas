@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 /** Display an ingredient row as one line, natural reading order: qty unit name. */
 function ingredientToLine(i: RecipeIngredient): string {
@@ -159,28 +160,48 @@ export function RecipeDialog({
             <Label htmlFor="rc-steps">{t('Instructions', '作法')}</Label>
             <Textarea id="rc-steps" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={5} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rc-serv">{t('Servings', '份量')}</Label>
-              <Input id="rc-serv" inputMode="numeric" value={servings} onChange={(e) => setServings(e.target.value)} placeholder="2" />
+          {/* Rare fields — auto-open when editing a recipe that already uses any of them. */}
+          <ExpanderSection
+            label={t('More options', '更多選項')}
+            filledCount={
+              (servings.trim() ? 1 : 0) +
+              (minutes.trim() ? 1 : 0) +
+              (sourceUrl.trim() ? 1 : 0) +
+              (tags.length ? 1 : 0) +
+              (favorite ? 1 : 0)
+            }
+            defaultOpen={Boolean(
+              recipe &&
+                (recipe.servings != null ||
+                  recipe.total_minutes != null ||
+                  recipe.source_url ||
+                  recipe.tags?.length ||
+                  recipe.is_favorite),
+            )}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="rc-serv">{t('Servings', '份量')}</Label>
+                <Input id="rc-serv" inputMode="numeric" value={servings} onChange={(e) => setServings(e.target.value)} placeholder="2" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="rc-min">{t('Total minutes', '總時間(分)')}</Label>
+                <Input id="rc-min" inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="30" />
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rc-min">{t('Total minutes', '總時間(分)')}</Label>
-              <Input id="rc-min" inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="30" />
+              <Label htmlFor="rc-src">{t('Source link', '來源連結')}</Label>
+              <Input id="rc-src" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
             </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="rc-src">{t('Source link', '來源連結')}</Label>
-            <Input id="rc-src" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>{t('Tags', '標籤')}</Label>
-            <TagInput tags={tags} onChange={setTags} listId="recipe-tags" />
-          </div>
-          <label className="flex items-center gap-2 text-[13px] text-foreground">
-            <input type="checkbox" checked={favorite} onChange={(e) => setFavorite(e.target.checked)} className="size-4 accent-[var(--brand)]" />
-            {t('Favorite', '最愛')}
-          </label>
+            <div className="flex flex-col gap-1.5">
+              <Label>{t('Tags', '標籤')}</Label>
+              <TagInput tags={tags} onChange={setTags} listId="recipe-tags" />
+            </div>
+            <label className="flex items-center gap-2 text-[13px] text-foreground">
+              <input type="checkbox" checked={favorite} onChange={(e) => setFavorite(e.target.checked)} className="size-4 accent-[var(--brand)]" />
+              {t('Favorite', '最愛')}
+            </label>
+          </ExpanderSection>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}

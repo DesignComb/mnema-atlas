@@ -37,6 +37,7 @@ import type {
   UpdateTaskListInput,
 } from '@shared/schemas'
 import type { ItineraryItem, TaskFilters, TxnFilters } from './api'
+import type { LayoutSection } from './today'
 import type {
   CreateAccountInput,
   CreateCategoryInput,
@@ -119,6 +120,8 @@ export const qk = {
   splitTxnIds: (ledgerId: string) => ['ledger-split-ids', ledgerId] as const,
   subscriptions: (ledgerId: string) => ['subscriptions', ledgerId] as const,
   upcomingSubscriptions: (ledgerId: string) => ['upcoming-subscriptions', ledgerId] as const,
+  // Per-surface section order/visibility (Today customization)
+  userLayout: ['user-layout'] as const,
 }
 
 export function useDecks() {
@@ -1106,6 +1109,36 @@ export function useUpcomingSubscriptions(ledgerId: string, daysAhead = 14) {
 export function useSetSubscription() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (input: SetSubscriptionInput) => api.setSubscription(input), onSuccess: () => bumpGalleon(qc) })
+}
+
+// ════════════════════ User layout (Today customization) ════════════════════
+
+export function useUserLayout() {
+  return useQuery({ queryKey: qk.userLayout, queryFn: api.getUserLayout })
+}
+
+export function useSetUserLayout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { surface: string; sections: LayoutSection[] }) => api.setUserLayout(v.surface, v.sections),
+    // Optimistic: reordering sections must feel instant (same rule as QW2).
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: qk.userLayout })
+      const prev = qc.getQueryData<api.UserLayoutMap>(qk.userLayout)
+      const next = { ...(prev ?? {}), [v.surface]: v.sections }
+      qc.setQueryData(qk.userLayout, next)
+      api.writeLayoutMirror(next)
+      return { prev }
+    },
+    onError: (e, _v, ctx) => {
+      if (ctx?.prev !== undefined) {
+        qc.setQueryData(qk.userLayout, ctx.prev)
+        api.writeLayoutMirror(ctx.prev)
+      }
+      toast.error(humanizeError(e, ['Failed to save layout', '版面儲存失敗']))
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.userLayout }),
+  })
 }
 export function useDeleteSubscription() {
   const qc = useQueryClient()

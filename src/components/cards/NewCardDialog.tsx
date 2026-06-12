@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 export function NewCardDialog({
   open,
@@ -155,12 +156,18 @@ export function NewCardDialog({
             <Label>{t('Image', '圖片')}</Label>
             <ImageUpload value={imageUrl} onChange={setImageUrl} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>{t('Tags', '標籤')}</Label>
+          {/* Tags — auto-open when the card (or its source note, whose tags new cards inherit) already has some. */}
+          <ExpanderSection
+            label={t('Tags', '標籤')}
+            filledCount={tags.length}
+            defaultOpen={Boolean(
+              card?.tags?.length || (noteId && (notes?.find((n) => n.id === noteId)?.tags?.length ?? 0) > 0),
+            )}
+          >
             <div className="rounded-lg border border-border bg-card px-2.5 py-2">
               <TagInput tags={tags} onChange={setTags} suggestions={tagSuggestions} listId="mnema-card-tags" />
             </div>
-          </div>
+          </ExpanderSection>
           <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
             {editing ? (
               <Button

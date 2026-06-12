@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 type TxnType = 'expense' | 'income' | 'transfer'
 
@@ -218,16 +219,24 @@ export function TransactionDialog({
               <Label htmlFor="txn-date">{t('Date', '日期')}</Label>
               <Input id="txn-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
+          </div>
+
+          {/* Payee & note — auto-open when editing a transaction that has either. */}
+          <ExpanderSection
+            label={t('More options', '更多選項')}
+            filledCount={(payee.trim() ? 1 : 0) + (note.trim() ? 1 : 0)}
+            defaultOpen={Boolean(transaction && (transaction.payee || transaction.note))}
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="txn-payee">{t('Payee', '對象/店家')}</Label>
               <Input id="txn-payee" value={payee} onChange={(e) => setPayee(e.target.value)} placeholder={t('optional', '選填')} />
             </div>
-          </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="txn-note">{t('Note', '備註')}</Label>
-            <Textarea id="txn-note" value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="txn-note">{t('Note', '備註')}</Label>
+              <Textarea id="txn-note" value={note} onChange={(e) => setNote(e.target.value)} />
+            </div>
+          </ExpanderSection>
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

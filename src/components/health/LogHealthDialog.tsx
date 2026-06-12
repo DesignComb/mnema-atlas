@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 function hm(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -211,18 +212,26 @@ export function LogHealthDialog({
               <Label htmlFor="hl-time">{t('Time', '時間')}</Label>
               <Input id="hl-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
             </div>
+          </div>
+
+          {/* Unit override & note — auto-open when editing an entry that has either. */}
+          <ExpanderSection
+            label={t('More options', '更多選項')}
+            filledCount={(defaultUnit && unit.trim() ? 1 : 0) + (note.trim() ? 1 : 0)}
+            defaultOpen={Boolean(log && (log.unit || log.note))}
+          >
             {defaultUnit ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="hl-unit">{t('Unit', '單位')}</Label>
-                <Input id="hl-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={defaultUnit} />
+                <Input id="hl-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={defaultUnit} className="w-32" />
               </div>
             ) : null}
-          </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="hl-note">{t('Note', '備註')}</Label>
-            <Textarea id="hl-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hl-note">{t('Note', '備註')}</Label>
+              <Textarea id="hl-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+            </div>
+          </ExpanderSection>
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

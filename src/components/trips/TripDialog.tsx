@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 export function TripDialog({
   open,
@@ -132,56 +133,72 @@ export function TripDialog({
               <Input id="trip-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="trip-tz">{t('Time zone', '時區')}</Label>
-              <Input
-                id="trip-tz"
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                placeholder="Asia/Tokyo"
-              />
+          {/* Rare fields — auto-open when editing a trip that already uses any of them. */}
+          <ExpanderSection
+            label={t('More options', '更多選項')}
+            filledCount={
+              (timezone.trim() ? 1 : 0) +
+              (currency.trim() ? 1 : 0) +
+              (travelers.trim() ? 1 : 0) +
+              (budget.trim() ? 1 : 0) +
+              (notes.trim() ? 1 : 0)
+            }
+            defaultOpen={Boolean(
+              trip &&
+                (trip.timezone || trip.default_currency || trip.travelers?.length || trip.budget_total != null || trip.notes),
+            )}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="trip-tz">{t('Time zone', '時區')}</Label>
+                <Input
+                  id="trip-tz"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  placeholder="Asia/Tokyo"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="trip-cur">{t('Currency', '幣別')}</Label>
+                <Input
+                  id="trip-cur"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  placeholder="TWD"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="trip-travelers">{t('Travelers', '同行者')}</Label>
+                <Input
+                  id="trip-travelers"
+                  value={travelers}
+                  onChange={(e) => setTravelers(e.target.value)}
+                  placeholder={t('e.g. Sam, Jamie', '例如：小明、小華')}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="trip-budget">{t('Budget', '預算')}</Label>
+                <Input
+                  id="trip-budget"
+                  inputMode="decimal"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="trip-cur">{t('Currency', '幣別')}</Label>
-              <Input
-                id="trip-cur"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                placeholder="TWD"
+              <Label htmlFor="trip-notes">{t('Notes', '備註')}</Label>
+              <Textarea
+                id="trip-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t('Flights, hotels, anything to remember…', '航班、住宿，或任何要記住的事…')}
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="trip-travelers">{t('Travelers', '同行者')}</Label>
-              <Input
-                id="trip-travelers"
-                value={travelers}
-                onChange={(e) => setTravelers(e.target.value)}
-                placeholder={t('e.g. Sam, Jamie', '例如：小明、小華')}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="trip-budget">{t('Budget', '預算')}</Label>
-              <Input
-                id="trip-budget"
-                inputMode="decimal"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                placeholder="0"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="trip-notes">{t('Notes', '備註')}</Label>
-            <Textarea
-              id="trip-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={t('Flights, hotels, anything to remember…', '航班、住宿，或任何要記住的事…')}
-            />
-          </div>
+          </ExpanderSection>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}

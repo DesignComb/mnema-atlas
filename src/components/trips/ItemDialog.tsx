@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 const UNSCHEDULED = 'unscheduled'
 
@@ -160,9 +161,6 @@ export function ItemDialog({
             className="w-full border-b border-border bg-transparent pb-2 text-lg font-semibold text-foreground placeholder:font-normal placeholder:text-muted-foreground/50 focus-visible:border-brand focus-visible:outline-none"
           />
 
-          <p className="-mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            {t('When & where', '時間與地點')}
-          </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="item-cat">{t('Category', '分類')}</Label>
@@ -193,37 +191,6 @@ export function ItemDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="item-status">{t('Status', '狀態')}</Label>
-              <Select
-                id="item-status"
-                value={status}
-                onChange={(e) => setStatusV(e.target.value as ItineraryItem['status'])}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s.v} value={s.v}>
-                    {t(s.en, s.zh)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="item-place">{t('Place', '地點')}</Label>
-              <Input
-                id="item-place"
-                value={place}
-                onChange={(e) => setPlace(e.target.value)}
-                placeholder={t('Name or address', '名稱或地址')}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label>{t("Who's going", '誰參加')}</Label>
-            <PeopleInput people={assignees} onChange={setAssigneesV} suggestions={travelers} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
               <Label htmlFor="item-start">{t('Start time', '開始時間')}</Label>
               <Input id="item-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
             </div>
@@ -233,63 +200,114 @@ export function ItemDialog({
             </div>
           </div>
 
-          <p className="-mb-1 mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            {t('Details', '細節')}
-          </p>
-          <div className="grid grid-cols-[1fr_5rem] gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="item-cost">{t('Cost', '花費')}</Label>
-              <Input
-                id="item-cost"
-                inputMode="decimal"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
-                placeholder="0"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="item-cur">{t('Cur.', '幣別')}</Label>
-              <Input id="item-cur" value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="JPY" />
-            </div>
-          </div>
-
-          {category === 'transport' ? (
+          {/* The old "When & where" / "Details" visual headers are now real expanders — auto-open when editing an item that uses them. */}
+          <ExpanderSection
+            label={t('Place & people', '地點與人員')}
+            filledCount={(place.trim() ? 1 : 0) + (status !== 'planned' ? 1 : 0) + (assignees.length ? 1 : 0)}
+            defaultOpen={Boolean(
+              item && (item.place || (item.status && item.status !== 'planned') || item.assignees?.length),
+            )}
+          >
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="item-tmode">{t('Transport', '交通方式')}</Label>
-                <Input
-                  id="item-tmode"
-                  value={transportMode}
-                  onChange={(e) => setTransportMode(e.target.value)}
-                  placeholder={t('train, walk…', '電車、步行…')}
-                />
+                <Label htmlFor="item-status">{t('Status', '狀態')}</Label>
+                <Select
+                  id="item-status"
+                  value={status}
+                  onChange={(e) => setStatusV(e.target.value as ItineraryItem['status'])}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s.v} value={s.v}>
+                      {t(s.en, s.zh)}
+                    </option>
+                  ))}
+                </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="item-tdetail">{t('Detail', '細節')}</Label>
+                <Label htmlFor="item-place">{t('Place', '地點')}</Label>
                 <Input
-                  id="item-tdetail"
-                  value={transportDetail}
-                  onChange={(e) => setTransportDetail(e.target.value)}
-                  placeholder={t('A → B, 6 min', 'A → B, 6 分鐘')}
+                  id="item-place"
+                  value={place}
+                  onChange={(e) => setPlace(e.target.value)}
+                  placeholder={t('Name or address', '名稱或地址')}
                 />
               </div>
             </div>
-          ) : null}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="item-url">{t('Booking link', '訂房／訂票連結')}</Label>
-            <Input
-              id="item-url"
-              value={bookingUrl}
-              onChange={(e) => setBookingUrl(e.target.value)}
-              placeholder="https://…"
-            />
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>{t("Who's going", '誰參加')}</Label>
+              <PeopleInput people={assignees} onChange={setAssigneesV} suggestions={travelers} />
+            </div>
+          </ExpanderSection>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="item-notes">{t('Notes', '備註')}</Label>
-            <Textarea id="item-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
+          <ExpanderSection
+            label={t('Details', '細節')}
+            filledCount={
+              (cost.trim() ? 1 : 0) +
+              (transportMode.trim() || transportDetail.trim() ? 1 : 0) +
+              (bookingUrl.trim() ? 1 : 0) +
+              (notes.trim() ? 1 : 0)
+            }
+            defaultOpen={Boolean(
+              item &&
+                (item.cost != null || item.transport_mode || item.transport_detail || item.booking_url || item.notes),
+            )}
+          >
+            <div className="grid grid-cols-[1fr_5rem] gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="item-cost">{t('Cost', '花費')}</Label>
+                <Input
+                  id="item-cost"
+                  inputMode="decimal"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="item-cur">{t('Cur.', '幣別')}</Label>
+                <Input id="item-cur" value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="JPY" />
+              </div>
+            </div>
+
+            {category === 'transport' ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="item-tmode">{t('Transport', '交通方式')}</Label>
+                  <Input
+                    id="item-tmode"
+                    value={transportMode}
+                    onChange={(e) => setTransportMode(e.target.value)}
+                    placeholder={t('train, walk…', '電車、步行…')}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="item-tdetail">{t('Detail', '細節')}</Label>
+                  <Input
+                    id="item-tdetail"
+                    value={transportDetail}
+                    onChange={(e) => setTransportDetail(e.target.value)}
+                    placeholder={t('A → B, 6 min', 'A → B, 6 分鐘')}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="item-url">{t('Booking link', '訂房／訂票連結')}</Label>
+              <Input
+                id="item-url"
+                value={bookingUrl}
+                onChange={(e) => setBookingUrl(e.target.value)}
+                placeholder="https://…"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="item-notes">{t('Notes', '備註')}</Label>
+              <Textarea id="item-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+          </ExpanderSection>
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

@@ -29,3 +29,33 @@ export function greeting(lang: 'en' | 'zh', hour: number = new Date().getHours()
   if (hour < 18) return lang === 'zh' ? '午安' : 'Good afternoon'
   return lang === 'zh' ? '晚安' : 'Good evening'
 }
+
+// ── User-customizable section layout (user_layout.layout[surface]) ──
+
+/** One entry of a surface's layout, in display order. */
+export interface LayoutSection {
+  key: string
+  hidden: boolean
+}
+
+/**
+ * Reconcile a stored layout with the app's current section keys:
+ * - stored order wins for keys the app still knows;
+ * - keys the app grew since the layout was saved append at the end, visible;
+ * - stored keys that no longer exist (and duplicates / malformed rows) drop out.
+ * Pure so both the Today screen and tests can rely on it.
+ */
+export function mergeLayout(stored: LayoutSection[] | null | undefined, known: readonly string[]): LayoutSection[] {
+  const knownSet = new Set(known)
+  const seen = new Set<string>()
+  const out: LayoutSection[] = []
+  for (const s of Array.isArray(stored) ? stored : []) {
+    if (!s || typeof s.key !== 'string' || !knownSet.has(s.key) || seen.has(s.key)) continue
+    seen.add(s.key)
+    out.push({ key: s.key, hidden: s.hidden === true })
+  }
+  for (const k of known) {
+    if (!seen.has(k)) out.push({ key: k, hidden: false })
+  }
+  return out
+}

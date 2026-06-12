@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 const INBOX = 'inbox'
 
@@ -255,122 +256,6 @@ export function TaskDialog({
             </div>
           </div>
 
-          {/* Recurrence */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="task-repeat">{t('Repeat', '重複')}</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                id="task-repeat"
-                value={repeat}
-                onChange={(e) => setRepeat(e.target.value as Freq | 'none')}
-                className="w-40"
-              >
-                <option value="none">{t('Does not repeat', '不重複')}</option>
-                <option value="DAILY">{t('Daily', '每天')}</option>
-                <option value="WEEKLY">{t('Weekly', '每週')}</option>
-                <option value="MONTHLY">{t('Monthly', '每月')}</option>
-                <option value="YEARLY">{t('Yearly', '每年')}</option>
-              </Select>
-              {repeat !== 'none' ? (
-                <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                  <span>{t('every', '每')}</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={365}
-                    value={interval}
-                    onChange={(e) => setIntervalV(Math.max(1, Number(e.target.value) || 1))}
-                    className="w-16"
-                  />
-                </div>
-              ) : null}
-            </div>
-            {repeat !== 'none' ? (
-              <>
-                {/* Fixed-schedule vs after-completion — the key distinction. */}
-                <span className="text-[12px] text-muted-foreground">{t('When is the next one due?', '下一次什麼時候?')}</span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setAfterCompletion(false)}
-                    className={`rounded-md border px-2.5 py-1.5 text-left transition ${
-                      !afterCompletion ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
-                    }`}
-                  >
-                    <span className="block text-[13px] font-medium">{t('Fixed schedule', '固定排程')}</span>
-                    <span className="block text-[11px] opacity-70">{t('on the calendar (e.g. every Mon)', '照日曆(例:每週一)')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAfterCompletion(true)}
-                    className={`rounded-md border px-2.5 py-1.5 text-left transition ${
-                      afterCompletion ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
-                    }`}
-                  >
-                    <span className="block text-[13px] font-medium">{t('After completion', '完成後再算')}</span>
-                    <span className="block text-[11px] opacity-70">{t('from the day you finish', '從你完成那天起算')}</span>
-                  </button>
-                </div>
-
-                {/* Weekday picker only applies to a fixed weekly schedule. */}
-                {repeat === 'WEEKLY' && !afterCompletion ? (
-                  <div className="flex flex-wrap gap-1">
-                    {WEEKDAYS.map((d, i) => {
-                      const on = byday.includes(d)
-                      return (
-                        <button
-                          type="button"
-                          key={d}
-                          onClick={() => setByday(on ? byday.filter((x) => x !== d) : [...byday, d])}
-                          className={`size-7 rounded-full border text-[11px] font-medium transition ${
-                            on ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
-                          }`}
-                        >
-                          {t(WD_EN[i], WD_ZH[i])}
-                        </button>
-                      )
-                    })}
-                  </div>
-                ) : null}
-
-                {recurExample ? <p className="text-[12px] font-medium text-brand">↻ {recurExample}</p> : null}
-              </>
-            ) : null}
-          </div>
-
-          {/* Reminder */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="task-remind">{t('Reminder', '提醒')}</Label>
-            <Select id="task-remind" value={reminderPreset} onChange={(e) => setReminderPreset(e.target.value)}>
-              {REMIND_PRESETS.map((p) => (
-                <option key={p.v} value={p.v}>
-                  {t(p.en, p.zh)}
-                </option>
-              ))}
-            </Select>
-            {reminderPreset === 'custom' ? (
-              <Input type="datetime-local" value={reminderLocal} onChange={(e) => setReminderLocal(e.target.value)} />
-            ) : reminderPreset && !dueDate ? (
-              <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                {t('Relative reminders need a due date — set one above.', '相對提醒需要先設上面的「截止日」。')}
-              </p>
-            ) : remindPreview ? (
-              <p className="text-[11px] text-muted-foreground">
-                {t('Reminds at', '提醒於')}{' '}
-                {new Date(remindPreview).toLocaleString(lang === 'zh' ? 'zh-TW' : 'en-GB', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                  hour12: false,
-                })}
-              </p>
-            ) : null}
-            {reminderPreset ? (
-              <p className="text-[11px] text-muted-foreground/80">
-                {t('Push needs to be enabled once in Settings → Reminders.', '推播需先在「設定 → 提醒」開啟一次。')}
-              </p>
-            ) : null}
-          </div>
-
           {!editing ? (
             <div className="flex flex-col gap-1.5">
               <Label>{t('Type', '類型')}</Label>
@@ -391,39 +276,181 @@ export function TaskDialog({
             </div>
           ) : null}
 
-          {kind === 'habit' ? (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="habit-reset">{t('Reset time', '重置時間')}</Label>
-              <Input
-                id="habit-reset"
-                type="time"
-                value={resetTime}
-                onChange={(e) => setResetTime(e.target.value)}
-                className="w-40"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                {t(
-                  'When this habit’s day rolls over — e.g. a game daily that resets at 04:00 or 14:00. Blank = midnight.',
-                  '這個習慣每天幾點換日 —— 例如遊戲日常 04:00 或 14:00 重置。留空 = 午夜。',
-                )}
-              </p>
+          {/* Recurrence — rarely used, so it lives behind an expander (auto-opens when the task already repeats). */}
+          <ExpanderSection
+            label={t('Repeat', '重複')}
+            filledCount={repeat !== 'none' ? 1 : 0}
+            defaultOpen={Boolean(task?.recurrence_rule)}
+          >
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  id="task-repeat"
+                  aria-label={t('Repeat', '重複')}
+                  value={repeat}
+                  onChange={(e) => setRepeat(e.target.value as Freq | 'none')}
+                  className="w-40"
+                >
+                  <option value="none">{t('Does not repeat', '不重複')}</option>
+                  <option value="DAILY">{t('Daily', '每天')}</option>
+                  <option value="WEEKLY">{t('Weekly', '每週')}</option>
+                  <option value="MONTHLY">{t('Monthly', '每月')}</option>
+                  <option value="YEARLY">{t('Yearly', '每年')}</option>
+                </Select>
+                {repeat !== 'none' ? (
+                  <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                    <span>{t('every', '每')}</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={interval}
+                      onChange={(e) => setIntervalV(Math.max(1, Number(e.target.value) || 1))}
+                      className="w-16"
+                    />
+                  </div>
+                ) : null}
+              </div>
+              {repeat !== 'none' ? (
+                <>
+                  {/* Fixed-schedule vs after-completion — the key distinction. */}
+                  <span className="text-[12px] text-muted-foreground">{t('When is the next one due?', '下一次什麼時候?')}</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setAfterCompletion(false)}
+                      className={`rounded-md border px-2.5 py-1.5 text-left transition ${
+                        !afterCompletion ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
+                      }`}
+                    >
+                      <span className="block text-[13px] font-medium">{t('Fixed schedule', '固定排程')}</span>
+                      <span className="block text-[11px] opacity-70">{t('on the calendar (e.g. every Mon)', '照日曆(例:每週一)')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAfterCompletion(true)}
+                      className={`rounded-md border px-2.5 py-1.5 text-left transition ${
+                        afterCompletion ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
+                      }`}
+                    >
+                      <span className="block text-[13px] font-medium">{t('After completion', '完成後再算')}</span>
+                      <span className="block text-[11px] opacity-70">{t('from the day you finish', '從你完成那天起算')}</span>
+                    </button>
+                  </div>
+
+                  {/* Weekday picker only applies to a fixed weekly schedule. */}
+                  {repeat === 'WEEKLY' && !afterCompletion ? (
+                    <div className="flex flex-wrap gap-1">
+                      {WEEKDAYS.map((d, i) => {
+                        const on = byday.includes(d)
+                        return (
+                          <button
+                            type="button"
+                            key={d}
+                            onClick={() => setByday(on ? byday.filter((x) => x !== d) : [...byday, d])}
+                            className={`size-7 rounded-full border text-[11px] font-medium transition ${
+                              on ? 'border-brand bg-brand-muted text-brand' : 'border-border text-muted-foreground hover:border-brand/40'
+                            }`}
+                          >
+                            {t(WD_EN[i], WD_ZH[i])}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : null}
+
+                  {recurExample ? <p className="text-[12px] font-medium text-brand">↻ {recurExample}</p> : null}
+                </>
+              ) : null}
             </div>
-          ) : null}
+          </ExpanderSection>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>{t('Labels', '標籤')}</Label>
-            <TagInput tags={labels} onChange={setLabels} suggestions={labelSuggestions} listId="tempo-labels" />
-          </div>
+          {/* Reminder — existing reminders aren't loaded into the dialog, so this never auto-opens. */}
+          <ExpanderSection label={t('Reminder', '提醒')} filledCount={reminderPreset ? 1 : 0}>
+            <div className="flex flex-col gap-1.5">
+              <Select
+                id="task-remind"
+                aria-label={t('Reminder', '提醒')}
+                value={reminderPreset}
+                onChange={(e) => setReminderPreset(e.target.value)}
+              >
+                {REMIND_PRESETS.map((p) => (
+                  <option key={p.v} value={p.v}>
+                    {t(p.en, p.zh)}
+                  </option>
+                ))}
+              </Select>
+              {reminderPreset === 'custom' ? (
+                <Input type="datetime-local" value={reminderLocal} onChange={(e) => setReminderLocal(e.target.value)} />
+              ) : reminderPreset && !dueDate ? (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                  {t('Relative reminders need a due date — set one above.', '相對提醒需要先設上面的「截止日」。')}
+                </p>
+              ) : remindPreview ? (
+                <p className="text-[11px] text-muted-foreground">
+                  {t('Reminds at', '提醒於')}{' '}
+                  {new Date(remindPreview).toLocaleString(lang === 'zh' ? 'zh-TW' : 'en-GB', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                    hour12: false,
+                  })}
+                </p>
+              ) : null}
+              {reminderPreset ? (
+                <p className="text-[11px] text-muted-foreground/80">
+                  {t('Push needs to be enabled once in Settings → Reminders.', '推播需先在「設定 → 提醒」開啟一次。')}
+                </p>
+              ) : null}
+            </div>
+          </ExpanderSection>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="task-notes">{t('Notes', '備註')}</Label>
-            <Textarea id="task-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
+          {/* Labels, notes, link, habit reset time — auto-opens when the task already uses any of them. */}
+          <ExpanderSection
+            label={t('More options', '更多選項')}
+            filledCount={
+              (labels.length ? 1 : 0) +
+              (notes.trim() ? 1 : 0) +
+              (url.trim() ? 1 : 0) +
+              (kind === 'habit' && resetTime ? 1 : 0)
+            }
+            defaultOpen={Boolean(
+              task && ((task.labels?.length ?? 0) > 0 || task.description || task.url || task.reset_time),
+            )}
+          >
+            {kind === 'habit' ? (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="habit-reset">{t('Reset time', '重置時間')}</Label>
+                <Input
+                  id="habit-reset"
+                  type="time"
+                  value={resetTime}
+                  onChange={(e) => setResetTime(e.target.value)}
+                  className="w-40"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {t(
+                    'When this habit’s day rolls over — e.g. a game daily that resets at 04:00 or 14:00. Blank = midnight.',
+                    '這個習慣每天幾點換日 —— 例如遊戲日常 04:00 或 14:00 重置。留空 = 午夜。',
+                  )}
+                </p>
+              </div>
+            ) : null}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="task-url">{t('Link', '連結')}</Label>
-            <Input id="task-url" type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>{t('Labels', '標籤')}</Label>
+              <TagInput tags={labels} onChange={setLabels} suggestions={labelSuggestions} listId="tempo-labels" />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="task-notes">{t('Notes', '備註')}</Label>
+              <Textarea id="task-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="task-url">{t('Link', '連結')}</Label>
+              <Input id="task-url" type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+            </div>
+          </ExpanderSection>
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

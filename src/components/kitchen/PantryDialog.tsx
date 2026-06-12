@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 export function PantryDialog({
   open,
@@ -89,20 +90,27 @@ export function PantryDialog({
               <Input id="pn-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={t('e.g. pcs', '例如:顆')} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="pn-cat">{t('Category', '分類')}</Label>
-              <Input id="pn-cat" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={t('e.g. Dairy', '例如:乳製品')} />
+          {/* Rare fields — auto-open when editing an item that already uses any of them. */}
+          <ExpanderSection
+            label={t('More options', '更多選項')}
+            filledCount={(category.trim() ? 1 : 0) + (location.trim() ? 1 : 0) + (expires ? 1 : 0)}
+            defaultOpen={Boolean(item && (item.category || item.location || item.expires_on))}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="pn-cat">{t('Category', '分類')}</Label>
+                <Input id="pn-cat" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={t('e.g. Dairy', '例如:乳製品')} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="pn-loc">{t('Location', '位置')}</Label>
+                <Input id="pn-loc" value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t('e.g. Fridge', '例如:冰箱')} />
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="pn-loc">{t('Location', '位置')}</Label>
-              <Input id="pn-loc" value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t('e.g. Fridge', '例如:冰箱')} />
+              <Label htmlFor="pn-exp">{t('Expires', '到期日')}</Label>
+              <Input id="pn-exp" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} className="w-44" />
             </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pn-exp">{t('Expires', '到期日')}</Label>
-            <Input id="pn-exp" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} className="w-44" />
-          </div>
+          </ExpanderSection>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}

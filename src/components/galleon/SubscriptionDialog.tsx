@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ExpanderSection } from '@/components/ui/expander-section'
 
 export function SubscriptionDialog({
   open,
@@ -108,26 +109,6 @@ export function SubscriptionDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="sub-account">{t('Account', '帳戶')}</Label>
-              <Select id="sub-account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-                <option value="">{t('— none —', '— 無 —')}</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="sub-cat">{t('Category', '分類')}</Label>
-              <Select id="sub-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                <option value="">{t('— none —', '— 無 —')}</option>
-                {cats.map((c) => (
-                  <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>
-                ))}
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
               <Label htmlFor="sub-freq">{t('Billing cycle', '計費週期')}</Label>
               <Select id="sub-freq" value={freq} onChange={(e) => setFreq(e.target.value as Freq)}>
                 <option value="WEEKLY">{t('Weekly', '每週')}</option>
@@ -135,19 +116,59 @@ export function SubscriptionDialog({
                 <option value="YEARLY">{t('Yearly', '每年')}</option>
               </Select>
             </div>
+          </div>
+          {/* Rare fields — auto-open when editing a subscription that deviates from the defaults. */}
+          <ExpanderSection
+            label={t('More options', '更多選項')}
+            filledCount={
+              (accountId ? 1 : 0) +
+              (categoryId ? 1 : 0) +
+              (reminderDays.trim() !== '7' ? 1 : 0) +
+              (notes.trim() ? 1 : 0) +
+              (active ? 0 : 1)
+            }
+            defaultOpen={Boolean(
+              subscription &&
+                (subscription.account_id ||
+                  subscription.category_id ||
+                  subscription.notes ||
+                  subscription.is_active === false ||
+                  (subscription.cancel_reminder_days != null && subscription.cancel_reminder_days !== 7)),
+            )}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="sub-account">{t('Account', '帳戶')}</Label>
+                <Select id="sub-account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                  <option value="">{t('— none —', '— 無 —')}</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="sub-cat">{t('Category', '分類')}</Label>
+                <Select id="sub-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                  <option value="">{t('— none —', '— 無 —')}</option>
+                  {cats.map((c) => (
+                    <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>
+                  ))}
+                </Select>
+              </div>
+            </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="sub-remind">{t('Remind days before', '提前幾天提醒')}</Label>
-              <Input id="sub-remind" inputMode="numeric" value={reminderDays} onChange={(e) => setReminderDays(e.target.value)} placeholder="7" />
+              <Input id="sub-remind" inputMode="numeric" value={reminderDays} onChange={(e) => setReminderDays(e.target.value)} placeholder="7" className="w-32" />
             </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sub-notes">{t('Notes', '備註')}</Label>
-            <Textarea id="sub-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-          </div>
-          <label className="flex items-center gap-2 text-[13px] text-foreground">
-            <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="size-4 accent-[var(--brand)]" />
-            {t('Active (auto-post expenses)', '啟用(自動入帳)')}
-          </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="sub-notes">{t('Notes', '備註')}</Label>
+              <Textarea id="sub-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            </div>
+            <label className="flex items-center gap-2 text-[13px] text-foreground">
+              <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="size-4 accent-[var(--brand)]" />
+              {t('Active (auto-post expenses)', '啟用(自動入帳)')}
+            </label>
+          </ExpanderSection>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}
