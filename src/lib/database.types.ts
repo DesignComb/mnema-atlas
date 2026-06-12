@@ -715,6 +715,7 @@ export type Database = {
         Row: {
           body: string
           created_at: string
+          created_via: string
           deck_id: string | null
           id: string
           search_tsv: unknown
@@ -726,6 +727,7 @@ export type Database = {
         Insert: {
           body?: string
           created_at?: string
+          created_via?: string
           deck_id?: string | null
           id?: string
           search_tsv?: unknown
@@ -737,6 +739,7 @@ export type Database = {
         Update: {
           body?: string
           created_at?: string
+          created_via?: string
           deck_id?: string | null
           id?: string
           search_tsv?: unknown
@@ -2095,6 +2098,24 @@ export type Database = {
           digest_time?: string
           is_enabled?: boolean
           tz?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_layout: {
+        Row: {
+          layout: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          layout?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          layout?: Json
           updated_at?: string
           user_id?: string
         }
@@ -3587,6 +3608,7 @@ export type Database = {
         Returns: {
           body: string
           created_at: string
+          created_via: string
           deck_id: string | null
           id: string
           search_tsv: unknown
@@ -4490,6 +4512,7 @@ export type Database = {
         Returns: {
           body: string
           created_at: string
+          created_via: string
           deck_id: string | null
           id: string
           search_tsv: unknown
@@ -4793,11 +4816,45 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_deck_parent: {
+        Args: { p_deck_id: string; p_parent_deck_id?: string; p_user_id: string | null }
+        Returns: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          parent_deck_id: string | null
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "decks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_user_layout: {
+        Args: { p_sections: Json; p_surface: string; p_user_id: string | null }
+        Returns: {
+          layout: Json
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_layout"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_note_deck: {
         Args: { p_deck_id?: string; p_note_id: string; p_user_id: string | null }
         Returns: {
           body: string
           created_at: string
+          created_via: string
           deck_id: string | null
           id: string
           search_tsv: unknown
@@ -4818,6 +4875,7 @@ export type Database = {
         Returns: {
           body: string
           created_at: string
+          created_via: string
           deck_id: string | null
           id: string
           search_tsv: unknown
@@ -5464,6 +5522,7 @@ export type Database = {
         Returns: {
           body: string
           created_at: string
+          created_via: string
           deck_id: string | null
           id: string
           search_tsv: unknown

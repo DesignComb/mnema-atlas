@@ -87,7 +87,7 @@ export function SubscriptionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit subscription', '編輯訂閱') : t('New subscription', '新增訂閱')}</DialogTitle>
         </DialogHeader>

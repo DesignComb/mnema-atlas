@@ -33,6 +33,7 @@ import {
   revokeShareLinkInput,
   searchNotesInput,
   setCardTagsInput,
+  setDeckParentInput,
   setItemAssigneesInput,
   setItemDayInput,
   setItemLocationInput,
@@ -446,6 +447,20 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       await callRpc(ctx.env, ctx.userId, 'delete_deck', { p_deck_id: a.deck_id })
       return { summary: 'Deck deleted (notes & cards kept)', data: { ok: true } }
+    },
+  },
+  {
+    name: 'set_deck_parent',
+    description: toolDescriptions.set_deck_parent,
+    schema: setDeckParentInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const deck = await callRpc<{ name: string }>(ctx.env, ctx.userId, 'set_deck_parent', {
+        p_deck_id: a.deck_id,
+        p_parent_deck_id: a.parent_deck_id ?? null,
+      })
+      return { summary: `Moved deck “${deck.name}”`, data: deck }
     },
   },
   {

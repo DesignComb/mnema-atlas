@@ -23,8 +23,9 @@ src/db.ts      service-role Supabase client + RPC calls
 
 ## Tools exposed
 
-`create_note · update_note · get_note · search_notes · create_deck · list_decks ·
-create_flashcard · create_flashcards_bulk · link_notes`
+All tools live in the one registry in `src/tools.ts` (notes/decks/cards, travel, tempo, money,
+health, kitchen, …). The OpenAPI spec (`src/openapi.ts`) and `llms.txt` (`src/llms.ts`) are
+generated from that registry, so they never go stale.
 
 `GET /rest` lists them; `POST /rest/<tool>` runs one with a JSON body.
 

@@ -145,7 +145,7 @@ export function ItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit activity', '編輯活動') : t('Add activity', '新增活動')}</DialogTitle>
         </DialogHeader>

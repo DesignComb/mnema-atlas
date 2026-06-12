@@ -345,6 +345,52 @@
   }
 }
 
+/* ── Enter/exit animation utilities (tailwindcss-animate subset) ──
+   Tailwind v4 ships no animate-in/zoom-in-95/etc. and the tw-animate-css plugin
+   isn't installed, so the data-[state] animation classes on dialogs, tooltips
+   and menus were inert. This is the minimal var-composed subset they (and the
+   mobile dialog bottom sheet) need. Durations compose with `duration-*`
+   (v4's utility also sets --tw-duration) and easing with `ease-*` (--tw-ease).
+   The global prefers-reduced-motion override above still collapses these. */
+@keyframes mnema-enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+  }
+}
+@keyframes mnema-exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+      scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), 1);
+  }
+}
+@utility animate-in {
+  animation: mnema-enter var(--tw-duration, 150ms) var(--tw-ease, ease) both;
+}
+@utility animate-out {
+  animation: mnema-exit var(--tw-duration, 150ms) var(--tw-ease, ease) both;
+}
+@utility fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+@utility fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+@utility zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
+@utility slide-in-from-bottom {
+  --tw-enter-translate-y: 100%;
+}
+@utility slide-out-to-bottom {
+  --tw-exit-translate-y: 100%;
+}
+
 /* ── Landing page ──
    The hero shows one message travelling down a dashed wire into your workspace.
    The dot is hidden unless the user is fine with motion, so reduced-motion users

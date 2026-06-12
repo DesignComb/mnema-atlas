@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { removeUploadedImage } from './upload'
 import type {
   ApiKeyRow,
   CardRow,
@@ -245,6 +246,17 @@ export async function updateDeck(
 export async function setNoteDeck(noteId: string, deckId: string | null): Promise<NoteRow> {
   return unwrap(
     await supabase.rpc('set_note_deck', { p_user_id: null, p_note_id: noteId, p_deck_id: deckId ?? undefined }),
+  )
+}
+
+/** Move a deck under another deck, or to the top level (parentDeckId = null). */
+export async function setDeckParent(deckId: string, parentDeckId: string | null): Promise<DeckRow> {
+  return unwrap(
+    await supabase.rpc('set_deck_parent', {
+      p_user_id: null,
+      p_deck_id: deckId,
+      p_parent_deck_id: parentDeckId ?? undefined,
+    }),
   )
 }
 
@@ -1395,9 +1407,12 @@ export async function updateRecipe(input: UpdateRecipeInput): Promise<RecipeRow>
     }),
   )
 }
-export async function deleteRecipe(recipeId: string): Promise<void> {
+export async function deleteRecipe(recipeId: string, imageUrl?: string | null): Promise<void> {
   const res = await supabase.rpc('delete_recipe', { p_user_id: null, p_recipe_id: recipeId })
   if (res.error) throw new Error(res.error.message)
+  // Undo-safe by construction: undoableDelete only calls this commit AFTER the
+  // grace window, so the storage object outlives any possible Undo.
+  if (imageUrl) void removeUploadedImage(imageUrl)
 }
 
 export async function listPantry(): Promise<PantryItemRow[]> {

@@ -100,7 +100,7 @@ export function JournalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{t('How was today?', '今天如何?')}</DialogTitle>
         </DialogHeader>

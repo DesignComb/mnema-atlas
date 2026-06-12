@@ -2,6 +2,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { Download, FilePlus2, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateNote, useNotes } from '@/lib/hooks'
+import { AiChip, useNewSince } from '@/components/common/AiChip'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { downloadText, relativeDue, humanizeError, untitledLabel } from '@/lib/utils'
@@ -12,6 +13,7 @@ export function NotesScreen() {
   const createNote = useCreateNote()
   const navigate = useNavigate()
   const { t, lang } = useI18n()
+  const isNew = useNewSince('notes')
 
   async function newNote() {
     try {
@@ -70,7 +72,10 @@ export function NotesScreen() {
                 >
                   <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground group-hover:text-brand" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{n.title}</p>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                      <span className="truncate">{n.title}</span>
+                      {n.created_via === 'mcp' ? <AiChip isNew={isNew(n.created_at)} /> : null}
+                    </p>
                     {n.body ? (
                       <p className="mt-0.5 line-clamp-1 text-[13px] text-muted-foreground">
                         {n.body.replace(/[#*_>`[\]]/g, '').slice(0, 140)}

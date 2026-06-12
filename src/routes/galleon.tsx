@@ -762,7 +762,7 @@ function Accounts({
           if (!o) setConfirmAcct(null)
         }}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="sm:max-w-sm">
           {(() => {
             if (!confirmAcct) return null
             const a = confirmAcct

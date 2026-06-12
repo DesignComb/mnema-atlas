@@ -2,7 +2,7 @@ import { humanizeError } from '@/lib/utils'
 import { useRef, useState } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { uploadImage } from '@/lib/upload'
+import { removeUploadedImage, uploadImage } from '@/lib/upload'
 import { useT } from '@/lib/i18n'
 
 /** Pick → upload → preview → remove. `value` is the public URL (or null). */
@@ -10,12 +10,25 @@ export function ImageUpload({ value, onChange }: { value: string | null; onChang
   const t = useT()
   const ref = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+  // URLs uploaded in THIS dialog session. Only these are safe to clean from
+  // storage when replaced/removed — a pre-existing saved image must survive a
+  // remove-click, because the user may still cancel the form.
+  const sessionUrls = useRef<Set<string>>(new Set())
+
+  /** Best-effort storage cleanup, restricted to this session's own uploads. */
+  function discardIfSessionUpload(url: string | null) {
+    if (url && sessionUrls.current.delete(url)) void removeUploadedImage(url)
+  }
 
   async function pick(file?: File) {
     if (!file) return
     setBusy(true)
     try {
-      onChange(await uploadImage(file))
+      const prev = value
+      const url = await uploadImage(file)
+      sessionUrls.current.add(url)
+      onChange(url)
+      discardIfSessionUpload(prev) // replacing our own fresh upload → drop the orphan
     } catch (e) {
       toast.error(humanizeError(e, ['Upload failed', '上傳失敗']))
     } finally {
@@ -32,7 +45,10 @@ export function ImageUpload({ value, onChange }: { value: string | null; onChang
           <img src={value} alt="" className="max-h-40 rounded-lg border border-border object-contain" />
           <button
             type="button"
-            onClick={() => onChange(null)}
+            onClick={() => {
+              discardIfSessionUpload(value)
+              onChange(null)
+            }}
             aria-label={t('Remove image', '移除圖片')}
             className="absolute -right-2 -top-2 rounded-full border border-border bg-card p-1 text-muted-foreground shadow-soft transition hover:text-destructive"
           >

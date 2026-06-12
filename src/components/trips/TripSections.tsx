@@ -218,7 +218,7 @@ function BookingDialog({
   const routey = type === 'flight' || type === 'transport'
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit reservation', '編輯訂位') : t('Add reservation', '新增訂位')}</DialogTitle>
         </DialogHeader>

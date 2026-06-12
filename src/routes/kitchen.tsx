@@ -213,20 +213,25 @@ export function KitchenScreen() {
                   return (
                     <div key={r.id} className="group rounded-xl border border-border bg-card p-4">
                       <div className="flex items-start gap-2">
-                        <button onClick={() => setRecipeDialog({ open: true, recipe: r })} className="min-w-0 flex-1 text-left">
-                          <p className="flex items-center gap-1.5 text-[15px] font-semibold text-foreground">
-                            <span className="truncate">{r.title}</span>
-                            {r.created_via === 'mcp' ? <AiChip isNew={isNew(r.created_at)} /> : null}
-                          </p>
-                          <p className="truncate text-[12.5px] text-muted-foreground">
-                            {[
-                              r.servings ? t(`${r.servings} servings`, `${r.servings} 份`) : '',
-                              r.total_minutes ? `${r.total_minutes} ${t('min', '分')}` : '',
-                              ings.length ? t(`${ings.length} ingredients`, `${ings.length} 種食材`) : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </p>
+                        <button onClick={() => setRecipeDialog({ open: true, recipe: r })} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                          {r.image_url ? (
+                            <img src={r.image_url} alt="" loading="lazy" className="size-12 shrink-0 rounded-lg border border-border object-cover" />
+                          ) : null}
+                          <span className="block min-w-0 flex-1">
+                            <span className="flex items-center gap-1.5 text-[15px] font-semibold text-foreground">
+                              <span className="truncate">{r.title}</span>
+                              {r.created_via === 'mcp' ? <AiChip isNew={isNew(r.created_at)} /> : null}
+                            </span>
+                            <span className="block truncate text-[12.5px] text-muted-foreground">
+                              {[
+                                r.servings ? t(`${r.servings} servings`, `${r.servings} 份`) : '',
+                                r.total_minutes ? `${r.total_minutes} ${t('min', '分')}` : '',
+                                ings.length ? t(`${ings.length} ingredients`, `${ings.length} 種食材`) : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
+                          </span>
                         </button>
                         <button
                           onClick={() => updateRecipe.mutate({ recipe_id: r.id, is_favorite: !r.is_favorite })}
@@ -240,7 +245,7 @@ export function KitchenScreen() {
                             <ListPlus className="size-4" />
                           </button>
                           <button
-                            onClick={() => removeKitchenItem(`recipe:${r.id}`, t(`Deleted “${r.title}”`, `已刪除「${r.title}」`), () => apiDeleteRecipe(r.id))}
+                            onClick={() => removeKitchenItem(`recipe:${r.id}`, t(`Deleted “${r.title}”`, `已刪除「${r.title}」`), () => apiDeleteRecipe(r.id, r.image_url))}
                             className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
                             aria-label={t('Delete', '刪除')}
                           >

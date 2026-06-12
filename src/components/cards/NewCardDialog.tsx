@@ -8,6 +8,7 @@ import type { CardRow } from '@/lib/database.types'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { removeUploadedImage } from '@/lib/upload'
 import { TagInput } from '@/components/editor/TagInput'
 import { ImageUpload } from './ImageUpload'
 import {
@@ -103,6 +104,8 @@ export function NewCardDialog({
     }
     try {
       await deleteCard.mutateAsync(card.id)
+      // Best-effort storage cleanup — card deletes are immediate (no undo window).
+      if (card.image_url) void removeUploadedImage(card.image_url)
       toast.success(t('Flashcard deleted', '已刪除字卡'))
       onOpenChange(false)
     } catch (err) {

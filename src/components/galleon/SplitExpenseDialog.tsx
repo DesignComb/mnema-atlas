@@ -164,7 +164,7 @@ export function SplitExpenseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[92dvh]">
         <DialogHeader>
           <DialogTitle>{t('Split an expense', '分帳')}</DialogTitle>
         </DialogHeader>

@@ -121,7 +121,7 @@ export function LogHealthDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit entry', '編輯紀錄') : t('Log health', '記錄健康')}</DialogTitle>
         </DialogHeader>

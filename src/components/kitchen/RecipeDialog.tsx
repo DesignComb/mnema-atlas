@@ -6,6 +6,8 @@ import { useI18n } from '@/lib/i18n'
 import type { RecipeRow } from '@/lib/database.types'
 import type { RecipeIngredient } from '@shared/schemas'
 import { TagInput } from '@/components/editor/TagInput'
+import { ImageUpload } from '@/components/cards/ImageUpload'
+import { removeUploadedImage } from '@/lib/upload'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -56,6 +58,7 @@ export function RecipeDialog({
   const [minutes, setMinutes] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [sourceUrl, setSourceUrl] = useState('')
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [favorite, setFavorite] = useState(false)
   // rendered line → the original structured ingredient(s) behind it
   const originalByLine = useRef<Map<string, RecipeIngredient[]>>(new Map())
@@ -78,6 +81,7 @@ export function RecipeDialog({
     setMinutes(recipe?.total_minutes != null ? String(recipe.total_minutes) : '')
     setTags(recipe?.tags ?? [])
     setSourceUrl(recipe?.source_url ?? '')
+    setImageUrl(recipe?.image_url ?? null)
     setFavorite(recipe?.is_favorite ?? false)
   }, [open, recipe])
 
@@ -111,11 +115,15 @@ export function RecipeDialog({
       total_minutes: minutes.trim() ? Number(minutes) : undefined,
       tags,
       source_url: sourceUrl.trim() || undefined,
+      // update_recipe (0042): null = keep current, '' = clear, value = set.
+      image_url: imageUrl ?? (editing && recipe?.image_url ? '' : undefined),
       is_favorite: favorite,
     }
     try {
       if (editing && recipe) {
         await update.mutateAsync({ recipe_id: recipe.id, ...fields })
+        // The old saved photo is now unreferenced (cleared or replaced) — best-effort cleanup.
+        if (recipe.image_url && recipe.image_url !== imageUrl) void removeUploadedImage(recipe.image_url)
       } else {
         await create.mutateAsync(fields)
       }
@@ -127,7 +135,7 @@ export function RecipeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit recipe', '編輯食譜') : t('New recipe', '新增食譜')}</DialogTitle>
         </DialogHeader>
@@ -139,6 +147,10 @@ export function RecipeDialog({
             placeholder={t('Recipe title', '食譜名稱')}
             className="w-full border-b border-border bg-transparent pb-2 text-lg font-semibold outline-none placeholder:text-muted-foreground/50 focus:border-brand"
           />
+          <div className="flex flex-col gap-1.5">
+            <Label>{t('Photo', '照片')}</Label>
+            <ImageUpload value={imageUrl} onChange={setImageUrl} />
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="rc-ing">{t('Ingredients (one per line)', '食材(一行一項)')}</Label>
             <Textarea id="rc-ing" value={ingredients} onChange={(e) => setIngredients(e.target.value)} rows={5} placeholder={t('2 eggs\n1 cup rice\n…', '2 顆蛋\n1 杯米\n…')} />

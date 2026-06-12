@@ -116,6 +116,7 @@ export const updateDeckInput = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   description: z.string().max(2_000).optional(),
 })
+export const setDeckParentInput = z.object({ deck_id: uuid, parent_deck_id: uuid.nullable().optional() })
 export const setNoteDeckInput = z.object({ note_id: uuid, deck_id: uuid.nullable() })
 export const setNoteTagsInput = z.object({ note_id: uuid, tags: tagList })
 export const setCardTagsInput = z.object({ card_id: uuid, tags: tagList })
@@ -999,6 +1000,8 @@ export const toolDescriptions = {
   delete_note: 'Delete a note (its flashcards are kept, just unlinked from the note).',
   update_deck: 'Rename a deck or change its description.',
   delete_deck: 'Delete a deck (its notes & cards are kept, just unfiled).',
+  set_deck_parent:
+    'Move a deck under another deck (or to the top level with parent_deck_id=null). Decks can nest like folders.',
   set_note_deck: 'Move a note into a deck, or out of all decks (deck_id = null).',
   set_note_tags: 'Replace a note’s whole tag set (drives the graph colours/clusters).',
   set_card_tags: 'Replace a flashcard’s whole tag set (enables study-by-tag).',

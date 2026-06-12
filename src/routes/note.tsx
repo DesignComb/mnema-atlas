@@ -19,6 +19,7 @@ import {
 const NoteEditor = lazy(() =>
   import('@/components/editor/NoteEditor').then((m) => ({ default: m.NoteEditor })),
 )
+import { AiChip } from '@/components/common/AiChip'
 import { NewCardDialog } from '@/components/cards/NewCardDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { AskAiDialog } from '@/components/cards/AskAiDialog'
@@ -227,6 +228,7 @@ export function NoteScreen() {
               ))}
             </select>
             {setNoteDeck.isPending ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
+            {note.created_via === 'mcp' ? <AiChip /> : null}
           </div>
           {/* Tags — colour & cluster this note in the graph. */}
           <div className="mb-6">

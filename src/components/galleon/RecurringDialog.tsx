@@ -57,7 +57,7 @@ export function RecurringDialog({ open, onOpenChange, ledger }: { open: boolean;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{t('Recurring transactions', '定期收支')}</DialogTitle>
         </DialogHeader>

@@ -70,7 +70,7 @@ export function PantryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit item', '編輯項目') : t('Add to pantry', '加入庫存')}</DialogTitle>
         </DialogHeader>

@@ -25,3 +25,25 @@ export async function uploadImage(file: File): Promise<string> {
   if (error) throw error
   return supabase.storage.from('uploads').getPublicUrl(key).data.publicUrl
 }
+
+/**
+ * Best-effort storage cleanup: delete the object behind a public `uploads` URL.
+ * Silently no-ops on URLs that don't belong to our bucket and swallows every
+ * error — an orphaned object is never worth blocking or surfacing a failure.
+ * Fire-and-forget AFTER the referencing row is actually gone (mind undo windows).
+ */
+export async function removeUploadedImage(url: string): Promise<void> {
+  try {
+    // Derive the exact public-URL prefix uploadImage() produces (probe trick:
+    // immune to trailing-slash differences across storage-js versions).
+    const probe = supabase.storage.from('uploads').getPublicUrl('probe').data.publicUrl
+    if (!probe.endsWith('probe')) return
+    const prefix = probe.slice(0, -'probe'.length)
+    if (!url.startsWith(prefix)) return // not ours (external image, other bucket…)
+    const key = decodeURIComponent(url.slice(prefix.length).split(/[?#]/)[0])
+    if (!key) return
+    await supabase.storage.from('uploads').remove([key])
+  } catch {
+    // best-effort only
+  }
+}

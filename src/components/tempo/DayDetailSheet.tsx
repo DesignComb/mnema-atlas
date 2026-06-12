@@ -57,7 +57,7 @@ export function DayDetailSheet({
 
   return (
     <Dialog open={!!date} onOpenChange={(o) => !o && onOpenChange(null)}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[85dvh]">
         {date && (
           <>
             <DialogHeader>

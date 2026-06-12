@@ -84,7 +84,7 @@ export function MedicationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit medication', '編輯用藥') : t('Add medication', '新增用藥')}</DialogTitle>
         </DialogHeader>
