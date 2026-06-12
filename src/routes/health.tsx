@@ -49,6 +49,7 @@ import { Select } from '@/components/ui/select'
 import { LogHealthDialog } from '@/components/health/LogHealthDialog'
 import { JournalDialog } from '@/components/health/JournalDialog'
 import { MedicationDialog } from '@/components/health/MedicationDialog'
+import { PullToRefresh } from '@/lib/use-pull-to-refresh'
 
 /** HH:MM (24h) of a timestamp, in local time. */
 function hmOf(iso: string): string {
@@ -171,7 +172,7 @@ export function HealthScreen() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <PullToRefresh onRefresh={() => bumpAllHealth(qc)}>
         <div className="mx-auto max-w-2xl px-4 py-5 sm:px-6">
           {sectionError && section !== 'settings' ? <ErrorState onRetry={() => void sectionRetry()} /> : null}
           {/* ── Overview ───────────────────────────────────────────── */}
@@ -508,7 +509,7 @@ export function HealthScreen() {
             </div>
           ) : null}
         </div>
-      </div>
+      </PullToRefresh>
 
       <LogHealthDialog
         open={logDialog.open}

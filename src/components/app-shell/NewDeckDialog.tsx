@@ -1,12 +1,14 @@
 import { humanizeError } from '@/lib/utils'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { useCreateDeck, useUpdateDeck } from '@/lib/hooks'
+import { useCreateDeck, useDecks, useUpdateDeck } from '@/lib/hooks'
+import { buildDeckTree, flattenTree, indentLabel } from '@/lib/deck-tree'
 import { useT } from '@/lib/i18n'
 import type { DeckRow } from '@/lib/database.types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
@@ -21,25 +23,34 @@ export function NewDeckDialog({
   open,
   onOpenChange,
   deck,
+  defaultParentId,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   /** When provided, the dialog renames this deck instead of creating one. */
   deck?: DeckRow
+  /** Create mode: preselect this deck as the parent (e.g. "New sub-deck" from a deck page). */
+  defaultParentId?: string
 }) {
   const editing = !!deck
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [parentSel, setParentSel] = useState('')
   const createDeck = useCreateDeck()
   const updateDeck = useUpdateDeck()
+  const { data: decks } = useDecks()
   const t = useT()
+
+  // Indented option list — nesting reads at a glance in the native select.
+  const deckOptions = useMemo(() => flattenTree(buildDeckTree(decks ?? [])), [decks])
 
   useEffect(() => {
     if (open) {
       setName(deck?.name ?? '')
       setDescription(deck?.description ?? '')
+      setParentSel(deck ? '' : defaultParentId ?? '')
     }
-  }, [open, deck])
+  }, [open, deck, defaultParentId])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -49,7 +60,11 @@ export function NewDeckDialog({
         await updateDeck.mutateAsync({ id: deck.id, patch: { name: name.trim(), description: description.trim() || null } })
         toast.success(t('Deck updated', '已更新牌組'))
       } else {
-        await createDeck.mutateAsync({ name: name.trim(), description: description.trim() || undefined })
+        await createDeck.mutateAsync({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          parent_deck_id: parentSel || undefined,
+        })
         toast.success(t(`Deck “${name.trim()}” created`, `已建立牌組「${name.trim()}」`))
       }
       setName('')
@@ -89,6 +104,20 @@ export function NewDeckDialog({
               placeholder={t('What is this deck about?', '這個牌組是關於什麼的？')}
             />
           </div>
+          {/* Nesting — pick where the new deck lives (renames keep their place; use "Move to" instead). */}
+          {!editing && deckOptions.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="deck-parent">{t('Inside (optional)', '上層牌組（選填）')}</Label>
+              <Select id="deck-parent" value={parentSel} onChange={(e) => setParentSel(e.target.value)}>
+                <option value="">{t('Top level', '最上層')}</option>
+                {deckOptions.map(({ deck: d, depth }) => (
+                  <option key={d.id} value={d.id}>
+                    {indentLabel(d.name, depth)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('Cancel', '取消')}

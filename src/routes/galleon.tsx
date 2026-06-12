@@ -84,6 +84,8 @@ import { MemberDialog } from '@/components/galleon/MemberDialog'
 import { SplitExpenseDialog } from '@/components/galleon/SplitExpenseDialog'
 import { SubscriptionDialog } from '@/components/galleon/SubscriptionDialog'
 import { SortableList } from '@/components/common/SortableList'
+import { SwipeRow } from '@/components/common/SwipeRow'
+import { PullToRefresh } from '@/lib/use-pull-to-refresh'
 
 /** Awaitable mirror of hooks.ts' bumpGalleon, for undoable-delete onSettled. */
 const GALLEON_KEYS = [
@@ -125,6 +127,7 @@ export function GalleonScreen() {
   const active = (ledgers ?? []).filter((l) => !l.is_archived)
   const ledgerId = search.ledger && active.some((l) => l.id === search.ledger) ? search.ledger : active[0]?.id ?? ''
 
+  const qc = useQueryClient()
   const { data: ledger } = useLedger(ledgerId)
   const { data: balancesForDialog = [] } = useBalances(ledgerId)
   const { data: splitIdsTop = [] } = useSplitTxnIds(ledgerId)
@@ -283,7 +286,7 @@ export function GalleonScreen() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <PullToRefresh onRefresh={() => bumpAllGalleon(qc)}>
         <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
           <div className="mb-4 flex items-center gap-1.5">
             {VIEWS.map((v) => (
@@ -336,7 +339,7 @@ export function GalleonScreen() {
             <Transactions ledger={ledger} onEditTxn={(txn) => setTxnDialog({ open: true, txn })} t={t} isNew={isNew} />
           )}
         </div>
-      </div>
+      </PullToRefresh>
 
       <LedgerDialog
         open={ledgerDialog.open}
@@ -605,8 +608,42 @@ function TxnRow({
       ? `${acc?.name ?? '—'} → ${toAcc?.name ?? '—'}`
       : tx.payee || cat?.name || t('Uncategorised', '未分類')
 
+  // Shared by the menu item and swipe-left — one undoable flow, never two.
+  function removeTxn() {
+    undoableDelete({
+      key: `txn:${tx.id}`,
+      message: t(`Deleted ${fmtMoney(tx.amount, tx.currency)}`, `已刪除 ${fmtMoney(tx.amount, tx.currency)}`),
+      undoLabel: t('Undo', '復原'),
+      errorMessage: t('Delete failed — the transaction is back', '刪除失敗,交易已還原'),
+      commit: () => apiDeleteTransaction(tx.id),
+      onSettled: () => bumpAllGalleon(qc),
+    })
+  }
+
   return (
-    <div className="group flex items-center gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0 sm:px-4">
+    // The divider lives on the SwipeRow wrapper (not the moving row) so it
+    // can't tear while the content translates.
+    <SwipeRow
+      className="border-b border-border/60 last:border-b-0"
+      right={{
+        icon: <Pencil className="size-5" />,
+        label: t('Edit', '編輯'),
+        className: 'bg-foreground text-background',
+        onTrigger: onEdit,
+      }}
+      left={
+        withMenu
+          ? {
+              icon: <Trash2 className="size-5" />,
+              label: t('Delete', '刪除'),
+              className: 'bg-destructive text-destructive-foreground',
+              onTrigger: removeTxn,
+              commit: 'exit',
+            }
+          : undefined
+      }
+    >
+    <div className="group flex items-center gap-3 bg-card px-3 py-2.5 sm:px-4">
       <button onClick={onEdit} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-[15px]">
           {tx.type === 'transfer' ? <ArrowLeftRight className="size-4 text-muted-foreground" /> : cat?.icon || '💸'}
@@ -641,16 +678,7 @@ function TxnRow({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive [&_svg]:text-destructive"
-              onSelect={() =>
-                undoableDelete({
-                  key: `txn:${tx.id}`,
-                  message: t(`Deleted ${fmtMoney(tx.amount, tx.currency)}`, `已刪除 ${fmtMoney(tx.amount, tx.currency)}`),
-                  undoLabel: t('Undo', '復原'),
-                  errorMessage: t('Delete failed — the transaction is back', '刪除失敗,交易已還原'),
-                  commit: () => apiDeleteTransaction(tx.id),
-                  onSettled: () => bumpAllGalleon(qc),
-                })
-              }
+              onSelect={removeTxn}
             >
               <Trash2 /> {t('Delete', '刪除')}
             </DropdownMenuItem>
@@ -658,6 +686,7 @@ function TxnRow({
         </DropdownMenu>
       ) : null}
     </div>
+    </SwipeRow>
   )
 }
 

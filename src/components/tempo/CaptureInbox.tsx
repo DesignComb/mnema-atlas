@@ -17,6 +17,8 @@ import type { CaptureRow } from '@/lib/database.types'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { EmptyState } from '@/components/app-shell/PageHeader'
+import { SwipeRow } from '@/components/common/SwipeRow'
+import { PullToRefresh } from '@/lib/use-pull-to-refresh'
 
 // What the user tells their own AI to run the triage flow (tool descriptions do the rest).
 const TRIGGER_EN = 'process my inbox'
@@ -116,7 +118,7 @@ export function CaptureInbox({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <PullToRefresh onRefresh={() => qc.invalidateQueries({ queryKey: ['captures'] })}>
       <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
         {/* Quick capture */}
         <div className="mb-3 rounded-xl border border-border bg-card p-3 shadow-soft focus-within:border-brand/50">
@@ -203,57 +205,82 @@ export function CaptureInbox({
         ) : (
           <div className="space-y-2">
             {rows.map((c) => (
-              <div key={c.id} className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-soft">
-                <div className="min-w-0 flex-1">
-                  <p className="whitespace-pre-wrap break-words text-[14px] text-foreground">{c.raw_text}</p>
-                  <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span>{shortStamp(c.created_at)}</span>
-                    <span>·</span>
-                    <span>{t(...(SOURCE_LABEL[c.source] ?? [c.source, c.source]))}</span>
-                    {c.resolved_kind ? (
-                      <>
-                        <span>·</span>
-                        <span className="text-brand">
-                          → {t(...(RESOLVED_KIND_LABEL[c.resolved_kind] ?? [c.resolved_kind, c.resolved_kind]))}
-                        </span>
-                      </>
-                    ) : null}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-0.5">
-                  {filter === 'pending' ? (
+              // Swipe mirrors the row's human actions: ← delete (undoable)
+              // everywhere; → reopen on filed/dismissed rows. Resolve is the
+              // AI's job, so pending rows get no swipe-right.
+              <SwipeRow
+                key={c.id}
+                className="rounded-xl border border-border shadow-soft"
+                right={
+                  filter !== 'pending'
+                    ? {
+                        icon: <RotateCcw className="size-5" />,
+                        label: t('Reopen', '重新開啟'),
+                        className: 'bg-brand text-brand-foreground',
+                        onTrigger: () => reopen.mutate(c.id),
+                      }
+                    : undefined
+                }
+                left={{
+                  icon: <Trash2 className="size-5" />,
+                  label: t('Delete', '刪除'),
+                  className: 'bg-destructive text-destructive-foreground',
+                  onTrigger: () => removeCapture(c),
+                  commit: 'exit',
+                }}
+              >
+                <div className="flex items-start gap-3 bg-card p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="whitespace-pre-wrap break-words text-[14px] text-foreground">{c.raw_text}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span>{shortStamp(c.created_at)}</span>
+                      <span>·</span>
+                      <span>{t(...(SOURCE_LABEL[c.source] ?? [c.source, c.source]))}</span>
+                      {c.resolved_kind ? (
+                        <>
+                          <span>·</span>
+                          <span className="text-brand">
+                            → {t(...(RESOLVED_KIND_LABEL[c.resolved_kind] ?? [c.resolved_kind, c.resolved_kind]))}
+                          </span>
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    {filter === 'pending' ? (
+                      <button
+                        onClick={() => dismiss.mutate(c.id)}
+                        className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        title={t('Dismiss', '忽略')}
+                        aria-label={t('Dismiss', '忽略')}
+                      >
+                        <X className="size-4" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => reopen.mutate(c.id)}
+                        className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        title={t('Reopen', '重新開啟')}
+                        aria-label={t('Reopen', '重新開啟')}
+                      >
+                        <RotateCcw className="size-4" />
+                      </button>
+                    )}
                     <button
-                      onClick={() => dismiss.mutate(c.id)}
-                      className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                      title={t('Dismiss', '忽略')}
-                      aria-label={t('Dismiss', '忽略')}
+                      onClick={() => removeCapture(c)}
+                      className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-destructive"
+                      title={t('Delete', '刪除')}
+                      aria-label={t('Delete', '刪除')}
                     >
-                      <X className="size-4" />
+                      <Trash2 className="size-4" />
                     </button>
-                  ) : (
-                    <button
-                      onClick={() => reopen.mutate(c.id)}
-                      className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                      title={t('Reopen', '重新開啟')}
-                      aria-label={t('Reopen', '重新開啟')}
-                    >
-                      <RotateCcw className="size-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => removeCapture(c)}
-                    className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-destructive"
-                    title={t('Delete', '刪除')}
-                    aria-label={t('Delete', '刪除')}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                  </div>
                 </div>
-              </div>
+              </SwipeRow>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </PullToRefresh>
   )
 }

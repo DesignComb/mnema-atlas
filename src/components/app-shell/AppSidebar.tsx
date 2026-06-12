@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   ArrowLeft,
@@ -7,6 +8,7 @@ import {
   CalendarDays,
   CalendarRange,
   ChefHat,
+  ChevronRight,
   Coins,
   FileText,
   Flame,
@@ -36,6 +38,8 @@ import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
 import { useDecks, useReorderDecks, useReorderTaskLists, useTaskLists } from '@/lib/hooks'
+import { buildDeckTree, type DeckNode } from '@/lib/deck-tree'
+import type { DeckRow } from '@/lib/database.types'
 import { cn, modKey } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SortableList } from '@/components/common/SortableList'
@@ -246,32 +250,7 @@ export function AppSidebar({
       <ScrollArea className="flex-1 px-3">
         <div className="flex flex-col gap-0.5 pb-4">
           {decks?.length ? (
-            <SortableList
-              items={decks}
-              onReorder={(ids) => reorderDecks.mutate(ids)}
-              itemClassName="rounded-md bg-sidebar"
-              renderItem={(deck, handle) => {
-                const active = pathname === `/decks/${deck.id}`
-                return (
-                  <div className="group flex items-center">
-                    {handle}
-                    <Link
-                      to="/decks/$deckId"
-                      params={{ deckId: deck.id }}
-                      className={cn(
-                        'flex min-w-0 flex-1 items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
-                        active
-                          ? 'bg-sidebar-accent text-foreground'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
-                      )}
-                    >
-                      <span className="size-1.5 shrink-0 rounded-full bg-brand/50" />
-                      <span className="truncate">{deck.name}</span>
-                    </Link>
-                  </div>
-                )
-              }}
-            />
+            <DeckTreeNav decks={decks} pathname={pathname} onReorder={(ids) => reorderDecks.mutate(ids)} />
           ) : (
             <p className="px-2.5 py-2 text-[12.5px] leading-relaxed text-muted-foreground/70">
               {t('No decks yet. Create one, or let a connected AI add content.', '還沒有牌組。建立一個,或讓連接的 AI 幫你新增。')}
@@ -416,5 +395,137 @@ export function AppSidebar({
         </DropdownMenu>
       </div>
     </aside>
+  )
+}
+
+// ── Deck tree (Notion-like nesting) ───────────────────────────────
+// Expand/collapse state persists across sessions; absent = expanded.
+const DECK_EXPANDED_KEY = 'mnema:deck-expanded'
+
+function readExpandedMap(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(DECK_EXPANDED_KEY) ?? '{}') as Record<string, boolean>
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Nested deck nav. Each same-parent sibling group is its own sortable scope,
+ * so a drag can never move a deck across parents — reorder_decks must only be
+ * called with same-parent siblings. Re-parenting happens on the deck page
+ * ("Move to"), not by dragging.
+ */
+function DeckTreeNav({
+  decks,
+  pathname,
+  onReorder,
+}: {
+  decks: DeckRow[]
+  pathname: string
+  onReorder: (siblingIds: string[]) => void
+}) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(readExpandedMap)
+  const tree = useMemo(() => buildDeckTree(decks), [decks])
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = { ...prev, [id]: !(prev[id] ?? true) }
+      try {
+        localStorage.setItem(DECK_EXPANDED_KEY, JSON.stringify(next))
+      } catch {
+        /* storage unavailable — collapse state just won't persist */
+      }
+      return next
+    })
+  return (
+    <DeckTreeLevel
+      nodes={tree}
+      depth={0}
+      expanded={expanded}
+      onToggle={toggle}
+      pathname={pathname}
+      onReorder={onReorder}
+    />
+  )
+}
+
+function DeckTreeLevel({
+  nodes,
+  depth,
+  expanded,
+  onToggle,
+  pathname,
+  onReorder,
+}: {
+  nodes: DeckNode<DeckRow>[]
+  depth: number
+  expanded: Record<string, boolean>
+  onToggle: (id: string) => void
+  pathname: string
+  onReorder: (siblingIds: string[]) => void
+}) {
+  const { t } = useI18n()
+  // SortableList keeps an optimistic copy keyed by ids — read names/children
+  // from the latest props at render time so renames and new sub-decks show up.
+  const nodeById = new Map(nodes.map((n) => [n.deck.id, n]))
+  const anyKids = nodes.some((n) => n.children.length > 0)
+  return (
+    <SortableList
+      items={nodes.map((n) => n.deck)}
+      onReorder={onReorder}
+      itemClassName="rounded-md bg-sidebar"
+      renderItem={(item, handle) => {
+        const node = nodeById.get(item.id)
+        if (!node) return null
+        const { deck } = node
+        const hasKids = node.children.length > 0
+        const open = expanded[deck.id] ?? true
+        const active = pathname === `/decks/${deck.id}`
+        return (
+          <>
+            <div className="group flex items-center" style={depth ? { paddingLeft: depth * 12 } : undefined}>
+              {handle}
+              {hasKids ? (
+                <button
+                  type="button"
+                  onClick={() => onToggle(deck.id)}
+                  aria-expanded={open}
+                  aria-label={t('Toggle sub-decks', '展開／收合子牌組')}
+                  className="shrink-0 rounded p-0.5 text-muted-foreground/70 transition hover:bg-sidebar-accent hover:text-foreground"
+                >
+                  <ChevronRight className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
+                </button>
+              ) : anyKids ? (
+                // Keep names aligned when some siblings have a chevron.
+                <span className="w-[18px] shrink-0" aria-hidden />
+              ) : null}
+              <Link
+                to="/decks/$deckId"
+                params={{ deckId: deck.id }}
+                className={cn(
+                  'flex min-w-0 flex-1 items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
+                  active
+                    ? 'bg-sidebar-accent text-foreground'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+                )}
+              >
+                <span className="size-1.5 shrink-0 rounded-full bg-brand/50" />
+                <span className="truncate">{deck.name}</span>
+              </Link>
+            </div>
+            {hasKids && open ? (
+              <DeckTreeLevel
+                nodes={node.children}
+                depth={depth + 1}
+                expanded={expanded}
+                onToggle={onToggle}
+                pathname={pathname}
+                onReorder={onReorder}
+              />
+            ) : null}
+          </>
+        )
+      }}
+    />
   )
 }

@@ -51,6 +51,8 @@ import { TaskDialog } from '@/components/tempo/TaskDialog'
 import { ListDialog } from '@/components/tempo/ListDialog'
 import { HabitCard } from '@/components/tempo/HabitCard'
 import { SortableList } from '@/components/common/SortableList'
+import { SwipeRow, type SwipeAction } from '@/components/common/SwipeRow'
+import { PullToRefresh } from '@/lib/use-pull-to-refresh'
 import { HabitCheckButton } from '@/components/tempo/HabitCheckButton'
 import { CalendarView } from '@/components/tempo/CalendarView'
 import { CaptureInbox } from '@/components/tempo/CaptureInbox'
@@ -211,6 +213,33 @@ export function TempoScreen() {
     }
   }
 
+  // Swipe gestures mirror the row's own controls exactly: right = the same
+  // toggle the checkbox fires (optimistic complete / habit check-in / reopen),
+  // left = the same undoable delete the menu offers.
+  function swipeComplete(task: TaskRow): SwipeAction {
+    const done = task.status === 'done'
+    return {
+      icon: done ? <Circle className="size-5" /> : <CheckCircle2 className="size-5" />,
+      label:
+        task.kind === 'habit'
+          ? t('Check in', '打卡')
+          : done
+            ? t('Reopen', '重新開啟')
+            : t('Complete', '完成'),
+      className: 'bg-success text-success-foreground',
+      onTrigger: () => void toggle(task),
+    }
+  }
+  function swipeDelete(task: TaskRow): SwipeAction {
+    return {
+      icon: <Trash2 className="size-5" />,
+      label: t('Delete', '刪除'),
+      className: 'bg-destructive text-destructive-foreground',
+      onTrigger: () => removeTask(task),
+      commit: 'exit',
+    }
+  }
+
   function removeTask(task: TaskRow) {
     undoableDelete({
       key: `task:${task.id}`,
@@ -282,7 +311,15 @@ export function TempoScreen() {
           <CalendarView tasks={tasks ?? []} onEdit={(task) => setTaskDialog({ open: true, task })} />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
+        <PullToRefresh
+          onRefresh={() =>
+            Promise.all(
+              ['tasks', 'task-lists', 'task', 'habit', 'streak', 'checkins'].map((k) =>
+                qc.invalidateQueries({ queryKey: [k] }),
+              ),
+            )
+          }
+        >
           <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
             <>
               {/* Quick add */}
@@ -358,17 +395,19 @@ export function TempoScreen() {
                   className="overflow-hidden rounded-xl border border-border bg-card shadow-soft"
                   itemClassName="bg-card border-b border-border/60 last:border-b-0"
                   renderItem={(task, handle) => (
-                    <TaskRowItem
-                      task={task}
-                      onToggle={() => toggle(task)}
-                      onEdit={() => setTaskDialog({ open: true, task })}
-                      onDelete={() => removeTask(task)}
-                      t={t}
-                      lang={lang}
-                      isNew={isNew}
-                      today={today}
-                      dragHandle={handle}
-                    />
+                    <SwipeRow right={swipeComplete(task)} left={swipeDelete(task)}>
+                      <TaskRowItem
+                        task={task}
+                        onToggle={() => toggle(task)}
+                        onEdit={() => setTaskDialog({ open: true, task })}
+                        onDelete={() => removeTask(task)}
+                        t={t}
+                        lang={lang}
+                        isNew={isNew}
+                        today={today}
+                        dragHandle={handle}
+                      />
+                    </SwipeRow>
                   )}
                 />
               ) : (
@@ -384,16 +423,18 @@ export function TempoScreen() {
                         // always :last-child inside it, so last: wouldn't work there.
                         className="overflow-hidden border-b border-border/60 last:border-b-0"
                       >
-                        <TaskRowItem
-                          task={task}
-                          onToggle={() => toggle(task)}
-                          onEdit={() => setTaskDialog({ open: true, task })}
-                          onDelete={() => removeTask(task)}
-                          t={t}
-                          lang={lang}
-                          isNew={isNew}
-                          today={today}
-                        />
+                        <SwipeRow right={swipeComplete(task)} left={swipeDelete(task)}>
+                          <TaskRowItem
+                            task={task}
+                            onToggle={() => toggle(task)}
+                            onEdit={() => setTaskDialog({ open: true, task })}
+                            onDelete={() => removeTask(task)}
+                            t={t}
+                            lang={lang}
+                            isNew={isNew}
+                            today={today}
+                          />
+                        </SwipeRow>
                       </motion.div>
                     ))}
                   </AnimatePresence>
@@ -410,7 +451,7 @@ export function TempoScreen() {
               ) : null}
             </>
           </div>
-        </div>
+        </PullToRefresh>
       )}
 
       <TaskDialog

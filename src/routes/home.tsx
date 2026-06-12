@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearch } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import {
   ArrowRight,
@@ -50,6 +51,7 @@ import { computeOccurrence, habitTodayISO, minutesUntilReset } from '@/lib/recur
 import type { JournalEntryRow, TaskRow } from '@/lib/database.types'
 import { JournalDialog } from '@/components/health/JournalDialog'
 import { TodayCustomizeDialog } from '@/components/home/TodayCustomizeDialog'
+import { PullToRefresh } from '@/lib/use-pull-to-refresh'
 
 /**
  * Today's building blocks, in default order. The user can reorder/hide them
@@ -103,6 +105,7 @@ function renderOrdered(sections: LayoutSection[], renderers: Record<string, Reac
 
 export function HomeScreen() {
   const { t, lang } = useI18n()
+  const qc = useQueryClient()
   const search = useSearch({ strict: false }) as { review?: string }
   const today = fmtLocalDate(new Date(), lang, { weekday: 'long', month: 'long', day: 'numeric' })
 
@@ -167,9 +170,11 @@ export function HomeScreen() {
           </Button>
         }
       />
-      <div className="flex-1 overflow-y-auto">
+      {/* Today aggregates every space, so a pull refreshes everything: only the
+          queries this screen mounts are active and actually refetch. */}
+      <PullToRefresh onRefresh={() => qc.invalidateQueries()}>
         <div className="mx-auto max-w-3xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">{renderOrdered(sections, renderers)}</div>
-      </div>
+      </PullToRefresh>
 
       <JournalDialog
         open={journalDialog.open}

@@ -265,6 +265,15 @@ export function useUpdateDeck() {
   })
 }
 
+/** Re-parent a deck (Notion-like nesting). parentDeckId = null moves it to the top level. */
+export function useSetDeckParent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { deckId: string; parentDeckId: string | null }) => api.setDeckParent(v.deckId, v.parentDeckId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.decks }),
+  })
+}
+
 /** Move a note to another deck (or out of all decks when deckId is null). */
 export function useSetNoteDeck() {
   const qc = useQueryClient()

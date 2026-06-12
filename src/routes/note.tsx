@@ -5,6 +5,7 @@ import { Check, Cloud, Copy, Download, Layers, Loader2, MoreHorizontal, Plus, Sp
 import { toast } from 'sonner'
 import * as api from '@/lib/api'
 import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useUpdateNote } from '@/lib/hooks'
+import { buildDeckTree, flattenTree, indentLabel } from '@/lib/deck-tree'
 import { downloadText, safeFilename, humanizeError } from '@/lib/utils'
 import { TagEditor } from '@/components/editor/TagEditor'
 import {
@@ -221,9 +222,9 @@ export function NoteScreen() {
               className="max-w-[60%] truncate rounded-md border border-border bg-card px-2 py-1 text-[13px] text-muted-foreground outline-none transition hover:text-foreground focus:border-brand"
             >
               <option value="">{t('No deck', '無牌組')}</option>
-              {decks?.map((d) => (
+              {flattenTree(buildDeckTree(decks ?? [])).map(({ deck: d, depth }) => (
                 <option key={d.id} value={d.id}>
-                  {d.name}
+                  {indentLabel(d.name, depth)}
                 </option>
               ))}
             </select>

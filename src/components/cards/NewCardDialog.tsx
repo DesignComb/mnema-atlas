@@ -1,8 +1,9 @@
 import { humanizeError } from '@/lib/utils'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCards, useCreateCard, useDecks, useDeleteCard, useNotes, useSetCardTags, useUpdateCard } from '@/lib/hooks'
+import { buildDeckTree, flattenTree, indentLabel } from '@/lib/deck-tree'
 import { useT } from '@/lib/i18n'
 import type { CardRow } from '@/lib/database.types'
 import { Button } from '@/components/ui/button'
@@ -49,6 +50,9 @@ export function NewCardDialog({
   const { data: notes } = useNotes()
   const { data: allCards } = useCards()
   const t = useT()
+
+  // Deck options in tree order, indented per depth (nesting reads at a glance).
+  const deckOptions = useMemo(() => flattenTree(buildDeckTree(decks ?? [])), [decks])
 
   // Tag suggestions = every tag already used on a note or card.
   const tagSuggestions = Array.from(
@@ -137,9 +141,9 @@ export function NewCardDialog({
               className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-brand"
             >
               <option value="">{t('No deck', '無牌組')}</option>
-              {decks?.map((d) => (
+              {deckOptions.map(({ deck: d, depth }) => (
                 <option key={d.id} value={d.id}>
-                  {d.name}
+                  {indentLabel(d.name, depth)}
                 </option>
               ))}
             </select>

@@ -5,6 +5,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Carrot,
+  Check,
   ChefHat,
   ListPlus,
   Pencil,
@@ -44,6 +45,8 @@ import { Input } from '@/components/ui/input'
 import { RecipeDialog } from '@/components/kitchen/RecipeDialog'
 import { PantryDialog } from '@/components/kitchen/PantryDialog'
 import { MealPlanDialog } from '@/components/kitchen/MealPlanDialog'
+import { SwipeRow } from '@/components/common/SwipeRow'
+import { PullToRefresh } from '@/lib/use-pull-to-refresh'
 
 /** Awaitable mirror of hooks.ts' bumpKitchen, for undoable-delete onSettled. */
 function bumpAllKitchen(qc: QueryClient) {
@@ -201,7 +204,7 @@ export function KitchenScreen() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <PullToRefresh onRefresh={() => bumpAllKitchen(qc)}>
         <div className="mx-auto max-w-2xl px-4 py-5 sm:px-6">
           {sectionError ? <ErrorState onRetry={() => void sectionRetry()} /> : null}
           {/* ── Recipes ────────────────────────────────────────────── */}
@@ -281,28 +284,47 @@ export function KitchenScreen() {
                     <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">{cat}</p>
                     <div className="flex flex-col gap-1.5">
                       {items.map((it) => (
-                        <div key={it.id} className="group flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-                          <Carrot className="size-4 shrink-0 text-muted-foreground" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[13.5px] text-foreground">
-                              {it.name}
-                              {it.quantity != null ? <span className="text-muted-foreground"> · {it.quantity}{it.unit ? ` ${it.unit}` : ''}</span> : null}
-                            </p>
-                            {it.expires_on ? <p className="text-[11.5px] text-muted-foreground">{t('Expires', '到期')} {fmtDate(it.expires_on)}</p> : null}
+                        <SwipeRow
+                          key={it.id}
+                          className="rounded-lg border border-border"
+                          right={{
+                            icon: <Pencil className="size-5" />,
+                            label: t('Edit', '編輯'),
+                            className: 'bg-foreground text-background',
+                            onTrigger: () => setPantryDialog({ open: true, item: it }),
+                          }}
+                          left={{
+                            icon: <Trash2 className="size-5" />,
+                            label: t('Delete', '刪除'),
+                            className: 'bg-destructive text-destructive-foreground',
+                            onTrigger: () =>
+                              removeKitchenItem(`pantry:${it.id}`, t(`Deleted “${it.name}”`, `已刪除「${it.name}」`), () => apiDeletePantryItem(it.id)),
+                            commit: 'exit',
+                          }}
+                        >
+                          <div className="group flex items-center gap-3 bg-card px-3 py-2">
+                            <Carrot className="size-4 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[13.5px] text-foreground">
+                                {it.name}
+                                {it.quantity != null ? <span className="text-muted-foreground"> · {it.quantity}{it.unit ? ` ${it.unit}` : ''}</span> : null}
+                              </p>
+                              {it.expires_on ? <p className="text-[11.5px] text-muted-foreground">{t('Expires', '到期')} {fmtDate(it.expires_on)}</p> : null}
+                            </div>
+                            <div className="flex gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+                              <button onClick={() => setPantryDialog({ open: true, item: it })} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
+                                <Pencil className="size-3.5" />
+                              </button>
+                              <button
+                                onClick={() => removeKitchenItem(`pantry:${it.id}`, t(`Deleted “${it.name}”`, `已刪除「${it.name}」`), () => apiDeletePantryItem(it.id))}
+                                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
+                                aria-label={t('Delete', '刪除')}
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
-                            <button onClick={() => setPantryDialog({ open: true, item: it })} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
-                              <Pencil className="size-3.5" />
-                            </button>
-                            <button
-                              onClick={() => removeKitchenItem(`pantry:${it.id}`, t(`Deleted “${it.name}”`, `已刪除「${it.name}」`), () => apiDeletePantryItem(it.id))}
-                              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
-                              aria-label={t('Delete', '刪除')}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </div>
-                        </div>
+                        </SwipeRow>
                       ))}
                     </div>
                   </div>
@@ -354,25 +376,46 @@ export function KitchenScreen() {
               {shopping.length ? (
                 <div className="flex flex-col gap-1">
                   {shopping.map((s) => (
-                    <div key={s.id} className="group flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={s.is_checked}
-                        onChange={(e) => updateShopping.mutate({ item_id: s.id, is_checked: e.target.checked })}
-                        className="size-4 accent-[var(--brand)]"
-                      />
-                      <span className={`min-w-0 flex-1 truncate text-[13.5px] ${s.is_checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                        {s.name}
-                        {s.quantity ? <span className="text-muted-foreground"> · {s.quantity}</span> : null}
-                      </span>
-                      <button
-                        onClick={() => removeKitchenItem(`shopitem:${s.id}`, t(`Deleted “${s.name}”`, `已刪除「${s.name}」`), () => apiDeleteShoppingItem(s.id))}
-                        className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-accent hover:text-destructive group-hover:opacity-100 [@media(hover:none)]:opacity-100"
-                        aria-label={t('Delete', '刪除')}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
+                    // Swipe → fires the same optimistic check toggle as the
+                    // checkbox; swipe ← the same undoable delete as the trash.
+                    <SwipeRow
+                      key={s.id}
+                      className="rounded-lg border border-border"
+                      right={{
+                        icon: <Check className="size-5" />,
+                        label: s.is_checked ? t('Uncheck', '取消勾選') : t('Check', '勾選'),
+                        className: 'bg-success text-success-foreground',
+                        onTrigger: () => updateShopping.mutate({ item_id: s.id, is_checked: !s.is_checked }),
+                      }}
+                      left={{
+                        icon: <Trash2 className="size-5" />,
+                        label: t('Delete', '刪除'),
+                        className: 'bg-destructive text-destructive-foreground',
+                        onTrigger: () =>
+                          removeKitchenItem(`shopitem:${s.id}`, t(`Deleted “${s.name}”`, `已刪除「${s.name}」`), () => apiDeleteShoppingItem(s.id)),
+                        commit: 'exit',
+                      }}
+                    >
+                      <div className="group flex items-center gap-3 bg-card px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={s.is_checked}
+                          onChange={(e) => updateShopping.mutate({ item_id: s.id, is_checked: e.target.checked })}
+                          className="size-4 accent-[var(--brand)]"
+                        />
+                        <span className={`min-w-0 flex-1 truncate text-[13.5px] ${s.is_checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                          {s.name}
+                          {s.quantity ? <span className="text-muted-foreground"> · {s.quantity}</span> : null}
+                        </span>
+                        <button
+                          onClick={() => removeKitchenItem(`shopitem:${s.id}`, t(`Deleted “${s.name}”`, `已刪除「${s.name}」`), () => apiDeleteShoppingItem(s.id))}
+                          className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-accent hover:text-destructive group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                          aria-label={t('Delete', '刪除')}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </SwipeRow>
                   ))}
                 </div>
               ) : (
@@ -430,7 +473,7 @@ export function KitchenScreen() {
             </div>
           ) : null}
         </div>
-      </div>
+      </PullToRefresh>
 
       <RecipeDialog open={recipeDialog.open} onOpenChange={(v) => setRecipeDialog((s) => ({ ...s, open: v }))} recipe={recipeDialog.recipe} />
       <PantryDialog open={pantryDialog.open} onOpenChange={(v) => setPantryDialog((s) => ({ ...s, open: v }))} item={pantryDialog.item} />

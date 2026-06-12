@@ -88,6 +88,9 @@ function SortableRow<T extends Identifiable>({
       aria-label="Drag to reorder / 拖曳排序"
       onPointerDown={(e) => {
         e.preventDefault()
+        // A grip press belongs to vertical reorder alone — never let it bubble
+        // into a row-level SwipeRow drag (or any other ancestor gesture).
+        e.stopPropagation()
         controls.start(e)
       }}
       // Rows can be clickable (e.g. open-to-edit) — don't let a grip click bubble.

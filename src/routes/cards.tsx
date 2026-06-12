@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { GraduationCap, Layers, Sparkles } from 'lucide-react'
 import { useCards, useDecks, useDueCards, useSeedSample } from '@/lib/hooks'
+import { buildDeckTree, flattenTree } from '@/lib/deck-tree'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/lib/i18n'
@@ -49,7 +50,8 @@ export function CardsScreen() {
 
   const totalDue = due?.length ?? 0
   const looseCount = countByDeck.get('none') ?? 0
-  const deckList = decks ?? []
+  // Tree order with depth, so nested decks read as folders here too.
+  const deckList = flattenTree(buildDeckTree(decks ?? []))
   const isEmpty = (cards?.length ?? 0) === 0
 
   return (
@@ -129,7 +131,7 @@ export function CardsScreen() {
                 </div>
               ) : null}
 
-              {deckList.map((d) => {
+              {deckList.map(({ deck: d, depth }) => {
                 const n = countByDeck.get(d.id) ?? 0
                 const dd = dueByDeck.get(d.id) ?? 0
                 return (
@@ -137,6 +139,7 @@ export function CardsScreen() {
                     key={d.id}
                     to="/decks/$deckId"
                     params={{ deckId: d.id }}
+                    style={depth ? { marginLeft: depth * 16 } : undefined}
                     className="group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 shadow-soft transition hover:border-brand/40 hover:shadow-pop"
                   >
                     <Layers className="size-4 shrink-0 text-muted-foreground group-hover:text-brand" />
