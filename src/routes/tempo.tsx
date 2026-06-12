@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
+  qk,
   useCheckIn,
   useCompleteTask,
   useCreateTask,
@@ -27,6 +28,7 @@ import {
   useReorderTasks,
   useTaskLists,
   useTasks,
+  useUncheckIn,
   useUncompleteTask,
 } from '@/lib/hooks'
 import { deleteTask as apiDeleteTask } from '@/lib/api'
@@ -109,6 +111,7 @@ export function TempoScreen() {
   const complete = useCompleteTask()
   const uncomplete = useUncompleteTask()
   const checkIn = useCheckIn()
+  const uncheckIn = useUncheckIn()
   const delList = useDeleteTaskList()
   const reorder = useReorderTasks()
 
@@ -181,13 +184,30 @@ export function TempoScreen() {
     }
   }
 
+  function habitChecked(task: TaskRow): boolean {
+    // Mirror HabitCheckButton's source of truth: the cached streak calendar.
+    // Visible habit rows mount HabitCheckButton (useStreak), so the cache is warm.
+    const streak = qc.getQueryData<{ calendar?: string[] }>(qk.streak(task.id))
+    return streak?.calendar?.includes(habitTodayISO(task.reset_time, task.tz)) ?? false
+  }
+
   async function toggle(task: TaskRow) {
     if (task.kind === 'habit') {
       // Use the habit's reset-aware "today" so a 04:00/14:00 cutoff counts for the right day.
-      checkIn.mutate(
-        { taskId: task.id, date: habitTodayISO(task.reset_time, task.tz) },
-        { onSuccess: () => toast.success(t('Checked in', '已打卡')) },
-      )
+      const day = habitTodayISO(task.reset_time, task.tz)
+      // Toggle like HabitCheckButton does — a swipe on an already-checked habit
+      // undoes the check-in instead of silently no-oping under a success toast.
+      if (habitChecked(task)) {
+        uncheckIn.mutate(
+          { taskId: task.id, date: day },
+          { onSuccess: () => toast.success(t('Check-in undone', '已取消打卡')) },
+        )
+      } else {
+        checkIn.mutate(
+          { taskId: task.id, date: day },
+          { onSuccess: () => toast.success(t('Checked in', '已打卡')) },
+        )
+      }
       return
     }
     if (task.status === 'done') {
@@ -218,11 +238,14 @@ export function TempoScreen() {
   // left = the same undoable delete the menu offers.
   function swipeComplete(task: TaskRow): SwipeAction {
     const done = task.status === 'done'
+    const habitDone = task.kind === 'habit' && habitChecked(task)
     return {
-      icon: done ? <Circle className="size-5" /> : <CheckCircle2 className="size-5" />,
+      icon: done || habitDone ? <Circle className="size-5" /> : <CheckCircle2 className="size-5" />,
       label:
         task.kind === 'habit'
-          ? t('Check in', '打卡')
+          ? habitDone
+            ? t('Undo check-in', '取消打卡')
+            : t('Check in', '打卡')
           : done
             ? t('Reopen', '重新開啟')
             : t('Complete', '完成'),
@@ -522,7 +545,8 @@ function TaskRowItem({
       {dragHandle ? <div className="-ml-1 mt-0.5">{dragHandle}</div> : null}
       {isHabit ? (
         <div className="mt-0.5">
-          <HabitCheckButton habitId={task.id} today={today} iconClassName="size-5" title={task.title} />
+          {/* Reset-aware day key — matching HabitCard, NOT the screen's localToday. */}
+          <HabitCheckButton habitId={task.id} today={habitTodayISO(task.reset_time, task.tz)} iconClassName="size-5" title={task.title} />
         </div>
       ) : (
         <button

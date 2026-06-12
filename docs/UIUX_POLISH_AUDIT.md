@@ -14,13 +14,23 @@ Anki · Obsidian · Paprika · Stripe/Vercel onboarding · Gmail.
 
 > **Status (2026-06-11).** Sections A + B are **shipped** (commits `0894ec2…628f706`, 8 commits):
 > ✅ A1–A12 all fixed (A8 via QW1's undo toasts) · ✅ QW1–QW16 all shipped.
-> Partials: QW13 has spring + haptics + milestone toasts but **no confetti**; QW9 ships tasks/habits/meals
-> sections but **no budget pace line**; QW10's chip covers tasks/transactions/recipes/health logs —
-> **notes have no `created_via` column** (needs a migration before notes can be attributed).
+> Partials: QW13 has spring + haptics + milestone toasts but **no confetti**.
 > New shared primitives: `src/lib/undoable.ts` (deferred-commit undo deletes), `ConfirmDialog`,
 > `ErrorState`/`RouteErrorScreen`, `AiChip` + `useNewSince`, `ConnectAiLink`, `humanizeError`,
-> `relativeDayLabel`/`fmtDayDate`, `lib/today.ts`. Section **C (bets) is untouched** — that's the
-> next arc, each behind its own PR.
+> `relativeDayLabel`/`fmtDayDate`, `lib/today.ts`.
+>
+> **Status (2026-06-12, commits `3c23813…`).** The next arc shipped: **the "Mobile interaction
+> layer" bet is done** (bottom-sheet `DialogContent` below `sm` with grabber + swipe-down dismiss;
+> `SwipeRow` swipe-to-act on tasks/captures/shopping/pantry/transactions; `PullToRefresh` on the
+> six list screens; the inert `animate-in` utilities were revived with a minimal CSS subset — they
+> had never animated). Also: **QW9 budget pace line closed** (Today budget section), **QW10 notes
+> gap closed** (migration 0040 `notes.created_via` + AiChip on notes), **A6 widget Chinese fixed**
+> (`widget_lang` bridge), progressive-disclosure forms (`ExpanderSection` on 9 heavy dialogs),
+> customizable Today layout (`user_layout` 0041 + reorder/hide dialog), deck nesting UI
+> (`lib/deck-tree.ts`, sidebar tree, breadcrumb, Move-to), recipe/note-editor image surfaces,
+> and 3 new Android widgets (journal/calendar/streak). Remaining C bets: command palette parity,
+> BYO-AI review surface, account/export screen, streak depth, study upgrade, wikilinks/backlinks,
+> Health/Kitchen tools, quick-add NLP, per-space sidebar parity, money correctness (A3 follow-ups).
 
 **Product DNA the recommendations respect.** BYO-AI (users connect their *own* external AI via MCP — **no
 in-app generation**; the win is *surfacing/attributing/reviewing* what the AI wrote). Calm Scandinavian

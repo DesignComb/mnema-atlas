@@ -427,8 +427,12 @@ function BudgetSection() {
 
   if (!ledger || !budgets?.length) return null
 
-  const total = budgets.reduce((s, b) => s + Number(b.amount), 0)
-  const spent = budgets.reduce((s, b) => s + Number(b.spent), 0)
+  // An overall budget's `spent` already covers every category budget — summing
+  // both double-counts. Prefer the overall row when one exists.
+  const overall = budgets.find((b) => b.category_id == null)
+  const rows = overall ? [overall] : budgets
+  const total = rows.reduce((s, b) => s + Number(b.amount), 0)
+  const spent = rows.reduce((s, b) => s + Number(b.spent), 0)
   const left = total - spent
   const now = new Date()
   // Days remaining in the month, today included — the denominator of the pace.

@@ -60,7 +60,8 @@ function hmOf(iso: string): string {
 /** Awaitable mirror of hooks.ts' bumpHealth, for undoable-delete onSettled. */
 function bumpAllHealth(qc: QueryClient) {
   return Promise.all(
-    ['health-logs', 'journal-entries', 'journal-entry', 'medications'].map((k) =>
+    // health-settings included so a pull-to-refresh picks up AI-toggled modules.
+    ['health-logs', 'journal-entries', 'journal-entry', 'medications', 'health-settings'].map((k) =>
       qc.invalidateQueries({ queryKey: [k] }),
     ),
   )

@@ -122,11 +122,31 @@ export function PullToRefresh({
         })
     }
 
+    // A touch that starts on a gesture-owning element (SortableList grips are
+    // touch-action:none) is a drag, never a pull — same rule as the bottom
+    // sheet's swipe-dismiss.
+    const ownsGesture = (target: EventTarget | null): boolean => {
+      let node = target instanceof Element ? target : null
+      while (node && node !== el) {
+        if (node instanceof HTMLElement && window.getComputedStyle(node).touchAction === 'none') return true
+        node = node.parentElement
+      }
+      return false
+    }
+
     const onTouchStart = (e: TouchEvent) => {
+      if (pulling) {
+        // A second finger landed mid-pull — cancel cleanly instead of stranding
+        // the chip mid-air with no path back.
+        pulling = false
+        armed = false
+        settleBack()
+        return
+      }
       armed = false
-      if (pulling || refreshingRef.current) return
+      if (refreshingRef.current) return
       if (e.touches.length !== 1 || !coarseMq?.matches) return
-      if (el.scrollTop > 0) return
+      if (el.scrollTop > 0 || ownsGesture(e.target)) return
       armed = true
       startY = e.touches[0].clientY
       startX = e.touches[0].clientX

@@ -101,9 +101,11 @@ export function SwipeRow({
   })
 
   // Desktop / disabled / nothing wired: same DOM shape, zero gesture handlers.
+  // overflow-hidden matches the gesture branch — callers put rounding/borders
+  // on this wrapper, and the square content surface must not overpaint them.
   if (!coarse || disabled || (!right && !left)) {
     return (
-      <div className={cn('relative', className)}>
+      <div className={cn('relative overflow-hidden', className)}>
         <div className={contentClassName}>{children}</div>
       </div>
     )

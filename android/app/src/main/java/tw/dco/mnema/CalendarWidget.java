@@ -111,8 +111,10 @@ public class CalendarWidget extends AppWidgetProvider {
                 if (y >= 1970 && m >= 1 && m <= 12) {
                     year = y;
                     month = m;
-                    String d = snap.optString("date", "");
-                    if (!d.isEmpty()) today = d;
+                    // `today` stays device-derived: the snapshot's date is just
+                    // "when the app last synced" — trusting it highlights
+                    // yesterday every morning until the app is opened. If the
+                    // snapshot month is stale, no cell matches, which is correct.
                     busy = snap.optJSONObject("busy");
                 }
             }

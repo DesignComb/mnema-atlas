@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -28,14 +28,26 @@ export function ExpanderSection({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const regionId = useId()
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const regionRef = useRef<HTMLDivElement>(null)
+
+  function toggle() {
+    // Collapsing while focus is inside would drop focus to <body> (the region
+    // goes inert) — Safari doesn't focus buttons on click, so park it here.
+    if (open && regionRef.current?.contains(document.activeElement)) {
+      buttonRef.current?.focus()
+    }
+    setOpen((v) => !v)
+  }
 
   return (
     <section className="flex flex-col border-t border-border/60">
       <button
+        ref={buttonRef}
         type="button"
         aria-expanded={open}
         aria-controls={regionId}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="flex w-full items-center gap-1.5 py-2 text-left text-[13px] font-medium text-muted-foreground transition hover:text-foreground"
       >
         <ChevronRight
@@ -58,7 +70,16 @@ export function ExpanderSection({
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         className="overflow-hidden"
       >
-        <div aria-hidden={!open} inert={!open} className="flex flex-col gap-4 pb-1 pt-1">
+        <div
+          ref={regionRef}
+          aria-hidden={!open}
+          inert={!open}
+          // A collapsed field failing native validation would block submit with
+          // no visible cue (the browser can't focus an inert control) — open up
+          // so the error bubble has somewhere to land.
+          onInvalidCapture={() => setOpen(true)}
+          className="flex flex-col gap-4 pb-1 pt-1"
+        >
           {children}
         </div>
       </motion.div>

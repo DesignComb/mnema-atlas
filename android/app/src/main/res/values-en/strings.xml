@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- Widget-picker metadata follows the DEVICE locale (android:description can't
+     read the in-app language toggle) — English devices get these; every other
+     locale falls back to the Chinese defaults in values/strings.xml. -->
+<resources>
+    <string name="widget_today_desc">Today\'s to-dos</string>
+    <string name="habits_widget_desc">Today\'s habit check-ins</string>
+    <string name="journal_widget_desc">Today\'s journal</string>
+    <string name="calendar_widget_desc">This month\'s calendar</string>
+    <string name="streak_widget_desc">Habit streak</string>
+</resources>

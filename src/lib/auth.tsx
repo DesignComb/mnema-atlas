@@ -108,6 +108,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     async signOut() {
       await supabase.auth.signOut()
+      // Per-user localStorage caches must not leak into the next account on a
+      // shared device (the layout mirror would flash the previous user's order).
+      try {
+        localStorage.removeItem('mnema.user-layout')
+      } catch {
+        /* storage unavailable */
+      }
     },
   }
 

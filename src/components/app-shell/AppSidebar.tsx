@@ -428,8 +428,11 @@ function DeckTreeNav({
   const [expanded, setExpanded] = useState<Record<string, boolean>>(readExpandedMap)
   const tree = useMemo(() => buildDeckTree(decks), [decks])
   const toggle = (id: string) =>
-    setExpanded((prev) => {
-      const next = { ...prev, [id]: !(prev[id] ?? true) }
+    setExpanded(() => {
+      // Two instances are mounted (desktop rail + mobile drawer): merge over the
+      // freshly-read STORED map so one instance can't wipe the other's toggles.
+      const stored = readExpandedMap()
+      const next = { ...stored, [id]: !(stored[id] ?? true) }
       try {
         localStorage.setItem(DECK_EXPANDED_KEY, JSON.stringify(next))
       } catch {
@@ -490,14 +493,17 @@ function DeckTreeLevel({
                   type="button"
                   onClick={() => onToggle(deck.id)}
                   aria-expanded={open}
-                  aria-label={t('Toggle sub-decks', '展開／收合子牌組')}
-                  className="shrink-0 rounded p-0.5 text-muted-foreground/70 transition hover:bg-sidebar-accent hover:text-foreground"
+                  aria-label={
+                    open ? t(`Collapse “${deck.name}”`, `收合「${deck.name}」`) : t(`Expand “${deck.name}”`, `展開「${deck.name}」`)
+                  }
+                  // -my keeps the row height; the padding buys a ≥26px hit area.
+                  className="-my-1 shrink-0 rounded p-1.5 text-muted-foreground/70 transition hover:bg-sidebar-accent hover:text-foreground"
                 >
                   <ChevronRight className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
                 </button>
               ) : anyKids ? (
-                // Keep names aligned when some siblings have a chevron.
-                <span className="w-[18px] shrink-0" aria-hidden />
+                // Keep names aligned when some siblings have a chevron (14px icon + 12px padding).
+                <span className="w-[26px] shrink-0" aria-hidden />
               ) : null}
               <Link
                 to="/decks/$deckId"

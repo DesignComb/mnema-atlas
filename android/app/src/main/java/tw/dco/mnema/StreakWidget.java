@@ -87,6 +87,14 @@ public class StreakWidget extends AppWidgetProvider {
                 longest = snap.optInt("longest", 0);
                 checkedToday = snap.optBoolean("checked_today", false);
                 days = snap.optJSONArray("days");
+                // A snapshot from yesterday must not claim "Done today" — the
+                // user might skip the habit trusting it. Stale date → not yet.
+                String snapDate = snap.optString("date", "");
+                String deviceDate = String.format(java.util.Locale.US, "%04d-%02d-%02d",
+                    java.util.Calendar.getInstance().get(java.util.Calendar.YEAR),
+                    java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1,
+                    java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH));
+                if (!snapDate.isEmpty() && snapDate.compareTo(deviceDate) < 0) checkedToday = false;
             }
         } catch (Exception e) {
             // Bad/missing snapshot — fall through to the empty state.

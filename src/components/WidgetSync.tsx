@@ -108,11 +108,14 @@ function WidgetSyncInner({ token }: { token: string }) {
     }
   }, [qc])
 
-  // The widget's "+" opens tw.dco.mnema://add — land on the Tempo add screen.
+  // Widget deep links: "+" opens tw.dco.mnema://add → Tempo; the journal
+  // widget's tap opens ://journal → the Health journal section.
   useEffect(() => {
     const handle = CapApp.addListener('appUrlOpen', ({ url }) => {
       if (url.startsWith('tw.dco.mnema://add')) {
         void router.navigate({ to: '/tempo' })
+      } else if (url.startsWith('tw.dco.mnema://journal')) {
+        void router.navigate({ to: '/health', search: { section: 'journal' } })
       }
     })
     return () => {
@@ -232,13 +235,14 @@ function WidgetSyncInner({ token }: { token: string }) {
     const snap: StreakSnapshot = featured
       ? {
           date: today,
+          habit_id: featured.id,
           title: featured.title,
           streak: featured.current_streak,
           longest: featured.longest_streak,
           checked_today: done.has(`${featured.id}|${habitTodayISO(featured.reset_time, featured.tz)}`),
           days,
         }
-      : { date: today, title: null, streak: 0, longest: 0, checked_today: false, days }
+      : { date: today, habit_id: null, title: null, streak: 0, longest: 0, checked_today: false, days }
     const key = JSON.stringify(snap)
     if (key === streakRef.current) return
     streakRef.current = key

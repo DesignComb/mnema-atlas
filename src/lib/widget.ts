@@ -116,6 +116,8 @@ export interface StreakDay {
 /** The featured habit (highest current streak) + 28-day history for the streak widget. */
 export interface StreakSnapshot {
   date: string
+  /** Featured habit's task id — HabitActionReceiver patches this snapshot when the same habit is toggled from the Habits widget. */
+  habit_id: string | null
   /** null when the user has no habits. */
   title: string | null
   streak: number

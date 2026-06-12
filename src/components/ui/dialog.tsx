@@ -43,6 +43,9 @@ function useSheetSwipeDismiss(
       while (node && node !== el) {
         if (node instanceof HTMLElement) {
           const style = window.getComputedStyle(node)
+          // Elements that own their own gesture (SortableList grips are touch-none):
+          // their drags must never double as a sheet pull.
+          if (style.touchAction === 'none') return true
           if (node.scrollWidth > node.clientWidth + 1 && /(auto|scroll)/.test(style.overflowX)) return true
           if (node.scrollTop > 0 && /(auto|scroll)/.test(style.overflowY)) return true
         }
@@ -63,8 +66,16 @@ function useSheetSwipeDismiss(
     }
 
     const onTouchStart = (e: TouchEvent) => {
+      if (dragging) {
+        // A second finger landed mid-pull — cancel cleanly instead of wedging
+        // the sheet at its dragged offset with no path back.
+        dragging = false
+        armed = false
+        springBack()
+        return
+      }
       armed = false
-      if (dragging || e.touches.length !== 1) return
+      if (e.touches.length !== 1) return
       if (!phone.matches || !coarse.matches) return
       if (el.scrollTop > 0 || ignoreTarget(e.target)) return
       armed = true

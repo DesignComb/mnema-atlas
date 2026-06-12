@@ -244,7 +244,9 @@ export function ItemDialog({
             label={t('Details', '細節')}
             filledCount={
               (cost.trim() ? 1 : 0) +
-              (transportMode.trim() || transportDetail.trim() ? 1 : 0) +
+              // Transport fields only render for the transport category — don't
+              // count leftovers from a category switch the user can't see.
+              (category === 'transport' && (transportMode.trim() || transportDetail.trim()) ? 1 : 0) +
               (bookingUrl.trim() ? 1 : 0) +
               (notes.trim() ? 1 : 0)
             }

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
 import { Bold, Code, Eye, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Pencil, Quote, Strikethrough } from 'lucide-react'
 import { toast } from 'sonner'
@@ -192,6 +193,10 @@ export function NoteEditor({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onPaste={(e) => {
+            // Rich-content pastes (Excel/Word/web pages) ship BOTH text and a
+            // bitmap of the selection — keep the text. Only true image pastes
+            // (screenshots, copied image files) carry no text/plain.
+            if (e.clipboardData.getData('text/plain').trim()) return
             const files = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'))
             if (!files.length) return
             e.preventDefault()
@@ -231,7 +236,9 @@ export function NoteEditor({
 function MarkdownPreview({ markdown }: { markdown: string }) {
   const editor = useEditor({
     editable: false,
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] } }), Markdown.configure({ html: false })],
+    // Image: StarterKit has no image node, so without it `![](url)` markdown
+    // (incl. our own uploads) silently vanishes from the preview.
+    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] } }), Image, Markdown.configure({ html: false })],
     content: markdown,
     editorProps: { attributes: { class: 'mnema-prose max-w-none px-1' } },
   })

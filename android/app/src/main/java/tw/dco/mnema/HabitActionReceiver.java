@@ -47,7 +47,9 @@ public class HabitActionReceiver extends BroadcastReceiver {
 
     // Optimistic flip for instant feedback (corrected below by the server's answer).
     flipSnapshot(prefs, habitId, !wasChecked);
+    flipStreakSnapshot(prefs, habitId, !wasChecked);
     HabitsWidget.refreshAll(context);
+    StreakWidget.refreshAll(context);
 
     final PendingResult pending = goAsync();
     new Thread(new Runnable() {
@@ -58,7 +60,9 @@ public class HabitActionReceiver extends BroadcastReceiver {
           Boolean nowChecked = toggle(a.optString("url"), a.optString("anonKey"), a.optString("token"), habitId);
           if (nowChecked != null) {
             flipSnapshot(prefs, habitId, nowChecked); // authoritative server state
+            flipStreakSnapshot(prefs, habitId, nowChecked);
             HabitsWidget.refreshAll(context);
+            StreakWidget.refreshAll(context);
           }
         } catch (Exception ignored) {
         } finally {
@@ -80,6 +84,29 @@ public class HabitActionReceiver extends BroadcastReceiver {
         if (it != null && habitId.equals(it.optString("id"))) it.put("checked", checked);
       }
       prefs.edit().putString(HabitsWidget.KEY, snap.toString()).apply();
+    } catch (Exception ignored) {
+    }
+  }
+
+  /**
+   * Keep the Streak widget in agreement when its featured habit is the one
+   * toggled — otherwise it contradicts the Habits widget until the app opens.
+   */
+  private static void flipStreakSnapshot(SharedPreferences prefs, String habitId, boolean checked) {
+    try {
+      String raw = prefs.getString(StreakWidget.KEY, null);
+      if (raw == null) return;
+      JSONObject snap = new JSONObject(raw);
+      if (!habitId.equals(snap.optString("habit_id"))) return;
+      snap.put("checked_today", checked);
+      JSONArray days = snap.optJSONArray("days");
+      if (days != null && days.length() > 0) {
+        JSONObject last = days.optJSONObject(days.length() - 1);
+        if (last != null) last.put("c", checked);
+      }
+      // The streak count itself needs the server's recompute — the app's next
+      // sync corrects it; checked-state agreement is what matters offline.
+      prefs.edit().putString(StreakWidget.KEY, snap.toString()).apply();
     } catch (Exception ignored) {
     }
   }
