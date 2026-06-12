@@ -40,6 +40,14 @@
                 <data android:scheme="tw.dco.mnema" android:host="add" />
             </intent-filter>
 
+            <!-- Journal-widget tap → lands on the journal screen (WidgetSync routes it). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tw.dco.mnema" android:host="journal" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -84,6 +92,42 @@
         <receiver
             android:name=".HabitActionReceiver"
             android:exported="false" />
+
+        <!-- Home-screen widget: today's journal entry (mood/energy/snippet). -->
+        <receiver
+            android:name=".JournalWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/journal_widget_info" />
+        </receiver>
+
+        <!-- Home-screen widget: month calendar with busy-day markers. -->
+        <receiver
+            android:name=".CalendarWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/calendar_widget_info" />
+        </receiver>
+
+        <!-- Home-screen widget: habit streak (🔥 + 28-day dot grid). -->
+        <receiver
+            android:name=".StreakWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/streak_widget_info" />
+        </receiver>
 
         <!-- FCM: replace the Capacitor plugin's MessagingService with ours so we can
              render reminders as notifications WITH 延後/已完成 action buttons (the

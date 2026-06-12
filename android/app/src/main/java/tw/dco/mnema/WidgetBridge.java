@@ -16,6 +16,9 @@ public class WidgetBridge extends Plugin {
     public void refresh(PluginCall call) {
         TodayWidget.refreshAll(getContext());
         HabitsWidget.refreshAll(getContext());
+        JournalWidget.refreshAll(getContext());
+        CalendarWidget.refreshAll(getContext());
+        StreakWidget.refreshAll(getContext());
         call.resolve();
     }
 }

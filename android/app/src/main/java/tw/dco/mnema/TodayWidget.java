@@ -54,6 +54,11 @@ public class TodayWidget extends AppWidgetProvider {
     private static void updateWidget(Context context, AppWidgetManager manager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_today);
 
+        // A6: follow the app language (widget_lang in Preferences; missing → zh).
+        boolean zh = WidgetLang.isZh(context);
+        views.setTextViewText(R.id.widget_title, zh ? "今天" : "Today");
+        views.setContentDescription(R.id.widget_add, zh ? "新增" : "Add");
+
         // Tap the card body → open the app.
         Intent open = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (open != null) {
@@ -89,9 +94,13 @@ public class TodayWidget extends AppWidgetProvider {
                         String id = it.optString("id", "");
                         String title = it.optString("title", "");
                         String sub = it.optString("sub", "");
-                        String text = "逾期".equals(sub) ? "⚠ " + title : title;
+                        // The web side sends sub already localized ("逾期"/"Overdue",
+                        // "今天"/"Today") — detect the semantic value, don't change the wire.
+                        boolean overdue = "逾期".equals(sub) || "Overdue".equals(sub);
+                        String text = overdue ? "⚠ " + title : title;
 
                         views.setTextViewText(TITLE_IDS[i], text);
+                        views.setContentDescription(CHECK_IDS[i], zh ? "完成" : "Complete");
                         views.setViewVisibility(ROW_IDS[i], View.VISIBLE);
 
                         // Checkbox → complete this task live.
@@ -116,20 +125,20 @@ public class TodayWidget extends AppWidgetProvider {
 
         if (!hasSnapshot) {
             views.setTextViewText(R.id.widget_count, "");
-            views.setTextViewText(R.id.widget_empty, "開啟 Mnema 以同步今日待辦");
+            views.setTextViewText(R.id.widget_empty, zh ? "開啟 Mnema 以同步今日待辦" : "Open Mnema to sync today's tasks");
             views.setViewVisibility(R.id.widget_empty, View.VISIBLE);
         } else if (count == 0) {
             views.setTextViewText(R.id.widget_count, "");
-            views.setTextViewText(R.id.widget_empty, "今天沒有待辦 🎉");
+            views.setTextViewText(R.id.widget_empty, zh ? "今天沒有待辦 🎉" : "All clear today 🎉");
             views.setViewVisibility(R.id.widget_empty, View.VISIBLE);
         } else {
-            views.setTextViewText(R.id.widget_count, count + " 件");
+            views.setTextViewText(R.id.widget_count, zh ? count + " 件" : count + (count == 1 ? " task" : " tasks"));
             views.setViewVisibility(R.id.widget_empty, View.GONE);
         }
 
         int more = count - shown;
         if (more > 0) {
-            views.setTextViewText(R.id.widget_more, "還有 " + more + " 件…");
+            views.setTextViewText(R.id.widget_more, zh ? "還有 " + more + " 件…" : "+" + more + " more…");
             views.setViewVisibility(R.id.widget_more, View.VISIBLE);
         } else {
             views.setViewVisibility(R.id.widget_more, View.GONE);

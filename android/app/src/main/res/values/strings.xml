@@ -6,4 +6,7 @@
     <string name="custom_url_scheme">tw.dco.mnema</string>
     <string name="widget_today_desc">今日待辦</string>
     <string name="habits_widget_desc">今日習慣打卡</string>
+    <string name="journal_widget_desc">今日日記</string>
+    <string name="calendar_widget_desc">本月行事曆</string>
+    <string name="streak_widget_desc">習慣連勝</string>
 </resources>

@@ -48,6 +48,10 @@ public class HabitsWidget extends AppWidgetProvider {
   private static void updateWidget(Context context, AppWidgetManager manager, int appWidgetId) {
     RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.habits_widget);
 
+    // A6: follow the app language (widget_lang in Preferences; missing → zh).
+    boolean zh = WidgetLang.isZh(context);
+    views.setTextViewText(R.id.habits_title, zh ? "習慣" : "Habits");
+
     Intent open = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
     if (open != null) {
       open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -76,6 +80,7 @@ public class HabitsWidget extends AppWidgetProvider {
 
             views.setTextViewText(TITLE_IDS[i], title);
             views.setImageViewResource(CHECK_IDS[i], checked ? R.drawable.ic_widget_check_filled : R.drawable.ic_widget_check);
+            views.setContentDescription(CHECK_IDS[i], zh ? "打卡" : "Check in");
             views.setViewVisibility(ROW_IDS[i], View.VISIBLE);
 
             Intent toggle = new Intent(context, HabitActionReceiver.class);
@@ -98,11 +103,11 @@ public class HabitsWidget extends AppWidgetProvider {
 
     if (!hasSnapshot) {
       views.setTextViewText(R.id.habits_count, "");
-      views.setTextViewText(R.id.habits_empty, "開啟 Mnema 以同步習慣");
+      views.setTextViewText(R.id.habits_empty, zh ? "開啟 Mnema 以同步習慣" : "Open Mnema to sync habits");
       views.setViewVisibility(R.id.habits_empty, View.VISIBLE);
     } else if (shown == 0) {
       views.setTextViewText(R.id.habits_count, "");
-      views.setTextViewText(R.id.habits_empty, "還沒有習慣");
+      views.setTextViewText(R.id.habits_empty, zh ? "還沒有習慣" : "No habits yet");
       views.setViewVisibility(R.id.habits_empty, View.VISIBLE);
     } else {
       views.setTextViewText(R.id.habits_count, doneCount + "/" + shown);
