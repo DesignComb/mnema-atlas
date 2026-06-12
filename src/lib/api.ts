@@ -250,6 +250,13 @@ export async function setNoteDeck(noteId: string, deckId: string | null): Promis
   )
 }
 
+/** Star/unstar a note (starred notes pin to the top of the notes list). */
+export async function setNoteStarred(noteId: string, starred: boolean): Promise<NoteRow> {
+  return unwrap(
+    await supabase.rpc('set_note_starred', { p_user_id: null, p_note_id: noteId, p_starred: starred }),
+  )
+}
+
 /** Move a deck under another deck, or to the top level (parentDeckId = null). */
 export async function setDeckParent(deckId: string, parentDeckId: string | null): Promise<DeckRow> {
   return unwrap(

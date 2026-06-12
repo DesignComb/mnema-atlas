@@ -37,6 +37,7 @@ import type {
   UpdateTaskListInput,
 } from '@shared/schemas'
 import type { ItineraryItem, TaskFilters, TxnFilters } from './api'
+import type { NoteRow } from './database.types'
 import type { LayoutSection } from './today'
 import type {
   CreateAccountInput,
@@ -284,6 +285,34 @@ export function useSetNoteDeck() {
       qc.invalidateQueries({ queryKey: qk.note(note.id) })
       qc.invalidateQueries({ queryKey: ['cards'] })
       qc.invalidateQueries({ queryKey: qk.graph })
+    },
+  })
+}
+
+export function useSetNoteStarred() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { noteId: string; starred: boolean }) => api.setNoteStarred(v.noteId, v.starred),
+    // Optimistic: a star toggle must feel instant (HabitCheckButton rule).
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: ['notes'] })
+      await qc.cancelQueries({ queryKey: qk.note(v.noteId) })
+      const prevLists = qc.getQueriesData<NoteRow[]>({ queryKey: ['notes'] })
+      const prevNote = qc.getQueryData<NoteRow | null>(qk.note(v.noteId))
+      for (const [key, rows] of prevLists) {
+        if (rows) qc.setQueryData(key, rows.map((n) => (n.id === v.noteId ? { ...n, starred: v.starred } : n)))
+      }
+      if (prevNote) qc.setQueryData(qk.note(v.noteId), { ...prevNote, starred: v.starred })
+      return { prevLists, prevNote }
+    },
+    onError: (e, v, ctx) => {
+      for (const [key, rows] of ctx?.prevLists ?? []) qc.setQueryData(key, rows)
+      if (ctx?.prevNote !== undefined) qc.setQueryData(qk.note(v.noteId), ctx.prevNote)
+      toast.error(humanizeError(e, ['Could not save', '無法儲存']))
+    },
+    onSettled: (_d, _e, v) => {
+      void qc.invalidateQueries({ queryKey: ['notes'] })
+      void qc.invalidateQueries({ queryKey: qk.note(v.noteId) })
     },
   })
 }

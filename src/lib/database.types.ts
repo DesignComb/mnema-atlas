@@ -719,6 +719,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          starred: boolean
           tags: string[]
           title: string
           updated_at: string
@@ -731,6 +732,7 @@ export type Database = {
           deck_id?: string | null
           id?: string
           search_tsv?: unknown
+          starred?: boolean
           tags?: string[]
           title: string
           updated_at?: string
@@ -743,6 +745,7 @@ export type Database = {
           deck_id?: string | null
           id?: string
           search_tsv?: unknown
+          starred?: boolean
           tags?: string[]
           title?: string
           updated_at?: string
@@ -3612,6 +3615,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          starred: boolean
           tags: string[]
           title: string
           updated_at: string
@@ -4516,6 +4520,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          starred: boolean
           tags: string[]
           title: string
           updated_at: string
@@ -4849,6 +4854,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_note_starred: {
+        Args: { p_note_id: string; p_starred: boolean; p_user_id: string | null }
+        Returns: {
+          body: string
+          created_at: string
+          created_via: string
+          deck_id: string | null
+          id: string
+          search_tsv: unknown
+          starred: boolean
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "notes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_note_deck: {
         Args: { p_deck_id?: string; p_note_id: string; p_user_id: string | null }
         Returns: {
@@ -4858,6 +4885,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          starred: boolean
           tags: string[]
           title: string
           updated_at: string
@@ -4879,6 +4907,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          starred: boolean
           tags: string[]
           title: string
           updated_at: string
@@ -5526,6 +5555,7 @@ export type Database = {
           deck_id: string | null
           id: string
           search_tsv: unknown
+          starred: boolean
           tags: string[]
           title: string
           updated_at: string

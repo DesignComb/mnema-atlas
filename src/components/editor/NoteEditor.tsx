@@ -21,13 +21,16 @@ export function NoteEditor({
   value,
   onChange,
   placeholder = 'Start writing — markdown supported. Your notes become flashcards and graph nodes…',
+  defaultMode = 'write',
 }: {
   value: string
   onChange: (markdown: string) => void
   placeholder?: string
+  /** Initial tab — pass 'preview' for notes with content (reading first). */
+  defaultMode?: Mode
 }) {
   const t = useT()
-  const [mode, setMode] = useState<Mode>('write')
+  const [mode, setMode] = useState<Mode>(defaultMode)
   const ref = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(0)

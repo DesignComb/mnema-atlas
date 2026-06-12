@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, Cloud, Copy, Download, Layers, Loader2, MoreHorizontal, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { Check, Cloud, Copy, Download, Layers, Loader2, MoreHorizontal, Plus, Sparkles, Star, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import * as api from '@/lib/api'
-import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useUpdateNote } from '@/lib/hooks'
+import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useSetNoteStarred, useUpdateNote } from '@/lib/hooks'
 import { buildDeckTree, flattenTree, indentLabel } from '@/lib/deck-tree'
 import { downloadText, safeFilename, humanizeError } from '@/lib/utils'
 import { TagEditor } from '@/components/editor/TagEditor'
@@ -38,6 +38,7 @@ export function NoteScreen() {
   const { data: decks } = useDecks()
   const updateNote = useUpdateNote()
   const setNoteDeck = useSetNoteDeck()
+  const setStarred = useSetNoteStarred()
   const deleteNote = useDeleteNote()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -143,6 +144,16 @@ export function NoteScreen() {
         subtitle={<SaveIndicator status={status} />}
         actions={
           <>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={note.starred}
+              aria-label={note.starred ? t('Unstar note', '移除星號') : t('Star note', '加上星號')}
+              title={note.starred ? t('Unstar', '移除星號') : t('Star', '加上星號')}
+              onClick={() => setStarred.mutate({ noteId: note.id, starred: !note.starred })}
+            >
+              <Star className={note.starred ? 'size-4 fill-warning text-warning' : 'size-4 text-muted-foreground'} />
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
               <Plus className="size-4" /> <span className="hidden sm:inline">{t('Add flashcard', '新增字卡')}</span>
             </Button>
@@ -240,6 +251,9 @@ export function NoteScreen() {
               key={note.id}
               value={body}
               onChange={setBody}
+              // Reading is the common case — open written notes in Preview;
+              // blank/new notes land in Write (nothing to preview yet).
+              defaultMode={note.body.trim() ? 'preview' : 'write'}
               placeholder={t(
                 'Start writing — markdown supported. Your notes become flashcards and graph nodes…',
                 '開始書寫 — 支援 Markdown。你的筆記會變成字卡與圖譜節點…',

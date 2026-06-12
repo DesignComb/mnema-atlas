@@ -118,6 +118,7 @@ export const updateDeckInput = z.object({
 })
 export const setDeckParentInput = z.object({ deck_id: uuid, parent_deck_id: uuid.nullable().optional() })
 export const setNoteDeckInput = z.object({ note_id: uuid, deck_id: uuid.nullable() })
+export const setNoteStarredInput = z.object({ note_id: uuid, starred: z.boolean() })
 export const setNoteTagsInput = z.object({ note_id: uuid, tags: tagList })
 export const setCardTagsInput = z.object({ card_id: uuid, tags: tagList })
 export const unlinkNotesInput = z.object({ note_id_a: uuid, note_id_b: uuid })
@@ -1003,6 +1004,7 @@ export const toolDescriptions = {
   set_deck_parent:
     'Move a deck under another deck (or to the top level with parent_deck_id=null). Decks can nest like folders.',
   set_note_deck: 'Move a note into a deck, or out of all decks (deck_id = null).',
+  set_note_starred: 'Star or unstar a note (starred notes pin to the top of the notes list).',
   set_note_tags: 'Replace a note’s whole tag set (drives the graph colours/clusters).',
   set_card_tags: 'Replace a flashcard’s whole tag set (enables study-by-tag).',
   unlink_notes: 'Remove the link between two notes.',

@@ -39,6 +39,7 @@ import {
   setItemLocationInput,
   setItemStatusInput,
   setNoteDeckInput,
+  setNoteStarredInput,
   setNoteTagsInput,
   toolDescriptions,
   unlinkNotesInput,
@@ -475,6 +476,20 @@ export const tools: ToolDef[] = [
         p_deck_id: a.deck_id ?? null,
       })
       return { summary: 'Note moved', data: note }
+    },
+  },
+  {
+    name: 'set_note_starred',
+    description: toolDescriptions.set_note_starred,
+    schema: setNoteStarredInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const note = await callRpc(ctx.env, ctx.userId, 'set_note_starred', {
+        p_note_id: a.note_id,
+        p_starred: a.starred,
+      })
+      return { summary: a.starred ? 'Note starred' : 'Note unstarred', data: note }
     },
   },
   {
