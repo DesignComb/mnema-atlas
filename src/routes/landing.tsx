@@ -145,7 +145,7 @@ function LandingMarketing() {
             <p className="mt-5 text-[15px] leading-relaxed text-muted-foreground sm:text-[16px]">
               {t(
                 "Every other app is racing to add its own chatbot. Mnema does the opposite: the assistant you already trust connects once — over MCP, or plain REST — and from then on it builds your flashcards, drafts whole trips, and files this week's tasks into the right place. No new model to learn, no second subscription.",
-                '其他每一款 App 都急著加上自己的聊天機器人，Mnema 卻反其道而行：你早已信任的助理只要連接一次 —— 透過 MCP 或單純的 REST —— 從此就能替你做字卡、草擬整趟行程，把本週的任務歸到正確的位置。不必學新的模型，也不必再付一份訂閱。',
+                '其他每一款 App 都急著加上自己的聊天機器人，Mnema 卻反其道而行：你早已信任的助理只要連接一次 —— 透過 MCP 或單純的 REST —— 從此就能替你做閃卡、草擬整趟行程，把本週的任務歸到正確的位置。不必學新的模型，也不必再付一份訂閱。',
               )}
             </p>
           </motion.div>
@@ -227,7 +227,7 @@ function LandingMarketing() {
               title={t('Just ask', '直接開口')}
               body={t(
                 '“Save this chapter as flashcards.” “Plan our Kyoto trip.” Your AI writes it into the right space for you.',
-                '「把這章存成字卡。」「幫我們安排京都行程。」你的 AI 就會把它寫進正確的區塊。',
+                '「把這章存成閃卡。」「幫我們安排京都行程。」你的 AI 就會把它寫進正確的區塊。',
               )}
             />
           </div>
@@ -265,7 +265,7 @@ function LandingMarketing() {
             </div>
 
             <div className="relative mt-8 space-y-2 lg:mt-0">
-              <PermissionRow allow label={t('Add notes, cards, trips & tasks', '新增筆記、字卡、行程與任務')} />
+              <PermissionRow allow label={t('Add notes, cards, trips & tasks', '新增筆記、閃卡、行程與任務')} />
               <PermissionRow label={t('Edit, complete, or delete', '編輯、完成或刪除')} />
               <PermissionRow label={t("See anyone else's data", '看見其他人的資料')} />
               <p className="px-1 pt-2 text-[12.5px] text-muted-foreground">
@@ -297,7 +297,7 @@ function LandingMarketing() {
           </motion.div>
 
           <motion.div {...reveal} className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <SpaceCard dot={ATLAS} icon={<GraduationCap />} name={t('Study', '讀書')} code="Atlas" body={t('Notes, spaced-repetition flashcards, and a knowledge graph.', '筆記、間隔重複字卡，以及一張知識圖譜。')} />
+            <SpaceCard dot={ATLAS} icon={<GraduationCap />} name={t('Study', '學習')} code="Atlas" body={t('Notes, spaced-repetition flashcards, and a knowledge graph.', '筆記、間隔重複閃卡，以及一張知識圖譜。')} />
             <SpaceCard dot={VOYAGE} icon={<MapIcon />} name={t('Travel', '旅遊')} code="Voyage" body={t('Multi-day itineraries with bookings, packing, and a share link.', '多天行程，含訂位、打包，還能用連結分享。')} />
             <SpaceCard dot={TEMPO} icon={<ListTodo />} name={t('Tasks', '任務')} code="Tempo" body={t('To-dos and lists, habits with streaks, a calendar, and reminders.', '待辦與清單、習慣連續紀錄、行事曆與提醒。')} />
             <div className="flex flex-col items-start justify-center rounded-2xl border border-dashed border-border p-5">
@@ -323,7 +323,7 @@ function LandingMarketing() {
             <p className="mt-5 text-[15px] leading-relaxed text-muted-foreground sm:text-[16px]">
               {t(
                 'Mnema is the quiet, durable layer behind whatever AI you use — notes link into a graph, facts return as cards just before you forget, and reminders arrive on time.',
-                'Mnema 是你所用任何 AI 背後，那層沉靜而長久的記憶 —— 筆記串成圖譜，知識在你快要遺忘前化為字卡，提醒也準時送達。',
+                'Mnema 是你所用任何 AI 背後，那層沉靜而長久的記憶 —— 筆記串成圖譜，知識在你快要遺忘前化為閃卡，提醒也準時送達。',
               )}
             </p>
           </motion.div>

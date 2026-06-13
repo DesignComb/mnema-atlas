@@ -83,7 +83,7 @@ export function NewCardDialog({
           patch: { front: front.trim(), back: back.trim(), deck_id: deckSel || null, image_url: imageUrl ?? '' },
         })
         await setCardTags.mutateAsync({ cardId: card.id, tags })
-        toast.success(t('Flashcard updated', '已更新字卡'))
+        toast.success(t('Flashcard updated', '已更新閃卡'))
       } else {
         const created = await createCard.mutateAsync({
           front: front.trim(),
@@ -93,11 +93,11 @@ export function NewCardDialog({
           image_url: imageUrl ?? undefined,
         })
         if (tags.length) await setCardTags.mutateAsync({ cardId: created.id, tags })
-        toast.success(t('Flashcard added — due now', '已新增字卡 — 立即到期'))
+        toast.success(t('Flashcard added — due now', '已新增閃卡 — 立即到期'))
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(humanizeError(err, ['Failed to save card', '儲存字卡失敗']))
+      toast.error(humanizeError(err, ['Failed to save card', '儲存閃卡失敗']))
     }
   }
 
@@ -111,10 +111,10 @@ export function NewCardDialog({
       await deleteCard.mutateAsync(card.id)
       // Best-effort storage cleanup — card deletes are immediate (no undo window).
       if (card.image_url) void removeUploadedImage(card.image_url)
-      toast.success(t('Flashcard deleted', '已刪除字卡'))
+      toast.success(t('Flashcard deleted', '已刪除閃卡'))
       onOpenChange(false)
     } catch (err) {
-      toast.error(humanizeError(err, ['Failed to delete card', '刪除字卡失敗']))
+      toast.error(humanizeError(err, ['Failed to delete card', '刪除閃卡失敗']))
     }
   }
 
@@ -124,11 +124,11 @@ export function NewCardDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{editing ? t('Edit flashcard', '編輯字卡') : t('New flashcard', '新增字卡')}</DialogTitle>
+          <DialogTitle>{editing ? t('Edit flashcard', '編輯閃卡') : t('New flashcard', '新增閃卡')}</DialogTitle>
           <DialogDescription>
             {editing
               ? t('Changes apply immediately; FSRS scheduling is preserved.', '變更立即生效；FSRS 排程會保留。')
-              : t('It becomes due immediately and enters FSRS scheduling.', '字卡會立即到期並進入 FSRS 排程。')}
+              : t('It becomes due immediately and enters FSRS scheduling.', '閃卡會立即到期並進入 FSRS 排程。')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-4">
@@ -190,7 +190,7 @@ export function NewCardDialog({
                 {t('Cancel', '取消')}
               </Button>
               <Button type="submit" variant="brand" disabled={pending || !front.trim() || !back.trim()} className="flex-1 sm:flex-none">
-                {pending ? t('Saving…', '儲存中…') : editing ? t('Save', '儲存') : t('Add card', '新增字卡')}
+                {pending ? t('Saving…', '儲存中…') : editing ? t('Save', '儲存') : t('Add card', '新增閃卡')}
               </Button>
             </div>
           </div>

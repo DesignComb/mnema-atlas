@@ -36,7 +36,7 @@ const RESOLVED_KIND_LABEL: Record<string, [string, string]> = {
   task: ['task', '任務'],
   habit: ['habit', '習慣'],
   note: ['note', '筆記'],
-  card: ['flashcard', '字卡'],
+  card: ['flashcard', '閃卡'],
   transaction: ['transaction', '記帳'],
   itinerary: ['trip', '行程'],
   event: ['event', '行事曆'],

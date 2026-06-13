@@ -1,12 +1,14 @@
-import { Link } from '@tanstack/react-router'
-import { GraduationCap, Layers, Sparkles } from 'lucide-react'
-import { useCards, useDecks, useDueCards, useSeedSample } from '@/lib/hooks'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { GraduationCap, Layers, Sparkles, X } from 'lucide-react'
+import { useCards, useDecks, useDueCards, useNotes, useSeedSample } from '@/lib/hooks'
 import { buildDeckTree, flattenTree } from '@/lib/deck-tree'
+import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import { tagChipStyle } from '@/lib/tags'
+import { cn } from '@/lib/utils'
 
 function StateTile({ label, n, cls }: { label: string; n: number; cls: string }) {
   return (
@@ -21,17 +23,29 @@ export function CardsScreen() {
   const { data: cards } = useCards()
   const { data: due } = useDueCards()
   const { data: decks } = useDecks()
+  const { data: notes } = useNotes()
   const seed = useSeedSample()
   const t = useT()
+  const navigate = useNavigate()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
-  // Tag overview → study by tag (across decks).
+  // Selected tag filter (in the URL so it's shareable / survives refresh).
+  const { tag: activeTag } = useSearch({ from: '/_app/cards' }) as { tag?: string }
+  const selectTag = (tg: string | undefined) =>
+    navigate({ to: '/cards', search: tg ? { tag: tg } : {} })
+
+  // Tag overview → filter the browse list (and a Study jump from the filtered view).
   const tagTotal = new Map<string, number>()
   const tagDue = new Map<string, number>()
   cards?.forEach((c) => c.tags?.forEach((tg) => tagTotal.set(tg, (tagTotal.get(tg) ?? 0) + 1)))
   due?.forEach((c) => c.tags?.forEach((tg) => tagDue.set(tg, (tagDue.get(tg) ?? 0) + 1)))
   const tagList = Array.from(tagTotal.keys()).sort()
+
+  // Filtered browse: every card carrying the selected tag, across all decks.
+  const filtered = activeTag ? (cards ?? []).filter((c) => c.tags?.includes(activeTag)) : null
+  const filteredDue = activeTag ? tagDue.get(activeTag) ?? 0 : 0
+  const noteTitleById = new Map((notes ?? []).map((n) => [n.id, n.title]))
 
   const countByDeck = new Map<string, number>()
   cards?.forEach((c) => {
@@ -57,12 +71,12 @@ export function CardsScreen() {
   return (
     <>
       <PageHeader
-        title={t('Flashcards', '字卡')}
+        title={t('Flashcards', '閃卡')}
         subtitle={
           cards
             ? t(
                 `${cards.length} card${cards.length === 1 ? '' : 's'} · ${totalDue} due`,
-                `${cards.length} 張字卡 · ${totalDue} 張到期`,
+                `${cards.length} 張閃卡 · ${totalDue} 張到期`,
               )
             : undefined
         }
@@ -71,7 +85,7 @@ export function CardsScreen() {
           totalDue > 0 ? (
             <Button asChild variant="brand" size="sm">
               <Link to="/study">
-                <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '複習')} </span>({totalDue})
+                <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '學習')} </span>({totalDue})
               </Link>
             </Button>
           ) : undefined
@@ -82,10 +96,10 @@ export function CardsScreen() {
           {isEmpty ? (
             <EmptyState
               icon={<Sparkles className="size-6" />}
-              title={t('No flashcards yet', '還沒有字卡')}
+              title={t('No flashcards yet', '還沒有閃卡')}
               description={t(
                 'Add a sample deck to see how it works, add cards from a note, or let a connected AI create them — they enter FSRS scheduling immediately.',
-                '加入範例牌組看看效果、從筆記新增字卡，或讓連接的 AI 為你建立——它們會立即進入 FSRS 排程。',
+                '加入範例牌組看看效果、從筆記新增閃卡，或讓連接的 AI 為你建立——它們會立即進入 FSRS 排程。',
               )}
               action={
                 <Button variant="brand" size="sm" onClick={() => seed.mutate()} disabled={seed.isPending}>
@@ -103,34 +117,81 @@ export function CardsScreen() {
                 <StateTile label={t('Due now', '現在到期')} n={totalDue} cls="text-brand" />
               </div>
 
-              {/* Study by tag — pick a tag to review across all decks. */}
+              {/* Filter by tag — click a tag to browse its cards across all decks. */}
               {tagList.length ? (
                 <div className="mb-1.5">
                   <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                    {t('Study by tag', '依標籤複習')}
+                    {t('Filter by tag', '依標籤篩選')}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {tagList.map((tg) => {
                       const n = tagTotal.get(tg) ?? 0
                       const d = tagDue.get(tg) ?? 0
+                      const active = tg === activeTag
                       return (
-                        <Link
+                        <button
                           key={tg}
-                          to="/study"
-                          search={{ tag: tg }}
-                          style={tagChipStyle(tg, isDark)}
-                          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-85"
-                          title={t(`Study “${tg}”`, `複習「${tg}」`)}
+                          type="button"
+                          onClick={() => selectTag(active ? undefined : tg)}
+                          aria-pressed={active}
+                          style={active ? tagChipStyle(tg, isDark) : undefined}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-85',
+                            active
+                              ? 'ring-1 ring-brand/40'
+                              : 'border-border text-muted-foreground hover:border-brand/40 hover:text-foreground',
+                          )}
+                          title={t(`Filter “${tg}”`, `篩選「${tg}」`)}
                         >
                           {tg}
                           <span className="tabular-nums opacity-70">{d > 0 ? `${d}/${n}` : n}</span>
-                        </Link>
+                          {active ? <X className="size-3" /> : null}
+                        </button>
                       )
                     })}
                   </div>
                 </div>
               ) : null}
 
+              {/* Filtered browse: the selected tag's cards, with a Study jump. */}
+              {activeTag ? (
+                <section className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <span style={tagChipStyle(activeTag, isDark)} className="rounded-full border px-2 py-0.5 text-[12px]">
+                        {activeTag}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {t(`${filtered?.length ?? 0} card${(filtered?.length ?? 0) === 1 ? '' : 's'}`, `${filtered?.length ?? 0} 張閃卡`)}
+                      </span>
+                    </h3>
+                    <div className="flex items-center gap-1.5">
+                      <Button variant="ghost" size="sm" onClick={() => selectTag(undefined)}>
+                        <X className="size-4" /> {t('Clear', '清除')}
+                      </Button>
+                      {filteredDue > 0 ? (
+                        <Button asChild variant="brand" size="sm">
+                          <Link to="/study" search={{ tag: activeTag }}>
+                            <GraduationCap className="size-4" /> {t('Study', '學習')} ({filteredDue})
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                  {filtered?.length ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {filtered.map((c) => (
+                        <FlashcardTile key={c.id} card={c} noteTitle={c.note_id ? noteTitleById.get(c.note_id) : undefined} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-border px-4 py-4 text-[13px] text-muted-foreground">
+                      {t('No cards with this tag.', '沒有帶此標籤的閃卡。')}
+                    </p>
+                  )}
+                </section>
+              ) : (
+              <>
               {deckList.map(({ deck: d, depth }) => {
                 const n = countByDeck.get(d.id) ?? 0
                 const dd = dueByDeck.get(d.id) ?? 0
@@ -146,7 +207,7 @@ export function CardsScreen() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{d.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {t(`${n} card${n === 1 ? '' : 's'}`, `${n} 張字卡`)}
+                        {t(`${n} card${n === 1 ? '' : 's'}`, `${n} 張閃卡`)}
                       </p>
                     </div>
                     {dd > 0 ? (
@@ -162,10 +223,12 @@ export function CardsScreen() {
                   <Layers className="size-4" />{' '}
                   {t(
                     `${looseCount} card${looseCount === 1 ? '' : 's'} not in any deck`,
-                    `${looseCount} 張字卡未歸入任何牌組`,
+                    `${looseCount} 張閃卡未歸入任何牌組`,
                   )}
                 </div>
               ) : null}
+              </>
+              )}
             </>
           )}
         </div>

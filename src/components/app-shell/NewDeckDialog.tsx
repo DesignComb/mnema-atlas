@@ -82,7 +82,7 @@ export function NewDeckDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editing ? t('Edit deck', '編輯牌組') : t('New deck', '新增牌組')}</DialogTitle>
-          <DialogDescription>{t('A deck groups related notes and flashcards.', '牌組用來歸納相關的筆記與字卡。')}</DialogDescription>
+          <DialogDescription>{t('A deck groups related notes and flashcards.', '牌組用來歸納相關的筆記與閃卡。')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

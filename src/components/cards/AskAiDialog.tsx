@@ -32,7 +32,7 @@ export function AskAiDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('Ask an AI to make the cards', '請 AI 幫你製作字卡')}</DialogTitle>
+          <DialogTitle>{t('Ask an AI to make the cards', '請 AI 幫你製作閃卡')}</DialogTitle>
           <DialogDescription>
             {t(
               'Copy this, paste it into ChatGPT / Claude / any AI, then paste its answer back here.',
@@ -48,7 +48,7 @@ export function AskAiDialog({
           <li>{t('It replies with a ', '它會回覆一段 ')}<code className="rounded bg-muted px-1">mnema</code>{t(' block.', ' 區塊。')}</li>
           <li>
             {t('Copy that reply, press', '複製該回覆，在這裡按')}{' '}
-            <kbd className="rounded border border-border bg-card px-1.5 text-[11px]">{modKey}+I</kbd>{t(' here, and paste it to create the cards.', '，再貼上即可建立字卡。')}
+            <kbd className="rounded border border-border bg-card px-1.5 text-[11px]">{modKey}+I</kbd>{t(' here, and paste it to create the cards.', '，再貼上即可建立閃卡。')}
           </li>
         </ol>
         <div className="flex justify-end gap-2 pt-1">

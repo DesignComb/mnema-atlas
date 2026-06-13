@@ -38,7 +38,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     q_en: 'What can my AI actually do here?',
     q_zh: '我的 AI 在這裡到底能做什麼？',
     a_en: 'Create notes and flashcards, draft multi-day trips, add tasks, habits, and reminders, and more — it picks the right space from what you ask. The exact, live list of actions appears in Settings once you connect.',
-    a_zh: '建立筆記與字卡、草擬多天行程、新增任務、習慣與提醒等等 —— 它會依你說的內容，選擇正確的區塊。連接之後，設定頁會即時列出它能執行的確切操作。',
+    a_zh: '建立筆記與閃卡、草擬多天行程、新增任務、習慣與提醒等等 —— 它會依你說的內容，選擇正確的區塊。連接之後，設定頁會即時列出它能執行的確切操作。',
   },
   {
     q_en: 'Is it free?',

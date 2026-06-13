@@ -155,7 +155,7 @@ export function NoteScreen() {
               <Star className={note.starred ? 'size-4 fill-warning text-warning' : 'size-4 text-muted-foreground'} />
             </Button>
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
-              <Plus className="size-4" /> <span className="hidden sm:inline">{t('Add flashcard', '新增字卡')}</span>
+              <Plus className="size-4" /> <span className="hidden sm:inline">{t('Add flashcard', '新增閃卡')}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={() => setAskOpen(true)}>
               <Sparkles className="size-4" /> <span className="hidden sm:inline">{t('Ask AI', '問 AI')}</span>
@@ -256,7 +256,7 @@ export function NoteScreen() {
               defaultMode={note.body.trim() ? 'preview' : 'write'}
               placeholder={t(
                 'Start writing — markdown supported. Your notes become flashcards and graph nodes…',
-                '開始書寫 — 支援 Markdown。你的筆記會變成字卡與圖譜節點…',
+                '開始書寫 — 支援 Markdown。你的筆記會變成閃卡與圖譜節點…',
               )}
             />
           </Suspense>
@@ -264,7 +264,7 @@ export function NoteScreen() {
           {noteCards && noteCards.length > 0 ? (
             <section className="mt-10 space-y-3 border-t border-border pt-6">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Layers className="size-4 text-muted-foreground" /> {t('Flashcards from this note', '此筆記的字卡')}
+                <Layers className="size-4 text-muted-foreground" /> {t('Flashcards from this note', '此筆記的閃卡')}
                 <span className="font-normal text-muted-foreground">· {noteCards.length}</span>
               </h3>
               <div className="grid gap-2 sm:grid-cols-2">

@@ -192,7 +192,7 @@ export function NotesScreen() {
               title={t('No notes yet', '還沒有筆記')}
               description={t(
                 'Write your first study note, or connect an AI to generate notes and flashcards for you.',
-                '寫下你的第一則學習筆記，或連接 AI 為你自動產生筆記與字卡。',
+                '寫下你的第一則學習筆記，或連接 AI 為你自動產生筆記與閃卡。',
               )}
               action={
                 <Button variant="brand" size="sm" onClick={newNote}>

@@ -21,7 +21,7 @@ export function NativeLogin() {
         <div className="space-y-2">
           <h1 className="font-serif text-3xl font-semibold tracking-tight">Mnema</h1>
           <p className="mx-auto max-w-[16rem] text-sm leading-relaxed text-muted-foreground">
-            {t('Study, tasks, money, health — your spaces, filled by your own AI.', '讀書、待辦、記帳、健康 —— 你的空間，交給你自己的 AI 幫你填。')}
+            {t('Study, tasks, money, health — your spaces, filled by your own AI.', '學習、待辦、記帳、健康 —— 你的空間，交給你自己的 AI 幫你填。')}
           </p>
         </div>
       </div>

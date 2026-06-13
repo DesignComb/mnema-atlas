@@ -151,7 +151,7 @@ export function StudyScreen() {
     try {
       const ahead = await listAheadCards(deckId, tag, 30)
       if (!ahead.length) {
-        toast.success(t('Nothing scheduled ahead yet — add more cards.', '目前沒有可超前的卡片 — 多新增一些吧。'))
+        toast.success(t('Nothing scheduled ahead yet — add more cards.', '目前沒有可超前的閃卡 — 多新增一些吧。'))
         return
       }
       setQueue(ahead)
@@ -162,7 +162,7 @@ export function StudyScreen() {
       setCram(true)
       setLastGrade(null)
     } catch (err) {
-      toast.error(humanizeError(err, ['Failed to load cards', '載入卡片失敗']))
+      toast.error(humanizeError(err, ['Failed to load cards', '載入閃卡失敗']))
     } finally {
       setCramLoading(false)
     }
@@ -218,7 +218,7 @@ export function StudyScreen() {
     <>
       <PageHeader
         title={t('Study', '學習')}
-        subtitle={cram ? t('Studying ahead', '超前複習') : tag ? `#${tag}` : (deckName ?? undefined)}
+        subtitle={cram ? t('Studying ahead', '超前學習') : tag ? `#${tag}` : (deckName ?? undefined)}
         icon={<Sparkles className="size-4" />}
         actions={
           <div className="flex items-center gap-2">
@@ -253,16 +253,16 @@ export function StudyScreen() {
         ) : total === 0 ? (
           <EmptyState
             icon={<PartyPopper className="size-6" />}
-            title={t('Nothing due right now', '目前沒有待複習的字卡')}
+            title={t('Nothing due right now', '目前沒有待複習的閃卡')}
             description={t(
               "You're all caught up. New cards (including ones added by AI) appear here the moment they're created.",
-              '你已全部複習完畢。新字卡（包括 AI 新增的）一建立就會出現在這裡。',
+              '你已全部複習完畢。新閃卡（包括 AI 新增的）一建立就會出現在這裡。',
             )}
             action={
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button variant="brand" size="sm" onClick={startCram} disabled={cramLoading}>
                   {cramLoading ? <Loader2 className="size-4 animate-spin" /> : <FastForward className="size-4" />}
-                  {t('Study ahead', '超前複習')}
+                  {t('Study ahead', '超前學習')}
                 </Button>
                 <Button asChild variant="outline" size="sm">
                   <Link to="/today">{t('Back to Today', '回到今天')}</Link>
@@ -284,7 +284,7 @@ export function StudyScreen() {
               <p className="text-sm text-muted-foreground">
                 {t(
                   `You reviewed ${reviewed} card${reviewed === 1 ? '' : 's'}. Nicely done.`,
-                  `你複習了 ${reviewed} 張字卡，做得很好。`,
+                  `你複習了 ${reviewed} 張閃卡，做得很好。`,
                 )}
               </p>
               {unsaved > 0 ? (
@@ -300,7 +300,7 @@ export function StudyScreen() {
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Button variant="outline" onClick={startCram} disabled={cramLoading}>
                 {cramLoading ? <Loader2 className="size-4 animate-spin" /> : <FastForward className="size-4" />}
-                {t('Study ahead', '超前複習')}
+                {t('Study ahead', '超前學習')}
               </Button>
               <Button asChild variant="brand">
                 <Link to="/today">{t('Back to Today', '回到今天')}</Link>

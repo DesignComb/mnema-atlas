@@ -18,7 +18,7 @@ import { modKey } from '@/lib/utils'
    spaces.ts without a blurb is a TYPE ERROR — the guide can never drift from
    the rail again (audit A1). */
 const SPACE_TITLE: Record<SpaceKey, [string, string]> = {
-  study: ['Study · Atlas', '讀書 · Atlas'],
+  study: ['Study · Atlas', '學習 · Atlas'],
   travel: ['Travel · Voyage', '旅遊 · Voyage'],
   tempo: ['Tasks · Tempo', '任務 · Tempo'],
   galleon: ['Money · Galleon', '記帳 · Galleon'],
@@ -26,7 +26,7 @@ const SPACE_TITLE: Record<SpaceKey, [string, string]> = {
   kitchen: ['Kitchen', '廚房 · Kitchen'],
 }
 const SPACE_BLURB: Record<SpaceKey, [string, string]> = {
-  study: ['Notes, flashcards (spaced repetition), and a knowledge graph.', '筆記、字卡(間隔重複)與知識圖譜。'],
+  study: ['Notes, flashcards (spaced repetition), and a knowledge graph.', '筆記、閃卡(間隔重複)與知識圖譜。'],
   travel: ['Multi-day trips: days, activities, reservations, packing — shareable.', '多天行程:日期、活動、訂位、打包 —— 可分享。'],
   tempo: ['To-dos & lists, habits, a calendar, recurrence, and reminders.', '待辦與清單、習慣、行事曆、重複與提醒。'],
   galleon: ['Ledgers, accounts & balances, budgets, and Splitwise-style bill-splitting.', '帳本、帳戶與結餘、預算,以及 Splitwise 式分帳結算。'],
@@ -73,8 +73,8 @@ export function GuideScreen() {
             <h2 className="font-serif text-xl text-foreground">{t('Your daily loop', '你的每日循環')}</h2>
             <div className="grid gap-2.5 sm:grid-cols-2">
               <Step icon={<FileText />} title={t('1 · Capture', '1 · 記錄')} body={t('Write a note, or paste something you want to remember.', '寫一則筆記，或貼上你想記住的內容。')} />
-              <Step icon={<Layers />} title={t('2 · Make cards', '2 · 製作卡片')} body={t('Turn a note into flashcards — a question and its answer.', '把筆記變成字卡 — 一個問題加上它的答案。')} />
-              <Step icon={<GraduationCap />} title={t('3 · Review', '3 · 複習')} body={t("Open Study and review what's due. We schedule the rest.", '開啟學習頁複習到期的卡片，其餘的交給我們安排。')} />
+              <Step icon={<Layers />} title={t('2 · Make cards', '2 · 製作閃卡')} body={t('Turn a note into flashcards — a question and its answer.', '把筆記變成閃卡 — 一個問題加上它的答案。')} />
+              <Step icon={<GraduationCap />} title={t('3 · Review', '3 · 複習')} body={t("Open Study and review what's due. We schedule the rest.", '開啟學習頁複習到期的閃卡，其餘的交給我們安排。')} />
               <Step icon={<Share2 />} title={t('See connections', '看見連結')} body={t('The Graph shows how your notes link together.', '圖譜會顯示你的筆記如何彼此串連。')} />
             </div>
           </section>

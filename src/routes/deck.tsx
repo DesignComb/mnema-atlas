@@ -90,7 +90,7 @@ export function DeckScreen() {
     try {
       await deleteDeck.mutateAsync(deckId)
       toast.success(
-        t('Deck deleted — its notes & cards were kept, just unfiled', '已刪除牌組——筆記與字卡都會保留，只是不再歸檔'),
+        t('Deck deleted — its notes & cards were kept, just unfiled', '已刪除牌組——筆記與閃卡都會保留，只是不再歸檔'),
       )
       navigate({ to: '/cards' })
     } catch (err) {
@@ -143,7 +143,7 @@ export function DeckScreen() {
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
-              <Plus className="size-4" /> <span className="hidden sm:inline">{t('Card', '字卡')}</span>
+              <Plus className="size-4" /> <span className="hidden sm:inline">{t('Card', '閃卡')}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={newNote}>
               <FilePlus2 className="size-4" /> <span className="hidden sm:inline">{t('Note', '筆記')}</span>
@@ -151,7 +151,7 @@ export function DeckScreen() {
             {dueCount > 0 ? (
               <Button asChild variant="brand" size="sm">
                 <Link to="/study/$deckId" params={{ deckId }}>
-                  <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '複習')} </span>({dueCount})
+                  <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '學習')} </span>({dueCount})
                 </Link>
               </Button>
             ) : null}
@@ -226,7 +226,7 @@ export function DeckScreen() {
           {/* Flashcards (primary) */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">
-              {t('Flashcards', '字卡')}{' '}
+              {t('Flashcards', '閃卡')}{' '}
               {cards?.length ? <span className="text-muted-foreground">· {cards.length}</span> : null}
             </h3>
             {cards?.length ? (
@@ -238,11 +238,11 @@ export function DeckScreen() {
             ) : (
               <EmptyState
                 icon={<Layers className="size-6" />}
-                title={t('No flashcards in this deck', '此牌組還沒有字卡')}
-                description={t('Add a card, or let a connected AI create them.', '新增一張字卡，或讓連接的 AI 為你建立。')}
+                title={t('No flashcards in this deck', '此牌組還沒有閃卡')}
+                description={t('Add a card, or let a connected AI create them.', '新增一張閃卡，或讓連接的 AI 為你建立。')}
                 action={
                   <Button variant="brand" size="sm" onClick={() => setCardOpen(true)}>
-                    <Plus className="size-4" /> {t('New card', '新增字卡')}
+                    <Plus className="size-4" /> {t('New card', '新增閃卡')}
                   </Button>
                 }
               />

@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test'
 test('app boots signed in, with the space rail', async ({ page }) => {
   await page.goto('/today')
   await expect(page).toHaveURL(/\/today/) // not bounced to the public landing
-  await expect(page.getByRole('link', { name: /Study|讀書/ }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /Study|學習/ }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Capture anything|隨手暫存/ }).first()).toBeVisible()
 })
 
@@ -42,13 +42,13 @@ test('create an image flashcard and the image shows up', async ({ page }) => {
   await page.getByRole('button', { name: /Write a note|寫一則筆記/ }).click()
   await expect(page).toHaveURL(/\/notes\//)
 
-  await page.getByRole('button', { name: /Add flashcard|新增字卡/ }).click()
+  await page.getByRole('button', { name: /Add flashcard|新增閃卡/ }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel(/^Front|正面/).fill(`e2e img ${Date.now()}`)
   await dialog.getByLabel(/^Back|背面/).fill('e2e back')
   await dialog.locator('input[type="file"]').setInputFiles('e2e/fixtures/pixel.png')
   await expect(dialog.locator('img')).toBeVisible({ timeout: 15_000 }) // upload finished → preview
-  await dialog.getByRole('button', { name: /^Add card$|^新增字卡$/ }).click()
+  await dialog.getByRole('button', { name: /^Add card$|^新增閃卡$/ }).click()
   await expect(dialog).toBeHidden()
 
   // the new card's tile (with the uploaded image) renders on the note page

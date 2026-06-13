@@ -4,7 +4,7 @@ import { BookOpenCheck, ChefHat, Coins, GraduationCap, HeartPulse, ListTodo, Map
  *  tabs, and the sidebar header. Each space owns a hue applied by AppLayout's
  *  theme-* class, so the active item just uses the brand tokens. */
 export const SPACES = [
-  { key: 'study', to: '/today', icon: GraduationCap, en: 'Study', zh: '讀書' },
+  { key: 'study', to: '/today', icon: GraduationCap, en: 'Study', zh: '學習' },
   { key: 'travel', to: '/trips', icon: MapIcon, en: 'Travel', zh: '旅遊' },
   { key: 'tempo', to: '/tempo', icon: ListTodo, en: 'Tempo', zh: '節奏' },
   { key: 'galleon', to: '/galleon', icon: Coins, en: 'Money', zh: '記帳' },

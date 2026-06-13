@@ -77,7 +77,7 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
       toast.success(
         t(
           `Imported ${data.notes.length} note(s) and ${data.cards.length} card(s)`,
-          `已匯入 ${data.notes.length} 則筆記與 ${data.cards.length} 張字卡`,
+          `已匯入 ${data.notes.length} 則筆記與 ${data.cards.length} 張閃卡`,
         ),
       )
       setText('')
@@ -134,13 +134,13 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
               </p>
             ) : null}
             <p className="flex items-center gap-2 text-muted-foreground">
-              <FileText className="size-3.5" /> {t(`${data.notes.length} note(s) · ${data.cards.length} card(s)`, `${data.notes.length} 則筆記 · ${data.cards.length} 張字卡`)}
+              <FileText className="size-3.5" /> {t(`${data.notes.length} note(s) · ${data.cards.length} card(s)`, `${data.notes.length} 則筆記 · ${data.cards.length} 張閃卡`)}
             </p>
             {unknownRefs > 0 ? (
               <p className="flex items-start gap-1.5 text-amber-600">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" /> {t(
                   `${unknownRefs} card(s) reference a note not in this import — they'll be created unlinked.`,
-                  `${unknownRefs} 張字卡參照了此次匯入中沒有的筆記 — 它們將不會連結。`,
+                  `${unknownRefs} 張閃卡參照了此次匯入中沒有的筆記 — 它們將不會連結。`,
                 )}
               </p>
             ) : null}

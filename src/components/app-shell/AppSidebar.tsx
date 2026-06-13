@@ -60,7 +60,7 @@ const NAV_STUDY = [
   { to: '/notes', label: 'Notes', zh: '筆記', icon: FileText, exact: false },
   { to: '/cards', label: 'Flashcards', zh: '閃卡', icon: Layers, exact: false },
   { to: '/graph', label: 'Graph', zh: '圖譜', icon: Share2, exact: false },
-  { to: '/study', label: 'Study', zh: '複習', icon: GraduationCap, exact: false },
+  { to: '/study', label: 'Study', zh: '學習', icon: GraduationCap, exact: false },
 ] as const
 const NAV_TRAVEL = [{ to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false }] as const
 const NAV_TEMPO = [{ to: '/tempo', label: 'Tasks', zh: '任務', icon: ListTodo, exact: false }] as const

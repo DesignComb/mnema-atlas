@@ -489,7 +489,7 @@ function StudySection() {
           <div className="absolute inset-0 bg-dots opacity-40" />
           <div className="relative space-y-2">
             <p className="text-xs font-medium uppercase tracking-wider text-brand">{t('Welcome', '歡迎')}</p>
-            <h2 className="font-serif text-xl text-foreground sm:text-2xl">{t("Let's get your first cards going", '來建立你的第一批卡片吧')}</h2>
+            <h2 className="font-serif text-xl text-foreground sm:text-2xl">{t("Let's get your first cards going", '來建立你的第一批閃卡吧')}</h2>
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
               {t(
                 'Add a tiny sample deck to see the whole loop in 30 seconds, or write your first note. An AI can also fill your library for you —',
@@ -519,7 +519,7 @@ function StudySection() {
               <p className="text-xs font-medium uppercase tracking-wider text-brand">{t('Spaced repetition', '間隔重複')}</p>
               <h2 className="font-serif text-xl text-foreground sm:text-2xl">
                 {dueCount > 0
-                  ? t(`${dueCount} card${dueCount === 1 ? '' : 's'} due`, `${dueCount} 張卡片待複習`)
+                  ? t(`${dueCount} card${dueCount === 1 ? '' : 's'} due`, `${dueCount} 張閃卡待複習`)
                   : t('All caught up 🌿', '全部完成 🌿')}
               </h2>
               <p className="text-sm text-muted-foreground">

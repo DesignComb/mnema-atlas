@@ -84,7 +84,14 @@ const homeRoute = createRoute({
 })
 const notesRoute = createRoute({ getParentRoute: () => appRoute, path: 'notes', component: NotesScreen })
 const deckRoute = createRoute({ getParentRoute: () => appRoute, path: 'decks/$deckId', component: DeckScreen })
-const cardsRoute = createRoute({ getParentRoute: () => appRoute, path: 'cards', component: CardsScreen })
+const cardsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'cards',
+  validateSearch: (search: Record<string, unknown>): { tag?: string } => ({
+    tag: typeof search.tag === 'string' ? search.tag : undefined,
+  }),
+  component: CardsScreen,
+})
 const tripsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'trips',
