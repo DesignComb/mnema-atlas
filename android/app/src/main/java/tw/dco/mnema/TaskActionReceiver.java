@@ -110,8 +110,9 @@ public class TaskActionReceiver extends BroadcastReceiver {
         }
     }
 
-    /** Drop the task from every day of the calendar snapshot (it may sit on
-     *  both its due and scheduled dates). */
+    /** Drop the to-do from every day of the calendar snapshot (it may sit on its
+     *  due and scheduled dates) and bump that day's done count. days[date] is an
+     *  object: { todos:[{id,…}], td, hc:[] }. */
     private static void removeFromCalendarSnapshot(SharedPreferences prefs, String taskId) {
         try {
             String raw = prefs.getString(CalendarWidget.KEY, null);
@@ -120,20 +121,21 @@ public class TaskActionReceiver extends BroadcastReceiver {
             JSONObject days = snap.optJSONObject("days");
             if (days == null) return;
             java.util.Iterator<String> dates = days.keys();
-            java.util.List<String> emptied = new java.util.ArrayList<>();
             while (dates.hasNext()) {
-                String date = dates.next();
-                JSONArray items = days.optJSONArray(date);
-                if (items == null) continue;
+                JSONObject day = days.optJSONObject(dates.next());
+                if (day == null) continue;
+                JSONArray todos = day.optJSONArray("todos");
+                if (todos == null) continue;
                 JSONArray kept = new JSONArray();
-                for (int i = 0; i < items.length(); i++) {
-                    JSONObject it = items.optJSONObject(i);
+                boolean removed = false;
+                for (int i = 0; i < todos.length(); i++) {
+                    JSONObject it = todos.optJSONObject(i);
                     if (it != null && !taskId.equals(it.optString("id"))) kept.put(it);
+                    else if (it != null) removed = true;
                 }
-                if (kept.length() == 0) emptied.add(date);
-                else days.put(date, kept);
+                day.put("todos", kept);
+                if (removed) day.put("td", day.optInt("td", 0) + 1);
             }
-            for (String date : emptied) days.remove(date);
             prefs.edit().putString(CalendarWidget.KEY, snap.toString()).apply();
         } catch (Exception ignored) {
         }

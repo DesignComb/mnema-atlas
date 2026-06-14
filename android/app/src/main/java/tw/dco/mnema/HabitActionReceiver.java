@@ -48,9 +48,11 @@ public class HabitActionReceiver extends BroadcastReceiver {
     // Optimistic flip for instant feedback (corrected below by the server's answer).
     flipSnapshot(prefs, habitId, !wasChecked);
     flipAgendaSnapshot(prefs, habitId, !wasChecked);
+    flipCalendarSnapshot(prefs, habitId, !wasChecked);
     flipStreakSnapshot(prefs, habitId, !wasChecked);
     HabitsWidget.refreshAll(context);
     TodayWidget.refreshAll(context);
+    CalendarWidget.refreshAll(context);
     StreakWidget.refreshAll(context);
 
     final PendingResult pending = goAsync();
@@ -63,9 +65,11 @@ public class HabitActionReceiver extends BroadcastReceiver {
           if (nowChecked != null) {
             flipSnapshot(prefs, habitId, nowChecked); // authoritative server state
             flipAgendaSnapshot(prefs, habitId, nowChecked);
+            flipCalendarSnapshot(prefs, habitId, nowChecked);
             flipStreakSnapshot(prefs, habitId, nowChecked);
             HabitsWidget.refreshAll(context);
             TodayWidget.refreshAll(context);
+            CalendarWidget.refreshAll(context);
             StreakWidget.refreshAll(context);
           }
         } catch (Exception ignored) {
@@ -74,6 +78,41 @@ public class HabitActionReceiver extends BroadcastReceiver {
         }
       }
     }).start();
+  }
+
+  /** Add/remove the habit id in the calendar snapshot's TODAY check-in set
+   *  (days[today].hc) so the calendar widget's 打卡 X/Y agrees immediately. */
+  private static void flipCalendarSnapshot(SharedPreferences prefs, String habitId, boolean checked) {
+    try {
+      String raw = prefs.getString(CalendarWidget.KEY, null);
+      if (raw == null) return;
+      JSONObject snap = new JSONObject(raw);
+      String today = snap.optString("date", "");
+      if (today.isEmpty()) return;
+      JSONObject days = snap.optJSONObject("days");
+      if (days == null) { days = new JSONObject(); snap.put("days", days); }
+      JSONObject day = days.optJSONObject(today);
+      if (day == null) {
+        day = new JSONObject();
+        day.put("todos", new JSONArray());
+        day.put("td", 0);
+        day.put("hc", new JSONArray());
+        days.put(today, day);
+      }
+      JSONArray hc = day.optJSONArray("hc");
+      if (hc == null) { hc = new JSONArray(); day.put("hc", hc); }
+      JSONArray next = new JSONArray();
+      boolean present = false;
+      for (int i = 0; i < hc.length(); i++) {
+        String id = hc.optString(i, "");
+        if (habitId.equals(id)) { present = true; if (checked) next.put(id); }
+        else next.put(id);
+      }
+      if (checked && !present) next.put(habitId);
+      day.put("hc", next);
+      prefs.edit().putString(CalendarWidget.KEY, snap.toString()).apply();
+    } catch (Exception ignored) {
+    }
   }
 
   private static void flipSnapshot(SharedPreferences prefs, String habitId, boolean checked) {

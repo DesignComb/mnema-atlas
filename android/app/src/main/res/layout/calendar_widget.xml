@@ -132,30 +132,56 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:text="今天"
-        android:textColor="#9A9AA6"
-        android:textSize="10.5sp"
+        android:textColor="#C8C8D0"
+        android:textSize="11sp"
+        android:textStyle="bold"
         android:maxLines="1"
         android:ellipsize="end" />
 
-    <LinearLayout android:id="@+id/ag_row0" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/widget_agenda_chip" android:paddingLeft="8dp" android:paddingRight="8dp" android:paddingTop="4dp" android:paddingBottom="4dp">
-        <ImageView android:id="@+id/ag_check0" android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
+    <!-- Agenda: 7 morphing slots. A slot is either a section header (ag_secN) or
+         an item row (ag_checkN + ag_timeN + ag_titleN) — to-dos complete, habits
+         check in. CalendarWidget.java decides at runtime. -->
+    <LinearLayout android:id="@+id/ag_row0" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/ag_sec0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
+        <ImageView android:id="@+id/ag_check0" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
         <TextView android:id="@+id/ag_time0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
         <TextView android:id="@+id/ag_title0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
     </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/widget_agenda_chip" android:paddingLeft="8dp" android:paddingRight="8dp" android:paddingTop="4dp" android:paddingBottom="4dp">
-        <ImageView android:id="@+id/ag_check1" android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
+    <LinearLayout android:id="@+id/ag_row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/ag_sec1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
+        <ImageView android:id="@+id/ag_check1" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
         <TextView android:id="@+id/ag_time1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
         <TextView android:id="@+id/ag_title1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
     </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/widget_agenda_chip" android:paddingLeft="8dp" android:paddingRight="8dp" android:paddingTop="4dp" android:paddingBottom="4dp">
-        <ImageView android:id="@+id/ag_check2" android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
+    <LinearLayout android:id="@+id/ag_row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/ag_sec2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
+        <ImageView android:id="@+id/ag_check2" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
         <TextView android:id="@+id/ag_time2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
         <TextView android:id="@+id/ag_title2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
     </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/widget_agenda_chip" android:paddingLeft="8dp" android:paddingRight="8dp" android:paddingTop="4dp" android:paddingBottom="4dp">
-        <ImageView android:id="@+id/ag_check3" android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
+    <LinearLayout android:id="@+id/ag_row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/ag_sec3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
+        <ImageView android:id="@+id/ag_check3" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
         <TextView android:id="@+id/ag_time3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
         <TextView android:id="@+id/ag_title3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/ag_row4" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/ag_sec4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
+        <ImageView android:id="@+id/ag_check4" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
+        <TextView android:id="@+id/ag_time4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
+        <TextView android:id="@+id/ag_title4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/ag_row5" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/ag_sec5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
+        <ImageView android:id="@+id/ag_check5" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
+        <TextView android:id="@+id/ag_time5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
+        <TextView android:id="@+id/ag_title5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/ag_row6" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/ag_sec6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
+        <ImageView android:id="@+id/ag_check6" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
+        <TextView android:id="@+id/ag_time6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
+        <TextView android:id="@+id/ag_title6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
     </LinearLayout>
 
     <TextView
@@ -163,7 +189,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="3dp"
-        android:layout_marginLeft="25dp"
+        android:layout_marginLeft="27dp"
         android:textColor="#9A9AA6"
         android:textSize="11sp" />
 

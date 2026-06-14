@@ -124,15 +124,30 @@ export interface CalendarAgendaItem {
   /** "HH:mm" or null = all-day. */
   hm: string | null
 }
+/** Per-day calendar data: open to-dos + done count + which habits were checked. */
+export interface CalendarDay {
+  /** Open to-dos due/scheduled that day (timed first), completable from the agenda. */
+  todos: CalendarAgendaItem[]
+  /** To-dos completed that day (for the "代辦 X/Y" grid + agenda summary). */
+  td?: number
+  /** Habit ids checked in that day (drives "打卡 X/Y" + the agenda habit state). */
+  hc?: string[]
+}
 /**
- * TickTick-style calendar widget data: open tasks per day (every dated open
- * task, not just the current month — the widget can page months natively) +
- * public-holiday names. Selection/month state lives on the native side.
+ * Google-Calendar-style calendar widget data: per day, open to-dos + completed
+ * count + habit check-ins, so the day cell shows 代辦 X/Y · 打卡 X/Y and the
+ * agenda runs the whole Tempo day (complete to-dos + check in habits). Covers
+ * every dated open to-do (native pages months) and the −27..+1 check-in window;
+ * selection/month state lives on the native side.
  */
 export interface CalendarSnapshot {
   date: string
-  /** YYYY-MM-DD → that day's open tasks (timed first, then all-day). */
-  days: Record<string, CalendarAgendaItem[]>
+  /** Active habit count — the denominator of "打卡 X/Y". */
+  habitCount: number
+  /** Active habits, for the agenda's check-in section (id + streak chip). */
+  habits: WidgetHabit[]
+  /** YYYY-MM-DD → that day's to-dos / done count / habit check-ins. */
+  days: Record<string, CalendarDay>
   /** YYYY-MM-DD → holiday name (mirrors the in-app calendar's TW set). */
   holidays: Record<string, string>
 }
