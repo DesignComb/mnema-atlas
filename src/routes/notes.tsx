@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
-import { Clock, Download, FilePlus2, FileText, Star, Tag } from 'lucide-react'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { Clock, Download, FilePlus2, FileText, Star, Tag, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateNote, useNotes, useSetNoteStarred } from '@/lib/hooks'
 import { AiChip, useNewSince } from '@/components/common/AiChip'
@@ -45,6 +45,16 @@ export function NotesScreen() {
   const { t, lang } = useI18n()
   const isNew = useNewSince('notes')
   const [view, setView] = useState<NotesView>(readView)
+
+  // Selected tag filter (in the URL so it's shareable / survives refresh).
+  const { tag: activeTag } = useSearch({ from: '/_app/notes' }) as { tag?: string }
+  const selectTag = (tg: string | undefined) => navigate({ to: '/notes', search: tg ? { tag: tg } : {} })
+
+  // All tags + counts, for the filter chip row.
+  const tagCount = new Map<string, number>()
+  notes?.forEach((n) => n.tags?.forEach((tg) => tagCount.set(tg, (tagCount.get(tg) ?? 0) + 1)))
+  const tagList = [...tagCount.keys()].sort((a, b) => a.localeCompare(b))
+  const filtered = activeTag ? (notes ?? []).filter((n) => n.tags?.includes(activeTag)) : null
 
   function switchView(v: NotesView) {
     setView(v)
@@ -107,31 +117,62 @@ export function NotesScreen() {
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6">
           {notes && notes.length > 0 ? (
-            // View switch — by-tag is the default lens; Recent is the flat stack.
-            <div
-              role="tablist"
-              aria-label={t('Notes view', '筆記檢視')}
-              className="mb-4 inline-flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5"
-            >
-              {(
-                [
-                  ['tags', Tag, t('By tag', '依標籤')],
-                  ['recent', Clock, t('Recent', '最近')],
-                ] as const
-              ).map(([key, Icon, label]) => (
-                <button
-                  key={key}
-                  role="tab"
-                  aria-selected={view === key}
-                  onClick={() => switchView(key)}
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] font-medium transition',
-                    view === key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                  )}
+            <div className="mb-4 flex flex-col gap-3">
+              {/* View switch — hidden while filtering by a single tag. */}
+              {!activeTag ? (
+                <div
+                  role="tablist"
+                  aria-label={t('Notes view', '筆記檢視')}
+                  className="inline-flex w-fit items-center gap-0.5 rounded-lg bg-muted/60 p-0.5"
                 >
-                  <Icon className="size-3.5" /> {label}
-                </button>
-              ))}
+                  {(
+                    [
+                      ['tags', Tag, t('By tag', '依標籤')],
+                      ['recent', Clock, t('Recent', '最近')],
+                    ] as const
+                  ).map(([key, Icon, label]) => (
+                    <button
+                      key={key}
+                      role="tab"
+                      aria-selected={view === key}
+                      onClick={() => switchView(key)}
+                      className={cn(
+                        'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] font-medium transition',
+                        view === key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      <Icon className="size-3.5" /> {label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Filter by tag — click a tag to see only its notes. */}
+              {tagList.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {tagList.map((tg) => {
+                    const active = tg === activeTag
+                    return (
+                      <button
+                        key={tg}
+                        type="button"
+                        onClick={() => selectTag(active ? undefined : tg)}
+                        aria-pressed={active}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-85',
+                          active ? 'border-brand/40 ring-1 ring-brand/30 text-foreground' : 'border-border text-muted-foreground hover:border-brand/40 hover:text-foreground',
+                        )}
+                        title={t(`Filter “${tg}”`, `篩選「${tg}」`)}
+                      >
+                        <span className="size-2 rounded-full" style={{ background: tagColor(tg) }} />
+                        {tg}
+                        <span className="tabular-nums opacity-70">{tagCount.get(tg) ?? 0}</span>
+                        {active ? <X className="size-3" /> : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -142,7 +183,31 @@ export function NotesScreen() {
               ))}
             </div>
           ) : notes?.length ? (
-            grouped ? (
+            activeTag ? (
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <span className="size-2 rounded-full" style={{ background: tagColor(activeTag) }} />
+                    <span>{activeTag}</span>
+                    <span className="font-normal text-muted-foreground">· {filtered?.length ?? 0}</span>
+                  </h3>
+                  <Button variant="ghost" size="sm" onClick={() => selectTag(undefined)}>
+                    <X className="size-4" /> {t('Clear', '清除')}
+                  </Button>
+                </div>
+                {filtered?.length ? (
+                  <div className="grid gap-2">
+                    {filtered.map((n) => (
+                      <div key={n.id}>{row(n)}</div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-border px-4 py-4 text-[13px] text-muted-foreground">
+                    {t('No notes with this tag.', '沒有帶此標籤的筆記。')}
+                  </p>
+                )}
+              </section>
+            ) : grouped ? (
               <div className="space-y-6">
                 {grouped.starred.length > 0 ? (
                   <NoteSection
