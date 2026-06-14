@@ -15,16 +15,13 @@ import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
-import android.view.View;
 import android.widget.RemoteViews;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Calendar;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 
 /**
  * Google-Calendar-style widget: a pageable Sunday-start month grid where each
@@ -68,22 +65,6 @@ public class CalendarWidget extends AppWidgetProvider {
     private static final int[] WEEKDAY_IDS = {
         R.id.wd0, R.id.wd1, R.id.wd2, R.id.wd3, R.id.wd4, R.id.wd5, R.id.wd6
     };
-    private static final int[] AG_ROW_IDS = {
-        R.id.ag_row0, R.id.ag_row1, R.id.ag_row2, R.id.ag_row3, R.id.ag_row4, R.id.ag_row5, R.id.ag_row6
-    };
-    private static final int[] AG_SEC_IDS = {
-        R.id.ag_sec0, R.id.ag_sec1, R.id.ag_sec2, R.id.ag_sec3, R.id.ag_sec4, R.id.ag_sec5, R.id.ag_sec6
-    };
-    private static final int[] AG_CHECK_IDS = {
-        R.id.ag_check0, R.id.ag_check1, R.id.ag_check2, R.id.ag_check3, R.id.ag_check4, R.id.ag_check5, R.id.ag_check6
-    };
-    private static final int[] AG_TIME_IDS = {
-        R.id.ag_time0, R.id.ag_time1, R.id.ag_time2, R.id.ag_time3, R.id.ag_time4, R.id.ag_time5, R.id.ag_time6
-    };
-    private static final int[] AG_TITLE_IDS = {
-        R.id.ag_title0, R.id.ag_title1, R.id.ag_title2, R.id.ag_title3, R.id.ag_title4, R.id.ag_title5, R.id.ag_title6
-    };
-
     private static final String[] WEEKDAYS_ZH = { "日", "一", "二", "三", "四", "五", "六" };
     private static final String[] WEEKDAYS_EN = { "S", "M", "T", "W", "T", "F", "S" };
     private static final String[] MONTHS_EN = {
@@ -228,11 +209,7 @@ public class CalendarWidget extends AppWidgetProvider {
         int year = shown.get(Calendar.YEAR);
         int month = shown.get(Calendar.MONTH) + 1;
 
-        String selected = prefs.getString(selKey(appWidgetId), null);
-        String monthPrefix = String.format(Locale.US, "%04d-%02d-", year, month);
-        if (selected == null || !selected.startsWith(monthPrefix)) {
-            selected = offset == 0 ? today : monthPrefix + "01";
-        }
+        String selected = selectedDate(prefs, appWidgetId);
 
         views.setTextViewText(R.id.cal_month,
             zh ? year + "年" + month + "月" : MONTHS_EN[month - 1] + " " + year);
@@ -293,172 +270,92 @@ public class CalendarWidget extends AppWidgetProvider {
                     .putExtra(EXTRA_WIDGET, appWidgetId).putExtra(EXTRA_DATE, dateKey)));
         }
 
-        renderAgenda(context, views, appWidgetId, selected, today, days, holidays, habits, habitCount, zh);
+        setupAgenda(context, views, appWidgetId, selected, today, days, holidays, habits, habitCount, zh);
         manager.updateAppWidget(appWidgetId, views);
+        // Refresh the scrollable lists: the factory re-reads the snapshot + the
+        // selected day, so a completion / check-in / day change updates in place.
+        manager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lt_list);
+        manager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.rt_list);
     }
 
-    /** Agenda: 代辦 X/Y · 打卡 X/Y header, then 代辦 (complete) + 打卡 (check in)
-     *  sections across 7 morphing slots. Habits are checkable for today; on other
-     *  days they show that day's check-in state read-only. */
-    private static void renderAgenda(Context context, RemoteViews views, int appWidgetId,
-                                     String selected, String today, JSONObject days,
-                                     JSONObject holidays, JSONArray habits, int habitCount, boolean zh) {
+    /** The day the agenda lists show — shared by render() and the list factory so
+     *  they always agree (per-widget tap, else today / the 1st of a paged month). */
+    static String selectedDate(SharedPreferences prefs, int widgetId) {
+        Calendar now = Calendar.getInstance();
+        String today = iso(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH));
+        Calendar shown = Calendar.getInstance();
+        shown.set(Calendar.DAY_OF_MONTH, 1);
+        int offset = prefs.getInt(offKey(widgetId), 0);
+        shown.add(Calendar.MONTH, offset);
+        String monthPrefix = String.format(Locale.US, "%04d-%02d-", shown.get(Calendar.YEAR), shown.get(Calendar.MONTH) + 1);
+        String sel = prefs.getString(selKey(widgetId), null);
+        if (sel == null || !sel.startsWith(monthPrefix)) sel = offset == 0 ? today : monthPrefix + "01";
+        return sel;
+    }
+
+    private static int templateFlags() {
+        // Collection-item templates must be MUTABLE (the row fills in extras).
+        return PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE;
+    }
+
+    /** Header counts + the two scrollable lists (代辦 + 打卡), each backed by
+     *  CalendarAgendaService with a complete / check-in PendingIntent template. */
+    private static void setupAgenda(Context context, RemoteViews views, int appWidgetId,
+                                    String selected, String today, JSONObject days,
+                                    JSONObject holidays, JSONArray habits, int habitCount, boolean zh) {
         String[] parts = selected.split("-");
         int m = Integer.parseInt(parts[1]);
         int d = Integer.parseInt(parts[2]);
         boolean isToday = selected.equals(today);
         String dayLabel = isToday ? (zh ? "今天" : "Today")
             : (zh ? m + "/" + d : MONTHS_EN[m - 1].substring(0, 3) + " " + d);
+        String holiday = holidays != null ? holidays.optString(selected, "") : "";
+        views.setTextViewText(R.id.ag_header, holiday.isEmpty() ? dayLabel : dayLabel + " · " + holiday);
 
+        // Selected-day counts for the column headers.
         JSONObject dayObj = days != null ? days.optJSONObject(selected) : null;
         JSONArray todos = dayObj != null ? dayObj.optJSONArray("todos") : null;
         int todoOpen = todos != null ? todos.length() : 0;
         int todoDone = dayObj != null ? dayObj.optInt("td", 0) : 0;
-        Set<String> checkedHabits = new HashSet<>();
+        int habitDone = 0;
         if (dayObj != null) {
             JSONArray hc = dayObj.optJSONArray("hc");
-            if (hc != null) for (int i = 0; i < hc.length(); i++) checkedHabits.add(hc.optString(i, ""));
+            habitDone = hc != null ? hc.length() : 0;
         }
         int nHabits = habits != null ? habits.length() : 0;
-        int habitDone = checkedHabits.size();
-
-        // Header: day · 代辦 X/Y · 打卡 X/Y (+ holiday name).
-        StringBuilder header = new StringBuilder(dayLabel);
-        String holiday = holidays != null ? holidays.optString(selected, "") : "";
-        if (!holiday.isEmpty()) header.append(" · ").append(holiday);
-        if (todoOpen + todoDone > 0) {
-            header.append(zh ? " · 代辦 " : " · To-do ").append(todoDone).append("/").append(todoOpen + todoDone);
-        }
-        if (habitCount > 0) {
-            header.append(zh ? " · 打卡 " : " · Habits ").append(habitDone).append("/").append(habitCount);
-        }
-        views.setTextViewText(R.id.ag_header, header.toString());
+        views.setTextViewText(R.id.lt_head, (zh ? "代辦 " : "To-do ") + todoDone + "/" + (todoOpen + todoDone));
+        views.setTextViewText(R.id.rt_head, (zh ? "打卡 " : "Habits ") + habitDone + "/" + habitCount);
 
         Intent openCal = new Intent(Intent.ACTION_VIEW, Uri.parse("tw.dco.mnema://calendar"));
         openCal.setPackage(context.getPackageName());
-        PendingIntent openPi = PendingIntent.getActivity(context, appWidgetId * 100 + 93, openCal, flags());
-        views.setOnClickPendingIntent(R.id.ag_header, openPi);
-        views.setOnClickPendingIntent(R.id.ag_empty, openPi);
-        views.setOnClickPendingIntent(R.id.ag_more, openPi);
+        views.setOnClickPendingIntent(R.id.ag_header,
+            PendingIntent.getActivity(context, appWidgetId * 100 + 93, openCal, flags()));
 
-        int slot = 0;
-        int hidden = 0;
-        // When both sections exist, cap to-dos so habits stay visible.
-        int maxTodo = nHabits > 0 ? 3 : 6;
+        // Left list: to-dos → complete (TaskActionReceiver). Unique data uri per
+        // (widget,list) so Android keeps distinct factories.
+        Intent ltSvc = new Intent(context, CalendarAgendaService.class);
+        ltSvc.putExtra(EXTRA_WIDGET, appWidgetId);
+        ltSvc.putExtra(CalendarAgendaService.EXTRA_LIST, "todo");
+        ltSvc.setData(Uri.parse(ltSvc.toUri(Intent.URI_INTENT_SCHEME)));
+        views.setRemoteAdapter(R.id.lt_list, ltSvc);
+        views.setEmptyView(R.id.lt_list, R.id.lt_empty);
+        views.setTextViewText(R.id.lt_empty,
+            days == null ? (zh ? "開啟 Mnema 以同步" : "Open Mnema to sync")
+            : todoOpen == 0 ? (zh ? "沒有待辦 🎉" : "Nothing due 🎉") : "");
+        Intent ltTmpl = new Intent(context, TaskActionReceiver.class).setAction(TaskActionReceiver.ACTION_COMPLETE);
+        views.setPendingIntentTemplate(R.id.lt_list,
+            PendingIntent.getBroadcast(context, appWidgetId * 100 + 60, ltTmpl, templateFlags()));
 
-        if (todoOpen > 0 && slot < AG_ROW_IDS.length) {
-            renderSection(views, slot++, zh ? "代辦" : "To-do");
-        }
-        for (int i = 0; i < todoOpen; i++) {
-            if (i >= maxTodo || slot >= AG_ROW_IDS.length) { hidden += todoOpen - i; break; }
-            JSONObject it = todos.optJSONObject(i);
-            if (it == null) continue;
-            String hm = it.optString("hm", "");
-            boolean allDay = hm.isEmpty() || "null".equals(hm);
-            renderTodo(context, views, appWidgetId, slot++, it.optString("id", ""),
-                it.optString("title", ""), allDay ? (zh ? "全天" : "All-day") : hm, zh);
-        }
-
-        if (nHabits > 0 && slot < AG_ROW_IDS.length) {
-            renderSection(views, slot++, (zh ? "打卡 " : "Habits ") + habitDone + "/" + habitCount);
-        }
-        for (int i = 0; i < nHabits; i++) {
-            if (slot >= AG_ROW_IDS.length) { hidden += nHabits - i; break; }
-            JSONObject h = habits.optJSONObject(i);
-            if (h == null) continue;
-            String id = h.optString("id", "");
-            boolean checked = checkedHabits.contains(id);
-            renderHabit(context, views, appWidgetId, slot++, id, h.optString("title", ""),
-                h.optInt("streak", 0), checked, isToday, zh);
-        }
-
-        for (int i = slot; i < AG_ROW_IDS.length; i++) {
-            views.setViewVisibility(AG_ROW_IDS[i], View.GONE);
-        }
-
-        if (hidden > 0) {
-            views.setViewVisibility(R.id.ag_more, View.VISIBLE);
-            views.setTextViewText(R.id.ag_more, zh ? "還有 " + hidden + " 件…" : "+" + hidden + " more…");
-        } else {
-            views.setViewVisibility(R.id.ag_more, View.GONE);
-        }
-
-        if (slot == 0) {
-            views.setViewVisibility(R.id.ag_empty, View.VISIBLE);
-            views.setTextViewText(R.id.ag_empty, days == null
-                ? (zh ? "開啟 Mnema 以同步…" : "Open Mnema to sync…")
-                : (zh ? "沒有待辦 🎉" : "Nothing due 🎉"));
-        } else {
-            views.setViewVisibility(R.id.ag_empty, View.GONE);
-        }
-    }
-
-    private static void renderSection(RemoteViews views, int slot, String text) {
-        views.setViewVisibility(AG_ROW_IDS[slot], View.VISIBLE);
-        views.setViewVisibility(AG_SEC_IDS[slot], View.VISIBLE);
-        views.setViewVisibility(AG_CHECK_IDS[slot], View.GONE);
-        views.setViewVisibility(AG_TIME_IDS[slot], View.GONE);
-        views.setViewVisibility(AG_TITLE_IDS[slot], View.GONE);
-        views.setTextViewText(AG_SEC_IDS[slot], text);
-    }
-
-    private static void renderTodo(Context context, RemoteViews views, int appWidgetId, int slot,
-                                   String taskId, String title, String time, boolean zh) {
-        views.setViewVisibility(AG_ROW_IDS[slot], View.VISIBLE);
-        views.setViewVisibility(AG_SEC_IDS[slot], View.GONE);
-        views.setViewVisibility(AG_CHECK_IDS[slot], View.VISIBLE);
-        views.setImageViewResource(AG_CHECK_IDS[slot], R.drawable.ic_widget_check);
-        views.setContentDescription(AG_CHECK_IDS[slot], zh ? "完成" : "Complete");
-        views.setViewVisibility(AG_TIME_IDS[slot], View.VISIBLE);
-        views.setTextViewText(AG_TIME_IDS[slot], time);
-        views.setTextColor(AG_TIME_IDS[slot], COLOR_TODO);
-        views.setViewVisibility(AG_TITLE_IDS[slot], View.VISIBLE);
-        views.setTextViewText(AG_TITLE_IDS[slot], title);
-        views.setTextColor(AG_TITLE_IDS[slot], COLOR_TITLE);
-
-        Intent done = new Intent(context, TaskActionReceiver.class);
-        done.setAction(TaskActionReceiver.ACTION_COMPLETE);
-        done.putExtra(TaskActionReceiver.EXTRA_TASK_ID, taskId);
-        // requestCode 60+slot: clear of grid cells (0..41) and nav (90..93).
-        views.setOnClickPendingIntent(AG_CHECK_IDS[slot],
-            broadcast(context, appWidgetId * 100 + 60 + slot, done));
-    }
-
-    private static void renderHabit(Context context, RemoteViews views, int appWidgetId, int slot,
-                                    String habitId, String title, int streak, boolean checked,
-                                    boolean isToday, boolean zh) {
-        views.setViewVisibility(AG_ROW_IDS[slot], View.VISIBLE);
-        views.setViewVisibility(AG_SEC_IDS[slot], View.GONE);
-        views.setViewVisibility(AG_CHECK_IDS[slot], View.VISIBLE);
-        views.setImageViewResource(AG_CHECK_IDS[slot],
-            checked ? R.drawable.ic_widget_check_filled : R.drawable.ic_widget_check);
-        views.setContentDescription(AG_CHECK_IDS[slot], zh ? "打卡" : "Check in");
-        if (streak > 0) {
-            views.setViewVisibility(AG_TIME_IDS[slot], View.VISIBLE);
-            views.setTextViewText(AG_TIME_IDS[slot], "🔥" + streak);
-            views.setTextColor(AG_TIME_IDS[slot], COLOR_HABIT);
-        } else {
-            views.setViewVisibility(AG_TIME_IDS[slot], View.GONE);
-        }
-        views.setViewVisibility(AG_TITLE_IDS[slot], View.VISIBLE);
-        views.setTextViewText(AG_TITLE_IDS[slot], title);
-        views.setTextColor(AG_TITLE_IDS[slot], checked ? COLOR_MUTED : COLOR_TITLE);
-
-        if (isToday) {
-            // Reset-aware toggle_check_in is for "today" only — checkable here.
-            Intent toggle = new Intent(context, HabitActionReceiver.class);
-            toggle.setAction(HabitActionReceiver.ACTION_TOGGLE);
-            toggle.putExtra(HabitActionReceiver.EXTRA_HABIT_ID, habitId);
-            toggle.putExtra(HabitActionReceiver.EXTRA_CHECKED, checked);
-            // requestCode 70+slot: clear of cells, nav and the to-do range.
-            views.setOnClickPendingIntent(AG_CHECK_IDS[slot],
-                broadcast(context, appWidgetId * 100 + 70 + slot, toggle));
-        } else {
-            // Past/future day: check-in state is read-only (open the app to backfill).
-            Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse("tw.dco.mnema://calendar"));
-            open.setPackage(context.getPackageName());
-            views.setOnClickPendingIntent(AG_CHECK_IDS[slot],
-                PendingIntent.getActivity(context, appWidgetId * 100 + 70 + slot, open, flags()));
-        }
+        // Right list: habits → toggle check-in (HabitActionReceiver).
+        Intent rtSvc = new Intent(context, CalendarAgendaService.class);
+        rtSvc.putExtra(EXTRA_WIDGET, appWidgetId);
+        rtSvc.putExtra(CalendarAgendaService.EXTRA_LIST, "habit");
+        rtSvc.setData(Uri.parse(rtSvc.toUri(Intent.URI_INTENT_SCHEME)));
+        views.setRemoteAdapter(R.id.rt_list, rtSvc);
+        views.setEmptyView(R.id.rt_list, R.id.rt_empty);
+        views.setTextViewText(R.id.rt_empty, nHabits == 0 ? (zh ? "沒有習慣" : "No habits") : "");
+        Intent rtTmpl = new Intent(context, HabitActionReceiver.class).setAction(HabitActionReceiver.ACTION_TOGGLE);
+        views.setPendingIntentTemplate(R.id.rt_list,
+            PendingIntent.getBroadcast(context, appWidgetId * 100 + 70, rtTmpl, templateFlags()));
     }
 }

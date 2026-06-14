@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- TickTick-style calendar widget (4×4): pageable month header + Sunday-start
-     6×7 grid of tappable static TextViews (cell0..cell41 — RemoteViews-safe, no
-     RemoteViewsService) + an agenda pane for the selected day (ag_row0..3 with
-     complete-checkboxes, +N more, empty/holiday line). CalendarWidget.java sets
-     every view at runtime; android:text values here are picker-preview only. -->
+<!-- Google-Calendar-style widget. The month grid is FIXED-height (kept as short
+     as possible) so stretching the widget grows the AGENDA, which fills the
+     remaining height (layout_weight=1) and splits into two columns: 代辦 (left,
+     complete) and 打卡 (right, check in). All RemoteViews-safe views; the day
+     cells (cell0..41) and the two row pools (lt_*/rt_*) are driven by
+     CalendarWidget.java. android:text values are picker-preview only. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/calendar_root"
     android:layout_width="match_parent"
@@ -13,45 +14,22 @@
     android:paddingLeft="12dp"
     android:paddingRight="12dp"
     android:paddingTop="10dp"
-    android:paddingBottom="8dp">
+    android:paddingBottom="10dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
-        <TextView
-            android:id="@+id/btn_prev"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:gravity="center"
-            android:text="‹"
-            android:textColor="#9A9AA6"
-            android:textSize="18sp" />
-        <TextView
-            android:id="@+id/cal_month"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="月曆"
-            android:textColor="#F4F4F7"
-            android:textSize="14.5sp"
-            android:textStyle="bold" />
-        <TextView
-            android:id="@+id/btn_next"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:gravity="center"
-            android:text="›"
-            android:textColor="#9A9AA6"
-            android:textSize="18sp" />
+        <TextView android:id="@+id/btn_prev" android:layout_width="28dp" android:layout_height="26dp" android:gravity="center" android:text="‹" android:textColor="#9A9AA6" android:textSize="18sp" />
+        <TextView android:id="@+id/cal_month" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="月曆" android:textColor="#F4F4F7" android:textSize="14.5sp" android:textStyle="bold" />
+        <TextView android:id="@+id/btn_next" android:layout_width="28dp" android:layout_height="26dp" android:gravity="center" android:text="›" android:textColor="#9A9AA6" android:textSize="18sp" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="3dp"
         android:orientation="horizontal">
         <TextView android:id="@+id/wd0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="日" android:textColor="#9A9AA6" android:textSize="10sp" />
         <TextView android:id="@+id/wd1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="一" android:textColor="#9A9AA6" android:textSize="10sp" />
@@ -62,7 +40,8 @@
         <TextView android:id="@+id/wd6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="六" android:textColor="#9A9AA6" android:textSize="10sp" />
     </LinearLayout>
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="2dp" android:orientation="horizontal">
+    <!-- 6 fixed-height week rows: the calendar stays compact. -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:layout_marginTop="2dp" android:orientation="horizontal">
         <TextView android:id="@+id/cell0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
@@ -71,7 +50,7 @@
         <TextView android:id="@+id/cell5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
     </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:orientation="horizontal">
         <TextView android:id="@+id/cell7" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell8" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell9" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
@@ -80,7 +59,7 @@
         <TextView android:id="@+id/cell12" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell13" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
     </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:orientation="horizontal">
         <TextView android:id="@+id/cell14" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell15" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell16" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
@@ -89,7 +68,7 @@
         <TextView android:id="@+id/cell19" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell20" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
     </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:orientation="horizontal">
         <TextView android:id="@+id/cell21" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell22" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell23" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
@@ -98,7 +77,7 @@
         <TextView android:id="@+id/cell26" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell27" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
     </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:orientation="horizontal">
         <TextView android:id="@+id/cell28" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell29" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell30" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
@@ -107,7 +86,7 @@
         <TextView android:id="@+id/cell33" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell34" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
     </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:orientation="horizontal">
         <TextView android:id="@+id/cell35" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell36" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
         <TextView android:id="@+id/cell37" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
@@ -117,14 +96,7 @@
         <TextView android:id="@+id/cell41" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:gravity="center" android:textColor="#E8E8EE" android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Agenda: the selected day's tasks (TickTick-style). Divider is a
-         FrameLayout — a bare <View> is NOT RemoteViews-safe and kills the whole
-         widget with "Can't load widget". -->
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="6dp"
-        android:background="#22FFFFFF" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginTop="8dp" android:background="#22FFFFFF" />
 
     <TextView
         android:id="@+id/ag_header"
@@ -133,71 +105,41 @@
         android:layout_marginTop="6dp"
         android:text="今天"
         android:textColor="#C8C8D0"
-        android:textSize="11sp"
+        android:textSize="11.5sp"
         android:textStyle="bold"
         android:maxLines="1"
         android:ellipsize="end" />
 
-    <!-- Agenda: 7 morphing slots. A slot is either a section header (ag_secN) or
-         an item row (ag_checkN + ag_timeN + ag_titleN) — to-dos complete, habits
-         check in. CalendarWidget.java decides at runtime. -->
-    <LinearLayout android:id="@+id/ag_row0" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/ag_sec0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
-        <ImageView android:id="@+id/ag_check0" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
-        <TextView android:id="@+id/ag_time0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
-        <TextView android:id="@+id/ag_title0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
-    </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/ag_sec1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
-        <ImageView android:id="@+id/ag_check1" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
-        <TextView android:id="@+id/ag_time1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
-        <TextView android:id="@+id/ag_title1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
-    </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/ag_sec2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
-        <ImageView android:id="@+id/ag_check2" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
-        <TextView android:id="@+id/ag_time2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
-        <TextView android:id="@+id/ag_title2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
-    </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/ag_sec3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
-        <ImageView android:id="@+id/ag_check3" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
-        <TextView android:id="@+id/ag_time3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
-        <TextView android:id="@+id/ag_title3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
-    </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row4" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/ag_sec4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
-        <ImageView android:id="@+id/ag_check4" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
-        <TextView android:id="@+id/ag_time4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
-        <TextView android:id="@+id/ag_title4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
-    </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row5" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/ag_sec5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
-        <ImageView android:id="@+id/ag_check5" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
-        <TextView android:id="@+id/ag_time5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
-        <TextView android:id="@+id/ag_title5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
-    </LinearLayout>
-    <LinearLayout android:id="@+id/ag_row6" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/ag_sec6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:visibility="gone" />
-        <ImageView android:id="@+id/ag_check6" android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_check" android:contentDescription="完成" />
-        <TextView android:id="@+id/ag_time6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="7dp" android:textColor="#8AA0FF" android:textSize="11sp" />
-        <TextView android:id="@+id/ag_title6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginLeft="7dp" android:textColor="#E8E8EE" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/ag_more"
+    <!-- Agenda fills the remaining height (weight=1) and splits into two
+         SCROLLABLE columns: 代辦 (left) + 打卡 (right), each a ListView backed by
+         CalendarAgendaService so every item is reachable + actionable on the
+         widget (no need to open the app). -->
+    <LinearLayout
+        android:id="@+id/ag_cols"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
-        android:layout_marginLeft="27dp"
-        android:textColor="#9A9AA6"
-        android:textSize="11sp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal">
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:id="@+id/lt_head" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="3dp" android:text="代辦" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <ListView android:id="@+id/lt_list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:divider="@null" android:dividerHeight="0dp" />
+            <TextView android:id="@+id/lt_empty" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="#6A6A76" android:textSize="11.5sp" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginLeft="10dp" android:orientation="vertical">
+            <TextView android:id="@+id/rt_head" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="3dp" android:text="打卡" android:textColor="#9A9AA6" android:textSize="10.5sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <ListView android:id="@+id/rt_list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:divider="@null" android:dividerHeight="0dp" />
+            <TextView android:id="@+id/rt_empty" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="#6A6A76" android:textSize="11.5sp" />
+        </LinearLayout>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/ag_empty"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
         android:textColor="#9A9AA6"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:visibility="gone" />
 </LinearLayout>

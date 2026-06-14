@@ -125,6 +125,12 @@
                 android:resource="@xml/calendar_widget_info" />
         </receiver>
 
+        <!-- Backs the calendar widget's scrollable 代辦 / 打卡 agenda lists. -->
+        <service
+            android:name=".CalendarAgendaService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
         <!-- Home-screen widget: habit streak (🔥 + 28-day dot grid). -->
         <receiver
             android:name=".StreakWidget"
