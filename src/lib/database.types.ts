@@ -718,7 +718,9 @@ export type Database = {
           created_via: string
           deck_id: string | null
           id: string
+          kind: string
           search_tsv: unknown
+          sketch_scene: Json | null
           starred: boolean
           tags: string[]
           title: string
@@ -731,7 +733,9 @@ export type Database = {
           created_via?: string
           deck_id?: string | null
           id?: string
+          kind?: string
           search_tsv?: unknown
+          sketch_scene?: Json | null
           starred?: boolean
           tags?: string[]
           title: string
@@ -744,7 +748,9 @@ export type Database = {
           created_via?: string
           deck_id?: string | null
           id?: string
+          kind?: string
           search_tsv?: unknown
+          sketch_scene?: Json | null
           starred?: boolean
           tags?: string[]
           title?: string
@@ -3614,7 +3620,9 @@ export type Database = {
           created_via: string
           deck_id: string | null
           id: string
+          kind: string
           search_tsv: unknown
+          sketch_scene: Json | null
           starred: boolean
           tags: string[]
           title: string
@@ -4519,7 +4527,9 @@ export type Database = {
           created_via: string
           deck_id: string | null
           id: string
+          kind: string
           search_tsv: unknown
+          sketch_scene: Json | null
           starred: boolean
           tags: string[]
           title: string
@@ -4862,7 +4872,33 @@ export type Database = {
           created_via: string
           deck_id: string | null
           id: string
+          kind: string
           search_tsv: unknown
+          sketch_scene: Json | null
+          starred: boolean
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "notes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_note_sketch: {
+        Args: { p_user_id: string | null; p_note_id: string; p_body: string; p_scene?: Json }
+        Returns: {
+          body: string
+          created_at: string
+          created_via: string
+          deck_id: string | null
+          id: string
+          kind: string
+          search_tsv: unknown
+          sketch_scene: Json | null
           starred: boolean
           tags: string[]
           title: string
@@ -4884,7 +4920,9 @@ export type Database = {
           created_via: string
           deck_id: string | null
           id: string
+          kind: string
           search_tsv: unknown
+          sketch_scene: Json | null
           starred: boolean
           tags: string[]
           title: string
@@ -4906,7 +4944,9 @@ export type Database = {
           created_via: string
           deck_id: string | null
           id: string
+          kind: string
           search_tsv: unknown
+          sketch_scene: Json | null
           starred: boolean
           tags: string[]
           title: string
@@ -5554,7 +5594,9 @@ export type Database = {
           created_via: string
           deck_id: string | null
           id: string
+          kind: string
           search_tsv: unknown
+          sketch_scene: Json | null
           starred: boolean
           tags: string[]
           title: string

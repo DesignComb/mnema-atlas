@@ -38,6 +38,9 @@ import type {
 } from '@shared/schemas'
 import type { ItineraryItem, TaskFilters, TxnFilters } from './api'
 import type { NoteRow } from './database.types'
+import { uploadImage, removeUploadedImage } from './upload'
+import { firstImageUrl } from './sketch'
+import type { SketchScene } from './sketch'
 import type { LayoutSection } from './today'
 import type {
   CreateAccountInput,
@@ -315,6 +318,54 @@ export function useSetNoteStarred() {
       void qc.invalidateQueries({ queryKey: qk.note(v.noteId) })
     },
   })
+}
+
+/** Save a whiteboard drawing onto a note (body image + editable scene + kind). */
+export function useSetNoteSketch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { noteId: string; body: string; scene: SketchScene | null }) =>
+      api.setNoteSketch(v.noteId, v.body, v.scene),
+    onSuccess: (note) => {
+      qc.invalidateQueries({ queryKey: ['notes'] })
+      qc.invalidateQueries({ queryKey: qk.note(note.id) })
+      qc.invalidateQueries({ queryKey: qk.graph })
+    },
+  })
+}
+
+/**
+ * Save a whiteboard drawing as a note: upload the flattened image, then persist
+ * body + editable scene (kind='sketch'). `create` makes a fresh sketch note;
+ * `update` re-saves an existing one and cleans up the now-orphaned old image.
+ */
+export function useSketchSave() {
+  const qc = useQueryClient()
+  const fileFor = (blob: Blob) =>
+    new File([blob], `sketch-${crypto.randomUUID().slice(0, 8)}.${blob.type === 'image/png' ? 'png' : 'webp'}`, {
+      type: blob.type || 'image/webp',
+    })
+  return {
+    create: async (blob: Blob, scene: SketchScene): Promise<NoteRow> => {
+      const url = await uploadImage(fileFor(blob))
+      const note = await api.createNote({ title: untitledLabel(), body: '' })
+      const saved = await api.setNoteSketch(note.id, `![](${url})`, scene)
+      qc.invalidateQueries({ queryKey: ['notes'] })
+      qc.invalidateQueries({ queryKey: qk.graph })
+      return saved
+    },
+    update: async (noteId: string, prevBody: string, blob: Blob, scene: SketchScene): Promise<NoteRow> => {
+      const url = await uploadImage(fileFor(blob))
+      const saved = await api.setNoteSketch(noteId, `![](${url})`, scene)
+      qc.invalidateQueries({ queryKey: ['notes'] })
+      qc.invalidateQueries({ queryKey: qk.note(noteId) })
+      qc.invalidateQueries({ queryKey: qk.graph })
+      // The body now points at the new image — the previous one is safe to drop.
+      const prev = firstImageUrl(prevBody)
+      if (prev && prev !== url) void removeUploadedImage(prev)
+      return saved
+    },
+  }
 }
 
 /** Set a flashcard's tags (enables study-by-tag). */

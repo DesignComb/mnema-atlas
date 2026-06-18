@@ -1,12 +1,13 @@
 import { humanizeError } from '@/lib/utils'
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Sparkles } from 'lucide-react'
+import { Brush, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCreateCapture } from '@/lib/hooks'
+import { useCreateCapture, useSketchSave } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { WhiteboardDialog } from '@/components/whiteboard/WhiteboardDialog'
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,9 @@ import {
 export function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const t = useT()
   const create = useCreateCapture()
+  const sketchSave = useSketchSave()
   const [text, setText] = useState('')
+  const [boardOpen, setBoardOpen] = useState(false)
 
   async function save() {
     const raw = text.trim()
@@ -40,6 +43,7 @@ export function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
@@ -53,6 +57,13 @@ export function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             )}
           </DialogDescription>
         </DialogHeader>
+        <button
+          type="button"
+          onClick={() => setBoardOpen(true)}
+          className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-left text-[13px] text-muted-foreground transition hover:border-brand/40 hover:text-foreground"
+        >
+          <Brush className="size-4 text-brand" /> {t('Sketch on a quick whiteboard', '隨手畫個小白板')}
+        </button>
         <Textarea
           autoFocus
           rows={3}
@@ -84,5 +95,16 @@ export function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <WhiteboardDialog
+      open={boardOpen}
+      onOpenChange={setBoardOpen}
+      onSave={async (blob, scene) => {
+        await sketchSave.create(blob, scene)
+        toast.success(t('Sketch saved', '已儲存塗鴉'))
+        setBoardOpen(false)
+        onOpenChange(false)
+      }}
+    />
+    </>
   )
 }

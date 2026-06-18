@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { removeUploadedImage } from './upload'
 import type { LayoutSection } from './today'
+import type { SketchScene } from './sketch'
 import type {
   ApiKeyRow,
   CardRow,
@@ -254,6 +255,22 @@ export async function setNoteDeck(noteId: string, deckId: string | null): Promis
 export async function setNoteStarred(noteId: string, starred: boolean): Promise<NoteRow> {
   return unwrap(
     await supabase.rpc('set_note_starred', { p_user_id: null, p_note_id: noteId, p_starred: starred }),
+  )
+}
+
+/**
+ * Persist a whiteboard drawing onto a note: replaces the body with the flattened
+ * ![](url) image markdown, stores the re-editable vector scene, and marks the
+ * note kind='sketch'. Used for both the first save and every re-edit.
+ */
+export async function setNoteSketch(noteId: string, body: string, scene: SketchScene | null): Promise<NoteRow> {
+  return unwrap(
+    await supabase.rpc('set_note_sketch', {
+      p_user_id: null,
+      p_note_id: noteId,
+      p_body: body,
+      p_scene: (scene ?? undefined) as unknown as Json,
+    }),
   )
 }
 

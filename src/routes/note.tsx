@@ -1,10 +1,12 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, Cloud, Copy, Download, Layers, Loader2, MoreHorizontal, Plus, Sparkles, Star, Trash2 } from 'lucide-react'
+import { Brush, Check, Cloud, Copy, Download, Layers, Loader2, MoreHorizontal, Plus, Sparkles, Star, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import * as api from '@/lib/api'
-import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useSetNoteStarred, useUpdateNote } from '@/lib/hooks'
+import { useCardsByNote, useDecks, useDeleteNote, useNote, useSetNoteDeck, useSetNoteStarred, useSketchSave, useUpdateNote } from '@/lib/hooks'
+import { WhiteboardDialog } from '@/components/whiteboard/WhiteboardDialog'
+import { parseScene } from '@/lib/sketch'
 import { buildDeckTree, flattenTree, indentLabel } from '@/lib/deck-tree'
 import { downloadText, safeFilename, humanizeError } from '@/lib/utils'
 import { TagEditor } from '@/components/editor/TagEditor'
@@ -40,6 +42,7 @@ export function NoteScreen() {
   const setNoteDeck = useSetNoteDeck()
   const setStarred = useSetNoteStarred()
   const deleteNote = useDeleteNote()
+  const sketchSave = useSketchSave()
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -49,6 +52,7 @@ export function NoteScreen() {
   const [cardOpen, setCardOpen] = useState(false)
   const [askOpen, setAskOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
+  const [boardOpen, setBoardOpen] = useState(false)
   const loadedId = useRef<string | null>(null)
   // Last values actually persisted to the server. The autosave effect diffs
   // against THIS (not the react-query `note` object, which churns a new
@@ -154,6 +158,11 @@ export function NoteScreen() {
             >
               <Star className={note.starred ? 'size-4 fill-warning text-warning' : 'size-4 text-muted-foreground'} />
             </Button>
+            {note.kind === 'sketch' ? (
+              <Button variant="outline" size="sm" onClick={() => setBoardOpen(true)}>
+                <Brush className="size-4" /> <span className="hidden sm:inline">{t('Edit drawing', '編輯塗鴉')}</span>
+              </Button>
+            ) : null}
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
               <Plus className="size-4" /> <span className="hidden sm:inline">{t('Add flashcard', '新增閃卡')}</span>
             </Button>
@@ -286,6 +295,21 @@ export function NoteScreen() {
         open={askOpen}
         onOpenChange={setAskOpen}
         prompt={`Make concise spaced-repetition flashcards from the note below. Reply with ONLY a fenced code block tagged mnema containing JSON like {"cards":[{"front":"...","back":"...","note":"${title || 'Untitled'}"}]}.\n\nNote "${title || 'Untitled'}":\n${body}`}
+      />
+      <WhiteboardDialog
+        open={boardOpen}
+        onOpenChange={setBoardOpen}
+        initialScene={parseScene(note.sketch_scene)}
+        onSave={async (blob, scene) => {
+          const saved = await sketchSave.update(note.id, body, blob, scene)
+          // Re-sync local editor state so the debounced autosave doesn't fight
+          // (or overwrite) the new image the board just wrote to the body.
+          const tt = title.trim() || 'Untitled'
+          setBody(saved.body)
+          savedRef.current = { title: tt, body: saved.body }
+          setStatus('saved')
+          setBoardOpen(false)
+        }}
       />
     </>
   )

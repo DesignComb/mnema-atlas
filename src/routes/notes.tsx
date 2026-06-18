@@ -1,22 +1,27 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { Clock, Download, FilePlus2, FileText, Star, Tag, X } from 'lucide-react'
+import { Brush, Clock, Download, FilePlus2, FileText, Star, Tag, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCreateNote, useNotes, useSetNoteStarred } from '@/lib/hooks'
+import { useCreateNote, useDeleteNote, useNotes, useSetNoteStarred, useSketchSave } from '@/lib/hooks'
 import { AiChip, useNewSince } from '@/components/common/AiChip'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
 import { downloadText, relativeDue, humanizeError, untitledLabel, cn } from '@/lib/utils'
 import { tagColor } from '@/lib/tags'
 import { useI18n } from '@/lib/i18n'
+import { WhiteboardDialog } from '@/components/whiteboard/WhiteboardDialog'
+import { firstImageUrl, parseScene, type SketchScene } from '@/lib/sketch'
+import { removeUploadedImage } from '@/lib/upload'
+import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
 import type { NoteRow } from '@/lib/database.types'
 
-type NotesView = 'tags' | 'recent'
+type NotesView = 'tags' | 'recent' | 'sketches'
 const VIEW_KEY = 'mnema:notes-view'
 
 function readView(): NotesView {
   try {
-    return localStorage.getItem(VIEW_KEY) === 'recent' ? 'recent' : 'tags'
+    const v = localStorage.getItem(VIEW_KEY)
+    return v === 'recent' || v === 'sketches' ? v : 'tags'
   } catch {
     return 'tags'
   }
@@ -41,10 +46,15 @@ export function NotesScreen() {
   const { data: notes, isLoading } = useNotes()
   const createNote = useCreateNote()
   const setStarred = useSetNoteStarred()
+  const deleteNote = useDeleteNote()
+  const sketchSave = useSketchSave()
+  const hidden = useHiddenKeys()
   const navigate = useNavigate()
   const { t, lang } = useI18n()
   const isNew = useNewSince('notes')
   const [view, setView] = useState<NotesView>(readView)
+  const [boardOpen, setBoardOpen] = useState(false)
+  const [editing, setEditing] = useState<{ noteId: string; body: string; scene: SketchScene | null } | null>(null)
 
   // Selected tag filter (in the URL so it's shareable / survives refresh).
   const { tag: activeTag } = useSearch({ from: '/_app/notes' }) as { tag?: string }
@@ -72,6 +82,42 @@ export function NotesScreen() {
     } catch (err) {
       toast.error(humanizeError(err, ['Failed to create note', '建立筆記失敗']))
     }
+  }
+
+  function openNewSketch() {
+    setEditing(null)
+    setBoardOpen(true)
+  }
+  function openEditSketch(n: NoteRow) {
+    setEditing({ noteId: n.id, body: n.body, scene: parseScene(n.sketch_scene) })
+    setBoardOpen(true)
+  }
+  // onSave throws on failure → the board surfaces the error and stays open.
+  async function handleBoardSave(blob: Blob, scene: SketchScene) {
+    if (editing) {
+      await sketchSave.update(editing.noteId, editing.body, blob, scene)
+      toast.success(t('Drawing updated', '已更新塗鴉'))
+    } else {
+      await sketchSave.create(blob, scene)
+      toast.success(t('Sketch saved', '已儲存塗鴉'))
+      switchView('sketches')
+    }
+    setBoardOpen(false)
+    setEditing(null)
+  }
+  function deleteSketch(n: NoteRow) {
+    const body = n.body
+    undoableDelete({
+      key: `note:${n.id}`,
+      message: t('Sketch deleted', '已刪除塗鴉'),
+      undoLabel: t('Undo', '復原'),
+      errorMessage: t('Failed to delete', '刪除失敗'),
+      commit: async () => {
+        await deleteNote.mutateAsync(n.id)
+        const url = firstImageUrl(body)
+        if (url) await removeUploadedImage(url)
+      },
+    })
   }
 
   const row = (n: NoteRow) => (
@@ -108,6 +154,9 @@ export function NotesScreen() {
                 <Download className="size-4" /> <span className="hidden sm:inline">{t('Export all', '全部匯出')}</span>
               </Button>
             ) : null}
+            <Button variant="outline" size="sm" onClick={openNewSketch}>
+              <Brush className="size-4" /> <span className="hidden sm:inline">{t('Sketch', '塗鴉')}</span>
+            </Button>
             <Button variant="brand" size="sm" onClick={newNote} disabled={createNote.isPending}>
               <FilePlus2 className="size-4" /> <span className="hidden sm:inline">{t('New note', '新增筆記')}</span>
             </Button>
@@ -129,6 +178,7 @@ export function NotesScreen() {
                     [
                       ['tags', Tag, t('By tag', '依標籤')],
                       ['recent', Clock, t('Recent', '最近')],
+                      ['sketches', Brush, t('Sketches', '塗鴉')],
                     ] as const
                   ).map(([key, Icon, label]) => (
                     <button
@@ -207,6 +257,16 @@ export function NotesScreen() {
                   </p>
                 )}
               </section>
+            ) : view === 'sketches' ? (
+              <SketchGrid
+                notes={notes}
+                hidden={hidden}
+                lang={lang}
+                isNew={isNew}
+                onOpen={openEditSketch}
+                onDelete={deleteSketch}
+                onNew={openNewSketch}
+              />
             ) : grouped ? (
               <div className="space-y-6">
                 {grouped.starred.length > 0 ? (
@@ -268,6 +328,15 @@ export function NotesScreen() {
           )}
         </div>
       </div>
+      <WhiteboardDialog
+        open={boardOpen}
+        onOpenChange={(v) => {
+          setBoardOpen(v)
+          if (!v) setEditing(null)
+        }}
+        initialScene={editing?.scene ?? null}
+        onSave={handleBoardSave}
+      />
     </>
   )
 }
@@ -313,13 +382,27 @@ function NoteRowItem({
       params={{ noteId: n.id }}
       className="group flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-soft transition hover:border-brand/40 hover:shadow-pop"
     >
-      <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground group-hover:text-brand" />
+      {n.kind === 'sketch' && firstImageUrl(n.body) ? (
+        <img
+          src={firstImageUrl(n.body)!}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="mt-0.5 size-10 shrink-0 rounded-md border border-border bg-card object-cover"
+        />
+      ) : n.kind === 'sketch' ? (
+        <Brush className="mt-0.5 size-4 shrink-0 text-muted-foreground group-hover:text-brand" />
+      ) : (
+        <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground group-hover:text-brand" />
+      )}
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
           <span className="truncate">{n.title}</span>
           {n.created_via === 'mcp' ? <AiChip isNew={isNew} /> : null}
         </p>
-        {n.body ? (
+        {n.kind === 'sketch' ? (
+          <p className="mt-0.5 text-[13px] text-muted-foreground">{t('Sketch', '塗鴉')}</p>
+        ) : n.body ? (
           <p className="mt-0.5 line-clamp-1 text-[13px] text-muted-foreground">
             {n.body.replace(/[#*_>`[\]]/g, '').slice(0, 140)}
           </p>
@@ -347,5 +430,107 @@ function NoteRowItem({
         />
       </button>
     </Link>
+  )
+}
+
+/** Gallery of saved sketches — thumbnail opens the board to keep editing. */
+function SketchGrid({
+  notes,
+  hidden,
+  lang,
+  isNew,
+  onOpen,
+  onDelete,
+  onNew,
+}: {
+  notes: NoteRow[]
+  hidden: ReadonlySet<string>
+  lang: 'en' | 'zh'
+  isNew: (iso: string) => boolean
+  onOpen: (n: NoteRow) => void
+  onDelete: (n: NoteRow) => void
+  onNew: () => void
+}) {
+  const { t } = useI18n()
+  const sketches = notes.filter((n) => n.kind === 'sketch' && !hidden.has(`note:${n.id}`))
+
+  if (!sketches.length) {
+    return (
+      <EmptyState
+        icon={<Brush className="size-6" />}
+        title={t('No sketches yet', '還沒有塗鴉')}
+        description={t(
+          'Tap Sketch to doodle on a quick whiteboard — it saves as an image you can browse and keep editing.',
+          '點「塗鴉」在隨手小白板上畫畫 —— 會存成圖片，日後可瀏覽，也能再打開繼續畫。',
+        )}
+        action={
+          <Button variant="brand" size="sm" onClick={onNew}>
+            <Brush className="size-4" /> {t('Sketch', '塗鴉')}
+          </Button>
+        }
+      />
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      {sketches.map((n) => {
+        const url = firstImageUrl(n.body)
+        return (
+          <div
+            key={n.id}
+            className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-soft transition hover:border-brand/40 hover:shadow-pop"
+          >
+            <button
+              type="button"
+              onClick={() => onOpen(n)}
+              title={t('Edit drawing', '編輯塗鴉')}
+              className="block w-full"
+            >
+              {url ? (
+                <img
+                  src={url}
+                  alt={n.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="bg-dots aspect-video w-full object-contain"
+                />
+              ) : (
+                <div className="bg-dots flex aspect-video w-full items-center justify-center">
+                  <Brush className="size-6 text-muted-foreground/50" />
+                </div>
+              )}
+            </button>
+            <div className="flex items-center gap-1.5 px-3 py-2">
+              <span className="truncate text-[13px] font-medium text-foreground">{n.title}</span>
+              {n.created_via === 'mcp' ? <AiChip isNew={isNew(n.created_at)} /> : null}
+              <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
+                {relativeDue(n.updated_at, undefined, lang)}
+              </span>
+            </div>
+            {/* Touch: always visible; desktop: reveal on hover/focus. */}
+            <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+              <Link
+                to="/notes/$noteId"
+                params={{ noteId: n.id }}
+                title={t('Open as note', '以筆記開啟')}
+                className="rounded-md bg-card/90 p-1.5 text-muted-foreground shadow-soft backdrop-blur transition hover:text-foreground"
+              >
+                <FileText className="size-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => onDelete(n)}
+                title={t('Delete', '刪除')}
+                aria-label={t('Delete sketch', '刪除塗鴉')}
+                className="rounded-md bg-card/90 p-1.5 text-muted-foreground shadow-soft backdrop-blur transition hover:text-destructive"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }

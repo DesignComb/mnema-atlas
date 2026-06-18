@@ -3,11 +3,12 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
-import { Bold, Code, Eye, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Pencil, Quote, Strikethrough } from 'lucide-react'
+import { Bold, Brush, Code, Eye, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Pencil, Quote, Strikethrough } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, humanizeError } from '@/lib/utils'
 import { uploadImage } from '@/lib/upload'
 import { useT } from '@/lib/i18n'
+import { WhiteboardDialog } from '@/components/whiteboard/WhiteboardDialog'
 
 type Mode = 'write' | 'preview'
 
@@ -35,6 +36,7 @@ export function NoteEditor({
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(0)
   const [dragOver, setDragOver] = useState(false)
+  const [boardOpen, setBoardOpen] = useState(false)
   // Latest value for async (post-upload) edits — the closure value would be stale.
   const valueRef = useRef(value)
   valueRef.current = value
@@ -135,7 +137,16 @@ export function NoteEditor({
     { icon: Code, label: t('Inline code', '行內程式碼'), run: () => wrap('`') },
     { icon: Link2, label: t('Link', '連結'), run: () => wrap('[', '](url)') },
     { icon: ImagePlus, label: t('Add image', '加入圖片'), run: () => fileRef.current?.click() },
+    { icon: Brush, label: t('Sketch', '隨手畫'), run: () => setBoardOpen(true) },
   ]
+
+  /** Drop a freehand drawing into the note as an image (inline doodle). */
+  async function insertDrawing(blob: Blob) {
+    const ext = blob.type === 'image/png' ? 'png' : 'webp'
+    await uploadAndInsert([
+      new File([blob], `sketch-${crypto.randomUUID().slice(0, 8)}.${ext}`, { type: blob.type || 'image/webp' }),
+    ])
+  }
 
   return (
     <div className="space-y-3">
@@ -231,6 +242,15 @@ export function NoteEditor({
       ) : (
         <p className="px-1 py-10 text-center text-sm text-muted-foreground/60">{t('Nothing to preview yet.', '還沒有可預覽的內容。')}</p>
       )}
+
+      <WhiteboardDialog
+        open={boardOpen}
+        onOpenChange={setBoardOpen}
+        onSave={async (blob) => {
+          await insertDrawing(blob)
+          setBoardOpen(false)
+        }}
+      />
     </div>
   )
 }
