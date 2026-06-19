@@ -21,7 +21,7 @@ export function AiChip({ isNew = false, className }: { isNew?: boolean; classNam
       )}
       title={label}
     >
-      <Sparkles className="size-2.5" aria-hidden />
+      <Sparkles className="size-3" aria-hidden />
       {/* Visible chip says "AI"; the full provenance (incl. the new-since state
           the dot conveys by colour) is in the DOM for screen readers. */}
       <span aria-hidden>AI</span>

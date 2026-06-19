@@ -147,7 +147,7 @@ export function ItineraryBoard({
                     type="button"
                     disabled={!canEdit}
                     onClick={() => onEdit(item)}
-                    className="w-full rounded-lg border border-border bg-card p-2.5 text-left shadow-soft transition hover:border-brand/40 disabled:cursor-default"
+                    className="w-full rounded-lg border border-border bg-card p-2.5 text-left shadow-soft transition hover:border-brand/40 hover:shadow-pop disabled:cursor-default"
                   >
                     <div className="flex items-center gap-1.5">
                       <span className={`size-2 shrink-0 rounded-full ${c.dot}`} />

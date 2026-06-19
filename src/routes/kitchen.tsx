@@ -238,7 +238,7 @@ export function KitchenScreen() {
                         </button>
                         <button
                           onClick={() => updateRecipe.mutate({ recipe_id: r.id, is_favorite: !r.is_favorite })}
-                          className="rounded p-1 text-muted-foreground hover:text-brand"
+                          className="rounded p-1 text-muted-foreground transition hover:text-brand"
                           title={t('Favorite', '最愛')}
                         >
                           <Star className={`size-4 ${r.is_favorite ? 'fill-brand text-brand' : ''}`} />

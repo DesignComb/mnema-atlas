@@ -64,7 +64,7 @@ export function SharedTripScreen() {
             </p>
             <Link
               to="/"
-              className="mt-2 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground transition hover:opacity-90"
+              className="mt-2 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring/50"
             >
               {t('Go to Mnema', '前往 Mnema')}
             </Link>

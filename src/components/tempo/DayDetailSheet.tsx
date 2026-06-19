@@ -81,7 +81,7 @@ export function DayDetailSheet({
                         <button
                           key={h.id}
                           onClick={() => toggleHabit(h)}
-                          className="flex w-full items-center gap-2.5 rounded-lg border border-border px-2.5 py-2 text-left transition hover:bg-muted/40"
+                          className="flex w-full items-center gap-2.5 rounded-lg border border-border px-2.5 py-2 text-left transition hover:border-brand/40 hover:bg-brand-muted/40"
                         >
                           <span
                             className={cn(

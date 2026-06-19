@@ -140,16 +140,16 @@ export function CalendarView({ tasks, onEdit }: { tasks: TaskRow[]; onEdit: (t: 
     <div className="flex h-full min-h-0 flex-col">
       <div className="mb-2.5 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1">
-          <button onClick={() => shift(-1)} className="rounded-md p-1 text-muted-foreground transition hover:bg-card hover:text-foreground">
+          <button onClick={() => shift(-1)} className="rounded-md p-1 text-muted-foreground outline-none transition hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
             <ChevronLeft className="size-4" />
           </button>
           <span className="min-w-28 text-center text-[14px] font-semibold sm:min-w-36">{title}</span>
-          <button onClick={() => shift(1)} className="rounded-md p-1 text-muted-foreground transition hover:bg-card hover:text-foreground">
+          <button onClick={() => shift(1)} className="rounded-md p-1 text-muted-foreground outline-none transition hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
             <ChevronRight className="size-4" />
           </button>
           <button
             onClick={() => setCursor(today)}
-            className="ml-1 rounded-md border border-border px-2 py-0.5 text-[12px] text-muted-foreground transition hover:border-brand/40 hover:text-foreground"
+            className="ml-1 rounded-md border border-border px-2 py-0.5 text-[12px] text-muted-foreground outline-none transition hover:border-brand/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
           >
             {t('Today', '今天')}
           </button>

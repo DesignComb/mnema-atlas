@@ -26,7 +26,7 @@ export function FlashcardTile({ card, noteTitle }: { card: CardRow; noteTitle?: 
     <div className="group relative rounded-xl border border-border bg-card p-3.5 shadow-soft">
       <button
         onClick={() => setEditing(true)}
-        className="absolute right-2 top-2 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 transition hover:text-brand group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+        className="absolute right-2 top-2 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 outline-none transition hover:text-brand focus-visible:text-brand focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
         title={t('Edit card', '編輯閃卡')}
       >
         <Pencil className="size-3.5" />

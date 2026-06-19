@@ -170,7 +170,7 @@ export function NoteEditor({
                 title={it.label}
                 aria-label={it.label}
                 onClick={it.run}
-                className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground sm:size-7"
+                className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 sm:size-7"
               >
                 <it.icon className="size-4" />
               </button>

@@ -194,7 +194,7 @@ export const DialogContent = React.forwardRef<
         {children}
         {/* Swipe-to-dismiss closes through the normal Radix path by clicking this hidden Close. */}
         <DialogPrimitive.Close ref={closeRef} className="hidden" tabIndex={-1} aria-hidden="true" />
-        <DialogPrimitive.Close className="absolute right-3 top-3 rounded-md p-2 text-muted-foreground opacity-70 transition hover:bg-accent hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100 sm:right-4 sm:top-4 sm:p-1">
+        <DialogPrimitive.Close className="absolute right-3 top-3 rounded-md p-2 text-muted-foreground opacity-70 transition hover:bg-accent hover:text-foreground hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100 sm:right-4 sm:top-4 sm:p-1">
           <X className="size-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

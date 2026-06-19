@@ -85,7 +85,7 @@ function Tab({ space, isActive, t }: { space: (typeof SPACES)[number]; isActive:
     <Link
       to={space.to}
       aria-current={isActive ? 'page' : undefined}
-      className={cn('flex flex-1 flex-col items-center justify-center py-2 text-[10px] font-medium', isActive ? 'text-brand' : 'text-muted-foreground')}
+      className={cn('flex flex-1 flex-col items-center justify-center py-2 text-[10px] font-medium transition-colors', isActive ? 'text-brand' : 'text-muted-foreground')}
     >
       <span className="relative flex flex-col items-center gap-0.5">
         {isActive && (

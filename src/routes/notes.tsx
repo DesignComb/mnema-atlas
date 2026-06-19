@@ -209,7 +209,7 @@ export function NotesScreen() {
                         onClick={() => selectTag(active ? undefined : tg)}
                         aria-pressed={active}
                         className={cn(
-                          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-85',
+                          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium outline-none transition hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring/50',
                           active ? 'border-brand/40 ring-1 ring-brand/30 text-foreground' : 'border-border text-muted-foreground hover:border-brand/40 hover:text-foreground',
                         )}
                         title={t(`Filter “${tg}”`, `篩選「${tg}」`)}

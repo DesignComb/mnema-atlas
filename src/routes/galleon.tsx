@@ -931,7 +931,7 @@ function BudgetRow({
             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
           }}
           placeholder={t('set', '設定')}
-          className="w-20 rounded border border-input bg-card px-2 py-0.5 text-right text-[13px] tabular-nums outline-none focus:border-brand"
+          className="w-20 rounded border border-input bg-card px-2 py-0.5 text-right text-[13px] tabular-nums outline-none transition focus:border-brand"
         />
       </div>
       {limit > 0 ? (

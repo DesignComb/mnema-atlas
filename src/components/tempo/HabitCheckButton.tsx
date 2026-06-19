@@ -99,7 +99,7 @@ export function HabitCheckButton({
       onClick={toggle}
       aria-pressed={checked}
       aria-label={checked ? t('Undo today’s check-in', '取消今天的打卡') : t('Check in for today', '打卡今天')}
-      className="shrink-0 transition-transform duration-150 hover:scale-105 active:scale-90"
+      className="shrink-0 rounded-full outline-none transition-transform duration-150 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-90"
     >
       {checked ? (
         <motion.span

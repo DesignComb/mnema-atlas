@@ -79,7 +79,7 @@ function Toggles() {
       <button
         onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
         aria-label={lang === 'zh' ? 'Switch to English' : '切換為中文'}
-        className="rounded-md px-2.5 py-1.5 text-[12px] font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+        className="rounded-md px-2.5 py-1.5 text-[12px] font-semibold text-muted-foreground outline-none transition hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         {lang === 'zh' ? 'EN' : '中'}
       </button>
