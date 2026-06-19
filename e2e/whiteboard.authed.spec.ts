@@ -34,3 +34,25 @@ test('whiteboard: draw a sketch, save it, and see it in the Sketches lens', asyn
     page.locator('img[src*="/storage/v1/object/public/uploads/"]').first(),
   ).toBeVisible({ timeout: 15_000 })
 })
+
+test('whiteboard: re-opening a saved sketch loads its strokes (re-edit path)', async ({ page }) => {
+  await page.goto('/notes')
+  await page.getByRole('button', { name: /^Sketch$|^塗鴉$/ }).first().click()
+  const canvas = page.locator('canvas')
+  await expect(canvas).toBeVisible()
+  const box = (await canvas.boundingBox())!
+  await page.mouse.move(box.x + box.width * 0.35, box.y + box.height * 0.4)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.6, { steps: 8 })
+  await page.mouse.up()
+  await page.getByRole('button', { name: /^Save$|^儲存$/ }).click()
+  await expect(canvas).toBeHidden({ timeout: 15_000 })
+
+  // Re-open from the Sketches-lens thumbnail → board loads the saved scene, so
+  // Save is enabled immediately without drawing anything new (strokes present).
+  const thumb = page.locator('img[src*="/storage/v1/object/public/uploads/"]').first()
+  await expect(thumb).toBeVisible({ timeout: 15_000 })
+  await thumb.click()
+  await expect(canvas).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Save$|^儲存$/ })).toBeEnabled()
+})

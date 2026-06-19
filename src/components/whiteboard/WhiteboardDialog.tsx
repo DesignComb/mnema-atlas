@@ -39,7 +39,6 @@ export function WhiteboardDialog({
           onInteractOutside={(e) => e.preventDefault()}
           onOpenAutoFocus={(e) => e.preventDefault()}
           className="fixed inset-0 z-50 flex flex-col bg-black outline-none"
-          style={{ paddingTop: 'env(safe-area-inset-top)' }}
         >
           <DialogPrimitive.Title className="sr-only">Whiteboard</DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">

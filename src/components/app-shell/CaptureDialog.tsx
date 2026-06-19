@@ -1,6 +1,6 @@
 import { humanizeError } from '@/lib/utils'
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { Brush, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateCapture, useSketchSave } from '@/lib/hooks'
@@ -24,6 +24,7 @@ import {
  */
 export function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const t = useT()
+  const navigate = useNavigate()
   const create = useCreateCapture()
   const sketchSave = useSketchSave()
   const [text, setText] = useState('')
@@ -100,9 +101,22 @@ export function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       onOpenChange={setBoardOpen}
       onSave={async (blob, scene) => {
         await sketchSave.create(blob, scene)
-        toast.success(t('Sketch saved', '已儲存塗鴉'))
         setBoardOpen(false)
         onOpenChange(false)
+        toast.success(t('Sketch saved', '已儲存塗鴉'), {
+          action: {
+            label: t('View', '查看'),
+            onClick: () => {
+              // The Sketches lens is the Notes view; remember it, then go there.
+              try {
+                localStorage.setItem('mnema:notes-view', 'sketches')
+              } catch {
+                /* ignore */
+              }
+              navigate({ to: '/notes' })
+            },
+          },
+        })
       }}
     />
     </>
