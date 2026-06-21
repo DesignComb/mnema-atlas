@@ -72,6 +72,12 @@ export function undoableDelete(opts: {
    * never flashes back between cache-drop and refetch.
    */
   onSettled?: () => Promise<unknown> | unknown
+  /**
+   * Runs when the user taps Undo, in addition to unhiding the key — for screens
+   * that hold the row in local state (e.g. an in-session study queue) and need
+   * to restore it themselves rather than relying on the hidden-key filter.
+   */
+  onUndo?: () => void
 }) {
   // Deleting an entity whose previous delete is still in its grace window:
   // commit the old one now so the two never interleave.
@@ -92,6 +98,7 @@ export function undoableDelete(opts: {
         clearTimeout(p.timer)
         pending.delete(opts.key)
         unhide(opts.key)
+        opts.onUndo?.()
       },
     },
     // The toast leaves just before the delete commits, so Undo is never shown

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import { AlertTriangle, Check, FastForward, Keyboard, Loader2, PartyPopper, Sparkles, Undo2 } from 'lucide-react'
+import { AlertTriangle, Check, FastForward, Keyboard, Loader2, PartyPopper, Sparkles, Trash2, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDecks, useDueCards } from '@/lib/hooks'
-import { listAheadCards, recordReviewSafe } from '@/lib/api'
+import { deleteCard, listAheadCards, recordReviewSafe } from '@/lib/api'
+import { undoableDelete } from '@/lib/undoable'
 import { grade, previewIntervals, Rating, RATING_META, type IntervalHint } from '@/lib/srs'
 import type { Grade } from 'ts-fsrs'
 import type { CardRow } from '@/lib/database.types'
@@ -21,6 +22,8 @@ const TONE: Record<string, string> = {
   good: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20',
   easy: 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-400 dark:hover:bg-sky-500/20',
 }
+
+const cardLabel = (s: string) => (s.length > 24 ? `${s.slice(0, 24)}…` : s)
 
 export function StudyScreen() {
   const t = useT()
@@ -145,6 +148,43 @@ export function StudyScreen() {
     setIdx(index)
   }, [lastGrade, t])
 
+  // Discard the current card mid-session — a typo, dupe, or card you no longer
+  // want. It leaves the in-session queue at once; the server delete fires after
+  // a grace window so Undo (toast) restores both the row and the queue slot.
+  const discardCurrent = useCallback(() => {
+    if (!current) return
+    const row = current
+    const at = idx
+    // A discard reshuffles the queue, which would invalidate the grade-undo's
+    // saved index — drop it so Z can't rewind into a now-stale slot.
+    setLastGrade(null)
+    setQueue((q) => (q ? q.filter((_, i) => i !== at) : q))
+    setFlipped(false)
+    undoableDelete({
+      key: `card:${row.id}`,
+      message: t(`Discarded "${cardLabel(row.front)}"`, `已丟棄「${cardLabel(row.front)}」`),
+      undoLabel: t('Undo', '復原'),
+      errorMessage: t('Discard failed — the card is back', '丟棄失敗，閃卡已還原'),
+      commit: () => deleteCard(row.id),
+      onUndo: () => {
+        setQueue((q) => {
+          const base = q ?? []
+          const next = [...base]
+          next.splice(Math.min(at, base.length), 0, row)
+          return next
+        })
+        setIdx(at)
+        setFlipped(false)
+      },
+      onSettled: () =>
+        Promise.all([
+          qc.invalidateQueries({ queryKey: ['due'] }),
+          qc.invalidateQueries({ queryKey: ['cards'] }),
+          qc.invalidateQueries({ queryKey: ['cards-by-note'] }),
+        ]),
+    })
+  }, [current, idx, qc, t])
+
   // Study-ahead: pull not-yet-due cards into a fresh queue (cramming).
   const startCram = useCallback(async () => {
     setCramLoading(true)
@@ -192,6 +232,11 @@ export function StudyScreen() {
         return
       }
       if (!current) return
+      if ((e.key === 'd' || e.key === 'D') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        discardCurrent()
+        return
+      }
       if (!flipped) {
         if (e.key === ' ' || e.key === 'Enter') {
           e.preventDefault()
@@ -210,7 +255,7 @@ export function StudyScreen() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [current, flipped, gradeCurrent, undoLast, lastGrade])
+  }, [current, flipped, gradeCurrent, undoLast, lastGrade, discardCurrent])
 
   const hints: IntervalHint[] = current && flipped ? previewIntervals(current) : []
 
@@ -381,9 +426,20 @@ export function StudyScreen() {
               )}
             </div>
 
-            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+            <div className="mt-4 flex items-center justify-center">
+              <button
+                onClick={discardCurrent}
+                title={t('Discard this card (D)', '丟棄這張閃卡 (D)')}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+              >
+                <Trash2 className="size-3.5" />
+                {t('Discard', '丟棄')}
+              </button>
+            </div>
+
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
               <Keyboard className="size-3.5" />
-              {t('Space to reveal · 1–4 to grade · Z to undo', '空白鍵顯示答案 · 1–4 評分 · Z 復原')}
+              {t('Space to reveal · 1–4 to grade · Z to undo · D to discard', '空白鍵顯示答案 · 1–4 評分 · Z 復原 · D 丟棄')}
             </p>
           </div>
         ) : null}
