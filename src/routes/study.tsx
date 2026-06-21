@@ -430,7 +430,7 @@ export function StudyScreen() {
               <button
                 onClick={discardCurrent}
                 title={t('Discard this card (D)', '丟棄這張閃卡 (D)')}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-2.5 text-xs text-muted-foreground transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:border-red-200 active:bg-red-50 active:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:hover:border-red-500/30 dark:hover:bg-red-500/10 dark:hover:text-red-400 dark:active:border-red-500/30 dark:active:bg-red-500/10 dark:active:text-red-400 sm:py-1.5"
               >
                 <Trash2 className="size-3.5" />
                 {t('Discard', '丟棄')}
