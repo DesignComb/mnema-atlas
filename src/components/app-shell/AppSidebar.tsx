@@ -36,7 +36,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
-import { SPACES, activeSpace, type SpaceKey } from './spaces'
+import { activeSpace, type SpaceKey } from './spaces'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
@@ -100,16 +100,12 @@ export function AppSidebar({
   onNewDeck,
   onOpenImport,
   className,
-  inDrawer,
 }: {
   onOpenCommand: () => void
   onNewDeck: () => void
   onOpenImport: () => void
-  /** Width + display are set by the caller so the same sidebar serves the
-   *  persistent desktop rail and the mobile slide-in drawer. */
+  /** Width + display are set by the caller (the persistent desktop rail). */
   className?: string
-  /** In the mobile drawer, reserve space so the brand switcher clears the X close button. */
-  inDrawer?: boolean
 }) {
   const { user, signOut } = useAuth()
   const { theme, toggle } = useTheme()
@@ -136,9 +132,8 @@ export function AppSidebar({
 
   return (
     <aside className={cn('h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar', className)}>
-      {/* Current space — switching lives in the rail (desktop) / bottom tabs + the
-          grid below (mobile drawer). */}
-      <div className={cn('px-3 pt-3 pb-2', inDrawer && 'pr-12')}>
+      {/* Current space — switching lives in the rail (desktop). */}
+      <div className="px-3 pt-3 pb-2">
         <div className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-sm">
             <BrandIcon className="size-4" />
@@ -148,32 +143,6 @@ export function AppSidebar({
           </span>
         </div>
       </div>
-
-      {/* Mobile drawer: ALL spaces. The bottom bar fits only 4 pinned tabs, so
-          without this grid the unpinned spaces are unreachable on a phone. */}
-      {inDrawer ? (
-        <div className="grid grid-cols-3 gap-1 px-3 pb-2">
-          {SPACES.map((s) => {
-            const isActive = space === s.key
-            return (
-              <Link
-                key={s.key}
-                to={s.to}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors',
-                  isActive
-                    ? 'bg-brand-muted text-brand'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground',
-                )}
-              >
-                <s.icon className="size-5" />
-                {t(s.en, s.zh)}
-              </Link>
-            )
-          })}
-        </div>
-      ) : null}
 
       {/* Search / Cmd-K */}
       <div className="px-3 pb-2">
@@ -431,7 +400,7 @@ export function AppSidebar({
 
 /** Build stamp so "is my version current?" is answerable at a glance —
  *  web bundle version (+ APK versionName/code in the native shell). */
-function VersionStamp() {
+export function VersionStamp() {
   const [apk, setApk] = useState<string | null>(null)
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
@@ -465,7 +434,7 @@ function readExpandedMap(): Record<string, boolean> {
  * called with same-parent siblings. Re-parenting happens on the deck page
  * ("Move to"), not by dragging.
  */
-function DeckTreeNav({
+export function DeckTreeNav({
   decks,
   pathname,
   onReorder,

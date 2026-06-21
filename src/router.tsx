@@ -90,6 +90,11 @@ const notesRoute = createRoute({
   }),
   component: NotesScreen,
 })
+const decksRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'decks',
+  component: lazyRouteComponent(() => import('@/routes/decks'), 'DecksScreen'),
+})
 const deckRoute = createRoute({ getParentRoute: () => appRoute, path: 'decks/$deckId', component: DeckScreen })
 const cardsRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -122,12 +127,12 @@ const tempoRoute = createRoute({
   // ?view=… selects the Tempo view; ?list=… focuses a single list.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { view?: 'today' | 'upcoming' | 'all' | 'calendar' | 'habits' | 'capture'; list?: string; new?: 'list'; capture?: string } => {
+  ): { view?: 'today' | 'upcoming' | 'all' | 'calendar' | 'habits' | 'capture' | 'lists'; list?: string; new?: 'list'; capture?: string } => {
     const view = search.view
     const ok =
-      view === 'today' || view === 'upcoming' || view === 'all' || view === 'calendar' || view === 'habits' || view === 'capture'
+      view === 'today' || view === 'upcoming' || view === 'all' || view === 'calendar' || view === 'habits' || view === 'capture' || view === 'lists'
     return {
-      view: ok ? (view as 'today' | 'upcoming' | 'all' | 'calendar' | 'habits' | 'capture') : undefined,
+      view: ok ? (view as 'today' | 'upcoming' | 'all' | 'calendar' | 'habits' | 'capture' | 'lists') : undefined,
       list: typeof search.list === 'string' && search.list ? search.list : undefined,
       new: search.new === 'list' ? 'list' : undefined,
       capture: typeof search.capture === 'string' && search.capture ? search.capture : undefined,
@@ -239,6 +244,7 @@ const routeTree = rootRoute.addChildren([
     homeRoute,
     notesRoute,
     noteRoute,
+    decksRoute,
     deckRoute,
     cardsRoute,
     tripsRoute,

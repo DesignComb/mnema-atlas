@@ -1,8 +1,11 @@
 import { useSyncExternalStore, type ReactNode } from 'react'
-import { CloudOff, Menu, RefreshCw } from 'lucide-react'
+import { CloudOff, RefreshCw, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useMobileNav } from '@/lib/mobile-nav'
+import { useShell } from '@/lib/mobile-nav'
 import { useT } from '@/lib/i18n'
+import { useAuth } from '@/lib/auth'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { SubNav } from './SubNav'
 
 export function PageHeader({
   title,
@@ -15,25 +18,41 @@ export function PageHeader({
   actions?: ReactNode
   icon?: ReactNode
 }) {
-  const { openNav } = useMobileNav()
+  const t = useT()
+  const { openProfile, openCommand } = useShell()
+  const { user } = useAuth()
+  const initials = (user?.email ?? '?').slice(0, 2).toUpperCase()
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3 sm:gap-3 sm:px-6">
-      {/* Mobile: opens the nav drawer. Hidden once the sidebar is persistent (lg+). */}
-      <button
-        type="button"
-        onClick={openNav}
-        aria-label="Open menu"
-        className="-ml-1 shrink-0 rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground lg:hidden"
-      >
-        <Menu className="size-5" />
-      </button>
-      {icon ? <span className="hidden text-muted-foreground sm:block">{icon}</span> : null}
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[15px] font-semibold tracking-tight text-foreground">{title}</h1>
-        {subtitle ? <p className="truncate text-xs text-muted-foreground">{subtitle}</p> : null}
-      </div>
-      {actions ? <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{actions}</div> : null}
-    </header>
+    <div className="shrink-0 border-b border-border">
+      <header className="flex h-14 items-center gap-2 px-3 sm:gap-3 sm:px-6">
+        {icon ? <span className="hidden text-muted-foreground sm:block">{icon}</span> : null}
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-[15px] font-semibold tracking-tight text-foreground">{title}</h1>
+          {subtitle ? <p className="truncate text-xs text-muted-foreground">{subtitle}</p> : null}
+        </div>
+        {actions ? <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{actions}</div> : null}
+        {/* Mobile-only global actions — on desktop the sidebar carries Search + account. */}
+        <button
+          type="button"
+          onClick={openCommand}
+          aria-label={t('Search', '搜尋')}
+          className="shrink-0 rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
+        >
+          <Search className="size-5" />
+        </button>
+        <button
+          type="button"
+          onClick={openProfile}
+          aria-label={t('Account & settings', '帳號與設定')}
+          className="shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
+        >
+          <Avatar>
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+        </button>
+      </header>
+      <SubNav />
+    </div>
   )
 }
 

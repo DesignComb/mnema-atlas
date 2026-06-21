@@ -1,6 +1,6 @@
 import { humanizeError } from '@/lib/utils'
 import { useEffect, useState, type ReactNode } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
 import {
@@ -59,7 +59,7 @@ import { HabitCheckButton } from '@/components/tempo/HabitCheckButton'
 import { CalendarView } from '@/components/tempo/CalendarView'
 import { CaptureInbox } from '@/components/tempo/CaptureInbox'
 
-type ViewKey = 'all' | 'today' | 'upcoming' | 'habits' | 'calendar' | 'capture'
+type ViewKey = 'all' | 'today' | 'upcoming' | 'habits' | 'calendar' | 'capture' | 'lists'
 
 const VIEW_LABEL: Record<ViewKey, [string, string]> = {
   all: ['All tasks', '所有任務'],
@@ -68,6 +68,7 @@ const VIEW_LABEL: Record<ViewKey, [string, string]> = {
   habits: ['Habits', '習慣'],
   calendar: ['Calendar', '行事曆'],
   capture: ['Capture', '暫存區'],
+  lists: ['Lists', '清單'],
 }
 
 const PRIO_COLOR: Record<number, string> = {
@@ -324,7 +325,52 @@ export function TempoScreen() {
         }
       />
 
-      {view === 'capture' ? (
+      {view === 'lists' ? (
+        <div className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">{t('Lists', '清單')}</h2>
+            <Button variant="ghost" size="sm" onClick={() => setListDialog({ open: true })}>
+              <Plus className="size-4" /> {t('New list', '新增清單')}
+            </Button>
+          </div>
+          <div className="space-y-1">
+            <Link
+              to="/tempo"
+              search={(p) => ({ ...p, list: undefined, view: undefined })}
+              className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-[14px] text-foreground transition hover:border-brand/40 hover:bg-brand-muted/40"
+            >
+              <ListTodo className="size-4 shrink-0 text-muted-foreground" /> {t('All lists', '全部清單')}
+            </Link>
+            <Link
+              to="/tempo"
+              search={(p) => ({ ...p, list: 'inbox', view: undefined })}
+              className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-[14px] text-foreground transition hover:border-brand/40 hover:bg-brand-muted/40"
+            >
+              <Inbox className="size-4 shrink-0 text-muted-foreground" /> {t('Inbox', '收件匣')}
+            </Link>
+            {activeLists.map((l) => (
+              <Link
+                key={l.id}
+                to="/tempo"
+                search={(p) => ({ ...p, list: l.id, view: undefined })}
+                className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-[14px] text-foreground transition hover:border-brand/40 hover:bg-brand-muted/40"
+              >
+                {l.icon ? (
+                  <span className="shrink-0 text-[14px] leading-none">{l.icon}</span>
+                ) : (
+                  <span className="size-1.5 shrink-0 rounded-full bg-brand/50" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{l.name}</span>
+              </Link>
+            ))}
+            {activeLists.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-[13px] text-muted-foreground">
+                {t('No custom lists yet.', '還沒有自訂清單。')}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : view === 'capture' ? (
         <CaptureInbox
           sharedText={search.capture}
           onConsumeShared={() => navigate({ to: '/tempo', search: (p) => ({ ...p, capture: undefined }), replace: true })}

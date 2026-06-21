@@ -1,12 +1,22 @@
 import { createContext, useContext } from 'react'
 
 /**
- * Lets any screen's <PageHeader> open the mobile navigation drawer that lives
- * in <AppLayout>. On desktop (lg+) the sidebar is always visible and the
- * hamburger is hidden, so `openNav` is simply never called.
+ * Lets any screen's <PageHeader> reach the app-shell actions that live in
+ * <AppLayout> — opening the account/settings sheet and the ⌘K command palette.
+ * (The old left nav drawer is gone: space switching is the bottom bar + Spaces
+ * sheet, within-space nav is the SubNav strip.) On desktop (lg+) the sidebar
+ * carries these, so the header's mobile buttons are hidden and never call these.
  */
-export const MobileNavContext = createContext<{ openNav: () => void }>({ openNav: () => {} })
+export type ShellApi = {
+  openProfile: () => void
+  openCommand: () => void
+}
 
-export function useMobileNav() {
-  return useContext(MobileNavContext)
+export const ShellContext = createContext<ShellApi>({
+  openProfile: () => {},
+  openCommand: () => {},
+})
+
+export function useShell() {
+  return useContext(ShellContext)
 }
