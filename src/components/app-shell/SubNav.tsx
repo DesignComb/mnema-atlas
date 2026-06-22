@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -31,12 +32,20 @@ export function SubNav() {
   const { t } = useI18n()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const search = useRouterState({ select: (s) => s.location.search as Search })
+  const navRef = useRef<HTMLElement>(null)
 
   const items = spaceSubnav(activeSpace(pathname))
+
+  // Keep the active tab in view as you swipe/navigate between sections.
+  useEffect(() => {
+    navRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: 'center', block: 'nearest' })
+  }, [pathname, search])
+
   if (!items.length) return null
 
   return (
     <nav
+      ref={navRef}
       aria-label={t('Sections', '區塊')}
       className="flex items-center gap-0.5 overflow-x-auto px-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
     >

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useCreateNote, useDueReminders } from '@/lib/hooks'
 import { cn, humanizeError, untitledLabel } from '@/lib/utils'
 import { ShellContext } from '@/lib/mobile-nav'
+import { useSwipeNav } from '@/lib/swipe-nav'
 import { saveLastRoute } from '@/lib/last-route'
 import { AppSidebar } from './AppSidebar'
 import { SpaceRail } from './SpaceRail'
@@ -24,6 +25,8 @@ export function AppLayout() {
   const [profileOpen, setProfileOpen] = useState(false)
   const navigate = useNavigate()
   const createNote = useCreateNote()
+  const mainRef = useRef<HTMLElement>(null)
+  useSwipeNav(mainRef)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const fullPath = useRouterState({ select: (s) => s.location.pathname + s.location.searchStr })
   useDueReminders()
@@ -90,7 +93,10 @@ export function AppLayout() {
         <SpaceRail onCapture={() => setCaptureOpen(true)} />
         <AppSidebar className="hidden w-60 lg:flex" {...sidebarProps} />
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <main
+          ref={mainRef}
+          className="flex min-w-0 flex-1 flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0"
+        >
           <Outlet />
         </main>
 
