@@ -61,13 +61,20 @@ export function useSwipeNav(ref: RefObject<HTMLElement | null>) {
     }
 
     const onMove = (e: TouchEvent) => {
-      if (!armed || decided) return
+      if (!armed) return
       const dx = e.touches[0].clientX - x0
       const dy = e.touches[0].clientY - y0
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return
-      decided = true
-      horizontal = Math.abs(dx) > Math.abs(dy) * DOMINANCE
-      if (!horizontal) armed = false // it's a vertical scroll — let it be
+      const horizNow = Math.abs(dx) > Math.abs(dy) * DOMINANCE
+      if (!decided) {
+        decided = true
+        horizontal = horizNow
+        if (!horizontal) armed = false // started as a vertical scroll — let it be
+      } else if (!horizNow) {
+        // Veered vertical mid-swipe — it's a scroll, not a tab flip. Disarm so a
+        // diagonal drag can't commit a navigation on release.
+        armed = false
+      }
     }
 
     const onEnd = (e: TouchEvent) => {
@@ -77,7 +84,7 @@ export function useSwipeNav(ref: RefObject<HTMLElement | null>) {
       const dx = (e.changedTouches[0]?.clientX ?? x0) - x0
       if (Math.abs(dx) < COMMIT) return
 
-      const items = spaceSubnav(activeSpace(pathname))
+      const items = spaceSubnav(activeSpace(pathname), pathname)
       if (!items.length) return
       const idx = items.findIndex((it) => isSubNavActive(it, pathname, search))
       if (idx < 0) return

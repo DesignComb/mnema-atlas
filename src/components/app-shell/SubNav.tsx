@@ -34,7 +34,7 @@ export function SubNav() {
   const search = useRouterState({ select: (s) => s.location.search as Search })
   const navRef = useRef<HTMLElement>(null)
 
-  const items = spaceSubnav(activeSpace(pathname))
+  const items = spaceSubnav(activeSpace(pathname), pathname)
 
   // Keep the active tab in view as you swipe/navigate between sections.
   useEffect(() => {

@@ -132,7 +132,10 @@ const tempoRoute = createRoute({
     const ok =
       view === 'today' || view === 'upcoming' || view === 'all' || view === 'calendar' || view === 'habits' || view === 'capture' || view === 'lists'
     return {
-      view: ok ? (view as 'today' | 'upcoming' | 'all' | 'calendar' | 'habits' | 'capture' | 'lists') : undefined,
+      // 'all' is the default view → canonicalise it to a cleared param so the
+      // SubNav active check (which treats undefined as "All tasks") agrees even
+      // for a directly-typed ?view=all.
+      view: ok && view !== 'all' ? (view as 'today' | 'upcoming' | 'calendar' | 'habits' | 'capture' | 'lists') : undefined,
       list: typeof search.list === 'string' && search.list ? search.list : undefined,
       new: search.new === 'list' ? 'list' : undefined,
       capture: typeof search.capture === 'string' && search.capture ? search.capture : undefined,

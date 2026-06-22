@@ -104,10 +104,16 @@ export const TRIP_SECTIONS: SubNavItem[] = [
   { kind: 'param', param: 'tab', value: 'packing', en: 'Packing', zh: '打包', icon: Luggage },
 ]
 
-/** The sub-nav items for a space's top-level screen (empty = no strip; e.g.
- *  Money/Health/Kitchen keep their own in-page section tabs, and /trips index
- *  has none — a trip *detail* page supplies TRIP_SECTIONS itself). */
-export function spaceSubnav(space: SpaceKey): SubNavItem[] {
+// Focused detail/editor screens get NO strip (and therefore no swipe-nav): a
+// note editor or deck detail shouldn't let a stray horizontal swipe flip away.
+const NO_STRIP = /^\/(notes|decks)\/[^/]+/
+
+/** The sub-nav items for the current screen (empty = no strip; e.g. Money/
+ *  Health/Kitchen keep their own in-page section tabs, the /trips index has
+ *  none, a trip *detail* keeps its own strip, and note/deck detail pages are
+ *  intentionally strip-free). */
+export function spaceSubnav(space: SpaceKey, pathname = ''): SubNavItem[] {
+  if (NO_STRIP.test(pathname)) return []
   if (space === 'study') return STUDY_NAV
   if (space === 'tempo') return TEMPO_VIEWS
   return []
