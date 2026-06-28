@@ -3,11 +3,13 @@ import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
   ArrowUpRight,
+  CalendarDays,
   CalendarPlus,
   CalendarRange,
   Check,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Columns3,
   List,
@@ -34,6 +36,7 @@ import {
   useItineraryRealtime,
   useReorderDays,
   useReorderItems,
+  useSetItemDay,
 } from '@/lib/hooks'
 import type { ItineraryDay, ItineraryItem } from '@/lib/api'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
@@ -84,6 +87,7 @@ export function TripScreen() {
   const deleteItem = useDeleteItem()
   const reorderDays = useReorderDays()
   const reorderItems = useReorderItems()
+  const setItemDayQuick = useSetItemDay()
   const navigate = useNavigate()
   const t = useT()
   useItineraryRealtime(tripId)
@@ -105,8 +109,33 @@ export function TripScreen() {
     open: false,
   })
   const [confirmDel, setConfirmDel] = useState(false)
-  // Tag filter for the unscheduled "想去" bucket (local, not URL).
+  // "想去" wishlist panel filters (local, not URL): area tag + category set.
   const [unschedTag, setUnschedTag] = useState<string | null>(null)
+  const [unschedCats, setUnschedCats] = useState<Set<Category>>(new Set())
+  const [wishlistOpen, setWishlistOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('mnema:wishlist-open') !== '0'
+    } catch {
+      return true
+    }
+  })
+  const toggleWishlist = () =>
+    setWishlistOpen((v) => {
+      const next = !v
+      try {
+        localStorage.setItem('mnema:wishlist-open', next ? '1' : '0')
+      } catch {
+        /* storage unavailable — just won't persist */
+      }
+      return next
+    })
+  const toggleUnschedCat = (c: Category) =>
+    setUnschedCats((prev) => {
+      const next = new Set(prev)
+      if (next.has(c)) next.delete(c)
+      else next.add(c)
+      return next
+    })
 
   async function removeTrip() {
     if (!confirmDel) {
@@ -213,6 +242,15 @@ export function TripScreen() {
   )
   // Drop a stale tag selection if nothing carries it anymore.
   const activeUnschedTag = unschedTag && unschedTags.includes(unschedTag) ? unschedTag : null
+  // Categories actually present among the "想去" candidates, in canonical order.
+  const unschedCatsPresent = CATEGORIES.filter((c) => trip.unscheduled.some((i) => categoryOf(i.category) === c))
+  const wishlistFiltering = unschedCats.size > 0 || activeUnschedTag != null
+  const shownUnscheduled = trip.unscheduled.filter(
+    (i) =>
+      (unschedCats.size === 0 || unschedCats.has(categoryOf(i.category))) &&
+      (!activeUnschedTag || i.tags?.includes(activeUnschedTag)),
+  )
+  const scheduleItem = (itemId: string, dayId: string) => setItemDayQuick.mutate({ itemId, dayId })
   const fTrip = filterActive
     ? {
         ...trip,
@@ -321,6 +359,143 @@ export function TripScreen() {
 
           {tab === 'itinerary' ? (
             <>
+          {/* 想去 wishlist — collapsible, quick filter by category/area + one-tap schedule */}
+          {trip.unscheduled.length || canEdit ? (
+            <section className="rounded-xl border border-border bg-card shadow-soft">
+              <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4">
+                <button
+                  type="button"
+                  onClick={toggleWishlist}
+                  aria-expanded={wishlistOpen}
+                  className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
+                >
+                  {wishlistOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                  {t('Wishlist', '想去')}
+                  <span className="font-normal text-muted-foreground">· {trip.unscheduled.length}</span>
+                </button>
+                {canEdit ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => setItemDialog({ open: true, dayId: null })}
+                  >
+                    <Plus className="size-4" /> {t('Idea', '想去')}
+                  </Button>
+                ) : null}
+              </div>
+              {wishlistOpen ? (
+                <div className="space-y-2.5 border-t border-border px-3 py-3 sm:px-4">
+                  {/* Quick filters: category (店家/景點…) + area tags */}
+                  {unschedCatsPresent.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {unschedCatsPresent.map((c) => {
+                        const meta = CATEGORY_META[c]
+                        const Icon = meta.icon
+                        const active = unschedCats.has(c)
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => toggleUnschedCat(c)}
+                            aria-pressed={active}
+                            className={cn(
+                              'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium outline-none transition hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring/50',
+                              active
+                                ? 'border-brand/40 ring-1 ring-brand/30 text-foreground'
+                                : 'border-border text-muted-foreground hover:border-brand/40 hover:text-foreground',
+                            )}
+                          >
+                            <Icon className="size-3.5" /> {t(meta.en, meta.zh)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : null}
+                  {unschedTags.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {unschedTags.map((tg) => {
+                        const active = tg === activeUnschedTag
+                        return (
+                          <button
+                            key={tg}
+                            type="button"
+                            onClick={() => setUnschedTag(active ? null : tg)}
+                            aria-pressed={active}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium outline-none transition hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring/50',
+                              active
+                                ? 'border-brand/40 ring-1 ring-brand/30 text-foreground'
+                                : 'border-border text-muted-foreground hover:border-brand/40 hover:text-foreground',
+                            )}
+                            title={t(`Filter “${tg}”`, `篩選「${tg}」`)}
+                          >
+                            <span className="size-2 rounded-full" style={{ background: tagColor(tg) }} />
+                            {tg}
+                            {active ? <X className="size-3" /> : null}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : null}
+
+                  {trip.unscheduled.length === 0 ? (
+                    <p className="py-3 text-center text-[12.5px] text-muted-foreground/70">
+                      {t('Add places you want to go, then schedule them into a day.', '把想去的地點加進來，再排進某一天。')}
+                    </p>
+                  ) : canEdit && !wishlistFiltering && trip.unscheduled.length > 1 ? (
+                    <SortableList
+                      items={trip.unscheduled}
+                      onReorder={(ids) => reorderItems.mutate({ dayId: null, itemIds: ids })}
+                      className="space-y-1.5"
+                      itemClassName="rounded-lg bg-background"
+                      renderItem={(item, handle) => (
+                        <ItemRow
+                          item={item}
+                          index={trip.unscheduled.findIndex((i) => i.id === item.id)}
+                          count={trip.unscheduled.length}
+                          canEdit={canEdit}
+                          t={t}
+                          dragHandle={handle}
+                          scheduleDays={trip.days}
+                          onSchedule={(dayId) => scheduleItem(item.id, dayId)}
+                          onEdit={() => setItemDialog({ open: true, item, dayId: null })}
+                          onDelete={() => removeItem(item)}
+                          onMove={(dir) => moveItem(trip.unscheduled, null, trip.unscheduled.findIndex((i) => i.id === item.id), dir)}
+                        />
+                      )}
+                    />
+                  ) : shownUnscheduled.length ? (
+                    <div className="space-y-1.5">
+                      {trip.unscheduled.map((item, index) =>
+                        (unschedCats.size === 0 || unschedCats.has(categoryOf(item.category))) &&
+                        (!activeUnschedTag || item.tags?.includes(activeUnschedTag)) ? (
+                          <ItemRow
+                            key={item.id}
+                            item={item}
+                            index={index}
+                            count={trip.unscheduled.length}
+                            canEdit={canEdit}
+                            t={t}
+                            scheduleDays={trip.days}
+                            onSchedule={(dayId) => scheduleItem(item.id, dayId)}
+                            onEdit={() => setItemDialog({ open: true, item, dayId: null })}
+                            onDelete={() => removeItem(item)}
+                            onMove={(dir) => moveItem(trip.unscheduled, null, index, dir)}
+                          />
+                        ) : null,
+                      )}
+                    </div>
+                  ) : (
+                    <p className="py-3 text-center text-[12.5px] text-muted-foreground/70">
+                      {t('No matches — try another filter.', '沒有符合的項目，換個篩選試試。')}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
           {/* Cost rollup */}
           {costEntries.length ? (
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-soft">
@@ -421,86 +596,6 @@ export function TripScreen() {
               />
             ))
           )}
-
-          {/* Unscheduled bucket */}
-          {trip.unscheduled.length ? (
-            <section className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-semibold text-muted-foreground">{t('Unscheduled', '未排程')}</h3>
-                {canEdit ? (
-                  <Button variant="ghost" size="sm" onClick={() => setItemDialog({ open: true, dayId: null })}>
-                    <Plus className="size-4" /> {t('Idea', '想去')}
-                  </Button>
-                ) : null}
-              </div>
-              {/* Classify "想去" candidates by tag — click a tag to filter the bucket. */}
-              {unschedTags.length ? (
-                <div className="flex flex-wrap gap-1.5 px-1">
-                  {unschedTags.map((tg) => {
-                    const active = tg === activeUnschedTag
-                    return (
-                      <button
-                        key={tg}
-                        type="button"
-                        onClick={() => setUnschedTag(active ? null : tg)}
-                        aria-pressed={active}
-                        className={cn(
-                          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium outline-none transition hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring/50',
-                          active
-                            ? 'border-brand/40 ring-1 ring-brand/30 text-foreground'
-                            : 'border-border text-muted-foreground hover:border-brand/40 hover:text-foreground',
-                        )}
-                        title={t(`Filter “${tg}”`, `篩選「${tg}」`)}
-                      >
-                        <span className="size-2 rounded-full" style={{ background: tagColor(tg) }} />
-                        {tg}
-                        {active ? <X className="size-3" /> : null}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : null}
-              {canEdit && !filtering && !activeUnschedTag && trip.unscheduled.length > 1 ? (
-                <SortableList
-                  items={trip.unscheduled}
-                  onReorder={(ids) => reorderItems.mutate({ dayId: null, itemIds: ids })}
-                  className="space-y-1.5"
-                  itemClassName="rounded-lg bg-card"
-                  renderItem={(item, handle) => (
-                    <ItemRow
-                      item={item}
-                      index={trip.unscheduled.findIndex((i) => i.id === item.id)}
-                      count={trip.unscheduled.length}
-                      canEdit={canEdit}
-                      t={t}
-                      dragHandle={handle}
-                      onEdit={() => setItemDialog({ open: true, item, dayId: null })}
-                      onDelete={() => removeItem(item)}
-                      onMove={(dir) => moveItem(trip.unscheduled, null, trip.unscheduled.findIndex((i) => i.id === item.id), dir)}
-                    />
-                  )}
-                />
-              ) : (
-                <div className="space-y-1.5">
-                  {trip.unscheduled.map((item, index) =>
-                    matchItem(item) && (!activeUnschedTag || item.tags?.includes(activeUnschedTag)) ? (
-                      <ItemRow
-                        key={item.id}
-                        item={item}
-                        index={index}
-                        count={trip.unscheduled.length}
-                        canEdit={canEdit}
-                        t={t}
-                        onEdit={() => setItemDialog({ open: true, item, dayId: null })}
-                        onDelete={() => removeItem(item)}
-                        onMove={(dir) => moveItem(trip.unscheduled, null, index, dir)}
-                      />
-                    ) : null,
-                  )}
-                </div>
-              )}
-            </section>
-          ) : null}
 
           {/* Add day / empty hint */}
           {trip.days.length === 0 && trip.unscheduled.length === 0 ? (
@@ -831,6 +926,8 @@ function ItemRow({
   onDelete,
   onMove,
   dragHandle,
+  scheduleDays,
+  onSchedule,
 }: {
   item: ItineraryItem
   index: number
@@ -841,6 +938,9 @@ function ItemRow({
   onDelete: () => void
   onMove: (dir: -1 | 1) => void
   dragHandle?: ReactNode
+  /** When provided (wishlist context), shows a quick "schedule into a day" picker. */
+  scheduleDays?: ItineraryDay[]
+  onSchedule?: (dayId: string) => void
 }) {
   const cat = CATEGORY_META[categoryOf(item.category)]
   const st = STATUS_META[statusOf(item.status)]
@@ -938,12 +1038,40 @@ function ItemRow({
         ) : null}
       </div>
 
-      {/* Actions · single overflow menu, calm at rest */}
+      {/* Actions · quick schedule (wishlist) + overflow menu, calm at rest */}
       {canEdit ? (
         <div
-          className="absolute right-1 top-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
+          className={cn(
+            'absolute right-1 top-1.5 flex items-center gap-0.5 transition',
+            // The wishlist "排入" affordance stays visible; the bare overflow menu rests until hover.
+            onSchedule
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100',
+          )}
           onClick={(e) => e.stopPropagation()}
         >
+          {scheduleDays && onSchedule ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={t('Schedule into a day', '排入某天')}
+                title={t('Schedule into a day', '排入某天')}
+                className="flex h-7 items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-muted-foreground/80 transition hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground"
+              >
+                <CalendarDays className="size-4" /> <span className="hidden sm:inline">{t('Schedule', '排入')}</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {scheduleDays.length ? (
+                  scheduleDays.map((d, i) => (
+                    <DropdownMenuItem key={d.id} onSelect={() => onSchedule(d.id)}>
+                      <CalendarDays /> {d.label || d.day_date || t(`Day ${i + 1}`, `第 ${i + 1} 天`)}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled>{t('Add a day first', '請先新增日期')}</DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={t('More', '更多')}

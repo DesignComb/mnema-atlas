@@ -48,10 +48,12 @@ export function ItineraryTable({
   onEdit: (item: ItineraryItem) => void
 }) {
   const t = useT()
-  const groups: { key: string; label: string; items: ItineraryItem[] }[] = [
-    ...trip.days.map((d, i) => ({ key: d.id, label: dayLabel(d.label, d.day_date, i, t), items: d.items })),
-    ...(trip.unscheduled.length ? [{ key: 'unsch', label: t('Unscheduled', '未排程'), items: trip.unscheduled }] : []),
-  ]
+  // Unscheduled "想去" candidates live in the dedicated wishlist panel, not here.
+  const groups: { key: string; label: string; items: ItineraryItem[] }[] = trip.days.map((d, i) => ({
+    key: d.id,
+    label: dayLabel(d.label, d.day_date, i, t),
+    items: d.items,
+  }))
   const cols = [
     t('Time', '時間'),
     t('Activity', '活動'),
@@ -123,7 +125,8 @@ export function ItineraryBoard({
   onEdit: (item: ItineraryItem) => void
 }) {
   const t = useT()
-  const all = [...trip.days.flatMap((d) => d.items), ...trip.unscheduled]
+  // Unscheduled "想去" candidates live in the dedicated wishlist panel, not here.
+  const all = trip.days.flatMap((d) => d.items)
   return (
     <div className="flex gap-3 overflow-x-auto pb-2">
       {STATUS_ORDER.map((s) => {
