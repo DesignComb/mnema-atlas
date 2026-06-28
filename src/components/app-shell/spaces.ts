@@ -17,6 +17,7 @@ import {
   ListTree,
   Luggage,
   Map as MapIcon,
+  MapPin,
   Share2,
   Sparkles,
   Ticket,
@@ -49,6 +50,7 @@ export const ANCHOR_KEYS: SpaceKey[] = SPACES.filter((s) => s.anchor).map((s) =>
 /** Which space a pathname belongs to (Study is the default / catch-all). */
 export function activeSpace(pathname: string): SpaceKey {
   if (pathname.startsWith('/trips')) return 'travel'
+  if (pathname.startsWith('/places')) return 'travel'
   if (pathname.startsWith('/tempo')) return 'tempo'
   if (pathname.startsWith('/galleon')) return 'galleon'
   if (pathname.startsWith('/health')) return 'health'
@@ -85,6 +87,12 @@ export const STUDY_NAV: SubNavItem[] = [
   { kind: 'route', to: '/decks', en: 'Decks', zh: '牌組', icon: Library },
 ]
 
+/** Travel: distinct routes — the trips list and the "想去" places wishlist. */
+export const TRAVEL_NAV: SubNavItem[] = [
+  { kind: 'route', to: '/trips', en: 'Trips', zh: '行程', icon: MapIcon },
+  { kind: 'route', to: '/places', en: 'Places', zh: '想去', icon: MapPin },
+]
+
 /** Tempo: ?view= on /tempo; the last item drills into the full-screen list picker. */
 export const TEMPO_VIEWS: SubNavItem[] = [
   { kind: 'param', param: 'view', value: 'today', en: 'Today', zh: '今天', icon: CalendarCheck },
@@ -106,7 +114,7 @@ export const TRIP_SECTIONS: SubNavItem[] = [
 
 // Focused detail/editor screens get NO strip (and therefore no swipe-nav): a
 // note editor or deck detail shouldn't let a stray horizontal swipe flip away.
-const NO_STRIP = /^\/(notes|decks)\/[^/]+/
+const NO_STRIP = /^\/(notes|decks|trips)\/[^/]+/
 
 /** The sub-nav items for the current screen (empty = no strip; e.g. Money/
  *  Health/Kitchen keep their own in-page section tabs, the /trips index has
@@ -116,5 +124,6 @@ export function spaceSubnav(space: SpaceKey, pathname = ''): SubNavItem[] {
   if (NO_STRIP.test(pathname)) return []
   if (space === 'study') return STUDY_NAV
   if (space === 'tempo') return TEMPO_VIEWS
+  if (space === 'travel') return TRAVEL_NAV
   return []
 }

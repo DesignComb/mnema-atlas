@@ -3,7 +3,7 @@
 const KEY = 'mnema:last-route'
 
 // Only these top-level app areas are worth restoring — never public/auth pages.
-const APP_PREFIXES = ['/today', '/notes', '/cards', '/graph', '/study', '/decks', '/trips', '/tempo', '/galleon', '/health', '/kitchen', '/settings']
+const APP_PREFIXES = ['/today', '/notes', '/cards', '/graph', '/study', '/decks', '/trips', '/places', '/tempo', '/galleon', '/health', '/kitchen', '/settings']
 
 function isAppRoute(path: string): boolean {
   return APP_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`) || path.startsWith(`${p}?`))

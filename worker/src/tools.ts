@@ -84,6 +84,11 @@ import {
   deleteRecipeInput,
   listRecipesInput,
   getRecipeInput,
+  createPlaceInput,
+  updatePlaceInput,
+  deletePlaceInput,
+  listPlacesInput,
+  getPlaceInput,
   addPantryItemInput,
   updatePantryItemInput,
   deletePantryItemInput,
@@ -1793,6 +1798,80 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       const row = await callRpc(ctx.env, ctx.userId, 'get_recipe', { p_recipe_id: a.recipe_id })
       return { summary: 'Recipe', data: row }
+    },
+  },
+  // ── Places: "想去的店 & 景點" wishlist (Travel space) ──
+  {
+    name: 'create_place',
+    description: toolDescriptions.create_place,
+    schema: createPlaceInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const row = await callRpc<{ id: string; name: string }>(ctx.env, ctx.userId, 'create_place', {
+        p_name: a.name,
+        p_tags: a.tags ?? null,
+        p_note: a.note ?? null,
+        p_url: a.url ?? null,
+        p_address: a.address ?? null,
+        p_visited: a.visited ?? false,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Saved place “${row.name}” (${row.id})`, data: row }
+    },
+  },
+  {
+    name: 'update_place',
+    description: toolDescriptions.update_place,
+    schema: updatePlaceInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'update_place', {
+        p_place_id: a.place_id,
+        p_name: a.name ?? null,
+        p_tags: a.tags ?? null,
+        p_note: a.note ?? null,
+        p_url: a.url ?? null,
+        p_address: a.address ?? null,
+        p_visited: a.visited ?? null,
+      })
+      return { summary: 'Place updated', data: row }
+    },
+  },
+  {
+    name: 'delete_place',
+    description: toolDescriptions.delete_place,
+    schema: deletePlaceInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_place', { p_place_id: a.place_id })
+      return { summary: 'Place deleted', data: { ok: true } }
+    },
+  },
+  {
+    name: 'list_places',
+    description: toolDescriptions.list_places,
+    schema: listPlacesInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const rows = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_places', {
+        p_query: a.query ?? null,
+        p_tag: a.tag ?? null,
+        p_visited: a.visited ?? null,
+        p_limit: a.limit ?? 200,
+      })
+      return { summary: `${rows.length} place(s)`, data: rows }
+    },
+  },
+  {
+    name: 'get_place',
+    description: toolDescriptions.get_place,
+    schema: getPlaceInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const row = await callRpc(ctx.env, ctx.userId, 'get_place', { p_place_id: a.place_id })
+      return { summary: 'Place', data: row }
     },
   },
   {

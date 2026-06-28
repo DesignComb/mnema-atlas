@@ -82,7 +82,7 @@ export function AppLayout() {
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
         className={cn(
           'flex h-dvh overflow-hidden bg-background text-foreground',
-          pathname.startsWith('/trips') && 'theme-voyage',
+          (pathname.startsWith('/trips') || pathname.startsWith('/places')) && 'theme-voyage',
           pathname.startsWith('/tempo') && 'theme-tempo',
           pathname.startsWith('/galleon') && 'theme-galleon',
           pathname.startsWith('/health') && 'theme-health',
