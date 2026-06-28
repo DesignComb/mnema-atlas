@@ -22,6 +22,7 @@ import {
   Table2,
   Ticket,
   Trash2,
+  Undo2,
   Users,
   Wallet,
   X,
@@ -253,6 +254,7 @@ export function TripScreen() {
   )
   const scheduleItem = (itemId: string, dayId: string) =>
     setItemDayQuick.mutate({ itemId, dayId, tripId: trip.id })
+  const unscheduleItem = (itemId: string) => setItemDayQuick.mutate({ itemId, dayId: null, tripId: trip.id })
   const fTrip = filterActive
     ? {
         ...trip,
@@ -572,6 +574,7 @@ export function TripScreen() {
                     onDeleteItem={removeItem}
                     onMoveItem={(index, dir) => moveItem(day.items, day.id, index, dir)}
                     onReorderItems={(ids) => reorderItems.mutate({ dayId: day.id, itemIds: ids })}
+                    onUnscheduleItem={unscheduleItem}
                   />
                 )
               }}
@@ -595,6 +598,7 @@ export function TripScreen() {
                 onDeleteItem={removeItem}
                 onMoveItem={(index, dir) => moveItem(day.items, day.id, index, dir)}
                 onReorderItems={(ids) => reorderItems.mutate({ dayId: day.id, itemIds: ids })}
+                onUnscheduleItem={unscheduleItem}
               />
             ))
           )}
@@ -788,6 +792,7 @@ function DaySection({
   onDeleteItem,
   onMoveItem,
   onReorderItems,
+  onUnscheduleItem,
 }: {
   day: ItineraryDay
   dayIndex: number
@@ -805,6 +810,7 @@ function DaySection({
   onReorderItems: (ids: string[]) => void
   onDeleteItem: (item: ItineraryItem) => void
   onMoveItem: (index: number, dir: -1 | 1) => void
+  onUnscheduleItem: (itemId: string) => void
 }) {
   // Day headers read as humans say them — 「6月14日(週六)」, not raw ISO (QW7).
   const { lang } = useI18n()
@@ -883,6 +889,7 @@ function DaySection({
                 onEdit={() => onEditItem(item)}
                 onDelete={() => onDeleteItem(item)}
                 onMove={(dir) => onMoveItem(day.items.findIndex((i) => i.id === item.id), dir)}
+                onUnschedule={() => onUnscheduleItem(item.id)}
               />
             )}
           />
@@ -900,6 +907,7 @@ function DaySection({
                 onEdit={() => onEditItem(item)}
                 onDelete={() => onDeleteItem(item)}
                 onMove={(dir) => onMoveItem(index, dir)}
+                onUnschedule={() => onUnscheduleItem(item.id)}
               />
             ) : null,
           )
@@ -930,6 +938,7 @@ function ItemRow({
   dragHandle,
   scheduleDays,
   onSchedule,
+  onUnschedule,
 }: {
   item: ItineraryItem
   index: number
@@ -943,6 +952,8 @@ function ItemRow({
   /** When provided (wishlist context), shows a quick "schedule into a day" picker. */
   scheduleDays?: ItineraryDay[]
   onSchedule?: (dayId: string) => void
+  /** When provided (scheduled context), shows a "move back to 想去" action. */
+  onUnschedule?: () => void
 }) {
   const cat = CATEGORY_META[categoryOf(item.category)]
   const st = STATUS_META[statusOf(item.status)]
@@ -1091,6 +1102,11 @@ function ItemRow({
               <DropdownMenuItem onSelect={() => onMove(1)} disabled={index === count - 1}>
                 <ChevronDown /> {t('Move down', '下移')}
               </DropdownMenuItem>
+              {onUnschedule ? (
+                <DropdownMenuItem onSelect={onUnschedule}>
+                  <Undo2 /> {t('Move to Wishlist', '移回想去')}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
                 <Trash2 /> {t('Delete', '刪除')}
