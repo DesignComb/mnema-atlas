@@ -40,6 +40,7 @@ import { relativeDayLabel } from '@/lib/tempo-date'
 import { AiChip, useNewSince } from '@/components/common/AiChip'
 import { ConnectAiLink } from '@/components/common/ConnectAiLink'
 import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -297,6 +298,7 @@ export function TempoScreen() {
         icon={headingIcon}
         actions={
           <div className="flex items-center gap-1.5">
+            <AiImportButton />
             {selectedList ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

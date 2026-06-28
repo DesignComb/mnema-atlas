@@ -75,7 +75,9 @@ export function AppLayout() {
   }
 
   return (
-    <ShellContext.Provider value={{ openProfile: () => setProfileOpen(true), openCommand: () => setCmdOpen(true) }}>
+    <ShellContext.Provider
+      value={{ openProfile: () => setProfileOpen(true), openCommand: () => setCmdOpen(true), openImport: () => setImportOpen(true) }}
+    >
       <div
         // Pad past the device status bar (top) so content isn't drawn under it on
         // edge-to-edge Android / notched phones (viewport-fit=cover makes env() real).

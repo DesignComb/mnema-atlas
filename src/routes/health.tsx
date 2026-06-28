@@ -42,6 +42,7 @@ import {
   localTodayISO,
 } from '@/lib/health'
 import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { AiChip, useNewSince } from '@/components/common/AiChip'
 import { ConnectAiLink } from '@/components/common/ConnectAiLink'
 import { Button } from '@/components/ui/button'
@@ -152,9 +153,12 @@ export function HealthScreen() {
         title={t('Health', '健康')}
         icon={<HeartPulse className="size-4" />}
         actions={
-          <Button variant="brand" size="sm" onClick={() => setLogDialog({ open: true })}>
-            <Plus className="size-4" /> {t('Log', '記錄')}
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <AiImportButton />
+            <Button variant="brand" size="sm" onClick={() => setLogDialog({ open: true })}>
+              <Plus className="size-4" /> {t('Log', '記錄')}
+            </Button>
+          </div>
         }
       />
 

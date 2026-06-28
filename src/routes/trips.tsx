@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useCreateTripBulk, useItineraries } from '@/lib/hooks'
 import { useAuth } from '@/lib/auth'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { TripDialog } from '@/components/trips/TripDialog'
 import { Button } from '@/components/ui/button'
 import { fmtDateRange } from '@/lib/itinerary'
@@ -63,9 +64,12 @@ export function TripsScreen() {
         subtitle={trips ? t(`${trips.length} trip${trips.length === 1 ? '' : 's'}`, `${trips.length} 個行程`) : undefined}
         icon={<MapIcon className="size-4" />}
         actions={
-          <Button variant="brand" size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="size-4" /> <span className="hidden sm:inline">{t('New trip', '新增行程')}</span>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <AiImportButton />
+            <Button variant="brand" size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="size-4" /> <span className="hidden sm:inline">{t('New trip', '新增行程')}</span>
+            </Button>
+          </div>
         }
       />
       <div className="flex-1 overflow-y-auto">

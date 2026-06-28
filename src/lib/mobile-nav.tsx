@@ -10,11 +10,14 @@ import { createContext, useContext } from 'react'
 export type ShellApi = {
   openProfile: () => void
   openCommand: () => void
+  /** Opens the Space-aware "Import from AI" dialog (lives in AppLayout). */
+  openImport: () => void
 }
 
 export const ShellContext = createContext<ShellApi>({
   openProfile: () => {},
   openCommand: () => {},
+  openImport: () => {},
 })
 
 export function useShell() {

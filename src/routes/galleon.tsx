@@ -57,6 +57,7 @@ import { settleUp } from '@shared/settle'
 import { ACCOUNT_TYPE_LABEL, addMonths, fmtLedgerDate, fmtMoney, monthRange, netWorthByCurrency } from '@/lib/money'
 import { shortRecurrenceLabel } from '@/lib/recurrence'
 import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { AiChip, useNewSince } from '@/components/common/AiChip'
 import { ConnectAiLink } from '@/components/common/ConnectAiLink'
 import { Button } from '@/components/ui/button'
@@ -251,6 +252,7 @@ export function GalleonScreen() {
         actions={
           canEdit ? (
             <div className="flex items-center gap-1.5">
+              <AiImportButton />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" aria-label={t('Ledger options', '帳本選項')}>

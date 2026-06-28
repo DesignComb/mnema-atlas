@@ -38,6 +38,7 @@ import type { MealPlanRow, PantryItemRow, RecipeRow } from '@/lib/database.types
 import type { RecipeIngredient } from '@shared/schemas'
 import { localTodayISO } from '@/lib/health'
 import { PageHeader, EmptyState, ErrorState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { AiChip, useNewSince } from '@/components/common/AiChip'
 import { ConnectAiLink } from '@/components/common/ConnectAiLink'
 import { Button } from '@/components/ui/button'
@@ -174,19 +175,22 @@ export function KitchenScreen() {
         title={t('Kitchen', '廚房')}
         icon={<ChefHat className="size-4" />}
         actions={
-          section === 'recipes' ? (
-            <Button variant="brand" size="sm" onClick={() => setRecipeDialog({ open: true })}>
-              <Plus className="size-4" /> {t('Recipe', '食譜')}
-            </Button>
-          ) : section === 'pantry' ? (
-            <Button variant="brand" size="sm" onClick={() => setPantryDialog({ open: true })}>
-              <Plus className="size-4" /> {t('Item', '項目')}
-            </Button>
-          ) : section === 'plan' ? (
-            <Button variant="brand" size="sm" onClick={() => setPlanDialog({ open: true })}>
-              <Plus className="size-4" /> {t('Meal', '餐點')}
-            </Button>
-          ) : null
+          <div className="flex items-center gap-1.5">
+            <AiImportButton />
+            {section === 'recipes' ? (
+              <Button variant="brand" size="sm" onClick={() => setRecipeDialog({ open: true })}>
+                <Plus className="size-4" /> {t('Recipe', '食譜')}
+              </Button>
+            ) : section === 'pantry' ? (
+              <Button variant="brand" size="sm" onClick={() => setPantryDialog({ open: true })}>
+                <Plus className="size-4" /> {t('Item', '項目')}
+              </Button>
+            ) : section === 'plan' ? (
+              <Button variant="brand" size="sm" onClick={() => setPlanDialog({ open: true })}>
+                <Plus className="size-4" /> {t('Meal', '餐點')}
+              </Button>
+            ) : null}
+          </div>
         }
       />
 

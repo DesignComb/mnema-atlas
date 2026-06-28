@@ -1,13 +1,16 @@
 import { humanizeError } from '@/lib/utils'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { Copy, FileText, Layers, Sparkles, TriangleAlert } from 'lucide-react'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Check, Copy, FileText, Layers, Sparkles, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { parseMnema } from '@/lib/import/parseMnema'
 import * as api from '@/lib/api'
 import { useDecks } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
+import { activeSpace, brandTitleFor, type SpaceKey } from '@/components/app-shell/spaces'
+import { SPACE_IMPORT, buildRestPrompt } from '@/lib/ai-import'
+import { REST_URL } from '@/lib/endpoints'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -18,6 +21,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+
+/**
+ * The "Import from AI" dialog, opened globally (⌘I, the command palette, the
+ * sidebar, the mobile profile sheet). It is **Space-aware**: it reads the
+ * current route and shows that Space's flow. Study uses a paste-back `mnema`
+ * block (parsed + written client-side); every other Space guides the user to
+ * let their own AI write through the REST API (no paste-back).
+ */
+export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const space = activeSpace(pathname)
+  if (SPACE_IMPORT[space].mode === 'paste') {
+    return <StudyPasteImport open={open} onOpenChange={onOpenChange} />
+  }
+  return <RestImportGuide open={open} onOpenChange={onOpenChange} space={space} />
+}
 
 /** The prompt the user pastes INTO their AI so it emits an importable block. */
 const PREAMBLE = `When I ask you to save notes or flashcards to Mnema, reply with ONLY a fenced code block tagged \`mnema\` containing JSON in this shape:
@@ -32,7 +51,8 @@ const PREAMBLE = `When I ask you to save notes or flashcards to Mnema, reply wit
 
 Keep fronts and backs concise. The "note" field links a card to a note by its title. Output nothing but the block.`
 
-export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+/** Study: the AI replies with a `mnema` block; we parse + write notes/cards here. */
+function StudyPasteImport({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const qc = useQueryClient()
@@ -155,6 +175,113 @@ export function QuickImportDialog({ open, onOpenChange }: { open: boolean; onOpe
             {busy ? t('Importing…', '匯入中…') : (
               <>
                 <Sparkles className="size-4" /> {t('Import', '匯入')}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Every non-Study Space: the AI writes through the REST API directly. We hand
+ *  the user a Space-specific prompt + a link to mint a key — there's nothing to
+ *  paste back. */
+function RestImportGuide({
+  open,
+  onOpenChange,
+  space,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  space: SpaceKey
+}) {
+  const t = useT()
+  const cfg = SPACE_IMPORT[space]
+  const prompt = useMemo(() => buildRestPrompt(cfg), [cfg])
+  const [copied, setCopied] = useState(false)
+  const configured = !!REST_URL
+
+  // Reset the "Copied" affordance via an effect so a pending timer is cleaned up
+  // if the dialog closes first (avoids a setState on an unmounted component).
+  useEffect(() => {
+    if (!copied) return
+    const id = setTimeout(() => setCopied(false), 1500)
+    return () => clearTimeout(id)
+  }, [copied])
+
+  async function copyPrompt() {
+    await navigator.clipboard.writeText(prompt)
+    setCopied(true)
+    toast.success(t('Prompt copied — paste it to your AI', '已複製提示詞 — 貼給你的 AI'))
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="size-4 text-brand" />
+            {t('Import with AI', '用 AI 匯入')}
+            <span className="text-muted-foreground">· {brandTitleFor(space)}</span>
+          </DialogTitle>
+          <DialogDescription>
+            {t(
+              `Let your own AI add ${cfg.thingEn} for you through the REST API — no copy-paste back needed.`,
+              `讓你自己的 AI 透過 REST API 幫你新增${cfg.thingZh} —— 不必再把結果貼回來。`,
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        <ol className="list-decimal space-y-2 pl-5 text-[13px] leading-relaxed text-muted-foreground">
+          <li>
+            {t('Get an API key in ', '到 ')}
+            <Link
+              to="/settings/integrations"
+              onClick={() => onOpenChange(false)}
+              className="font-medium text-brand hover:underline"
+            >
+              {t('Settings → Connect an AI', '設定 → 連接 AI')}
+            </Link>
+            {t(' (an add-only key is enough).', '（用「僅新增」金鑰就夠了）。')}
+          </li>
+          <li>
+            {t(
+              'Copy the prompt below and paste it to ChatGPT / Claude / Cursor — paste your key when it asks.',
+              '複製下方提示詞，貼到 ChatGPT／Claude／Cursor —— 它要金鑰時貼上即可。',
+            )}
+          </li>
+          <li>
+            {t(`Then just tell it what to add, e.g. “${cfg.exampleEn}”.`, `接著直接告訴它要新增什麼，例如「${cfg.exampleZh}」。`)}
+          </li>
+        </ol>
+
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-muted/40 px-4 py-3 text-[12px] leading-relaxed">
+          <code>{prompt}</code>
+        </pre>
+
+        {!configured ? (
+          <p className="flex items-start gap-1.5 text-[13px] text-amber-600">
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+            {t(
+              'Your Worker URL isn’t configured, so the prompt uses a placeholder. Set VITE_REST_URL (see self-host docs).',
+              '尚未設定你的 Worker 網址，提示詞先用佔位字串。請設定 VITE_REST_URL（見自架文件）。',
+            )}
+          </p>
+        ) : null}
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            {t('Done', '完成')}
+          </Button>
+          <Button variant="brand" onClick={copyPrompt}>
+            {copied ? (
+              <>
+                <Check className="size-4" /> {t('Copied', '已複製')}
+              </>
+            ) : (
+              <>
+                <Copy className="size-4" /> {t('Copy prompt', '複製提示詞')}
               </>
             )}
           </Button>
