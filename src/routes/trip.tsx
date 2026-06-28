@@ -1,4 +1,4 @@
-import { humanizeError } from '@/lib/utils'
+import { humanizeError, cn } from '@/lib/utils'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
@@ -22,6 +22,7 @@ import {
   Trash2,
   Users,
   Wallet,
+  X,
   Map as MapIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -72,6 +73,8 @@ import {
 } from '@/lib/itinerary'
 import { useI18n, useT } from '@/lib/i18n'
 import { fmtDayDate } from '@/lib/tempo-date'
+import { tagChipStyle, tagColor } from '@/lib/tags'
+import { useTheme } from '@/lib/theme'
 
 export function TripScreen() {
   const { tripId } = useParams({ strict: false }) as { tripId: string }
@@ -102,6 +105,8 @@ export function TripScreen() {
     open: false,
   })
   const [confirmDel, setConfirmDel] = useState(false)
+  // Tag filter for the unscheduled "想去" bucket (local, not URL).
+  const [unschedTag, setUnschedTag] = useState<string | null>(null)
 
   async function removeTrip() {
     if (!confirmDel) {
@@ -200,6 +205,14 @@ export function TripScreen() {
   const filterActive = hiddenCats.size > 0 || hiddenStatuses.size > 0
   const allItems = [...trip.days.flatMap((d) => d.items), ...trip.unscheduled]
   const catsPresent = CATEGORIES.filter((c) => allItems.some((i) => categoryOf(i.category) === c))
+  // Tags: all for the item dialog's suggestions; the unscheduled subset drives
+  // the "想去" tag filter chips.
+  const allTags = Array.from(new Set(allItems.flatMap((i) => i.tags ?? []))).sort((a, b) => a.localeCompare(b))
+  const unschedTags = Array.from(new Set(trip.unscheduled.flatMap((i) => i.tags ?? []))).sort((a, b) =>
+    a.localeCompare(b),
+  )
+  // Drop a stale tag selection if nothing carries it anymore.
+  const activeUnschedTag = unschedTag && unschedTags.includes(unschedTag) ? unschedTag : null
   const fTrip = filterActive
     ? {
         ...trip,
@@ -420,7 +433,34 @@ export function TripScreen() {
                   </Button>
                 ) : null}
               </div>
-              {canEdit && !filtering && trip.unscheduled.length > 1 ? (
+              {/* Classify "想去" candidates by tag — click a tag to filter the bucket. */}
+              {unschedTags.length ? (
+                <div className="flex flex-wrap gap-1.5 px-1">
+                  {unschedTags.map((tg) => {
+                    const active = tg === activeUnschedTag
+                    return (
+                      <button
+                        key={tg}
+                        type="button"
+                        onClick={() => setUnschedTag(active ? null : tg)}
+                        aria-pressed={active}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium outline-none transition hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring/50',
+                          active
+                            ? 'border-brand/40 ring-1 ring-brand/30 text-foreground'
+                            : 'border-border text-muted-foreground hover:border-brand/40 hover:text-foreground',
+                        )}
+                        title={t(`Filter “${tg}”`, `篩選「${tg}」`)}
+                      >
+                        <span className="size-2 rounded-full" style={{ background: tagColor(tg) }} />
+                        {tg}
+                        {active ? <X className="size-3" /> : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+              {canEdit && !filtering && !activeUnschedTag && trip.unscheduled.length > 1 ? (
                 <SortableList
                   items={trip.unscheduled}
                   onReorder={(ids) => reorderItems.mutate({ dayId: null, itemIds: ids })}
@@ -443,7 +483,7 @@ export function TripScreen() {
               ) : (
                 <div className="space-y-1.5">
                   {trip.unscheduled.map((item, index) =>
-                    matchItem(item) ? (
+                    matchItem(item) && (!activeUnschedTag || item.tags?.includes(activeUnschedTag)) ? (
                       <ItemRow
                         key={item.id}
                         item={item}
@@ -509,6 +549,7 @@ export function TripScreen() {
         itineraryId={trip.id}
         days={trip.days}
         travelers={trip.travelers}
+        tagSuggestions={allTags}
         defaultDayId={itemDialog.dayId}
         defaultCurrency={trip.default_currency}
         item={itemDialog.item}
@@ -808,6 +849,8 @@ function ItemRow({
   const maps = mapsUrl(item.place, item.lat, item.lng)
   const booking = safeHttps(item.booking_url)
   const cost = fmtCost(item.cost, item.currency)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
     <div
@@ -857,6 +900,19 @@ function ItemRow({
       {/* COLUMN 2 · title (dominant) + description */}
       <div className="min-w-0 flex-1 pr-7">
         <h4 className="text-[16px] font-semibold leading-snug text-foreground sm:text-[18px]">{item.title}</h4>
+        {item.tags?.length ? (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {item.tags.map((tg) => (
+              <span
+                key={tg}
+                style={tagChipStyle(tg, isDark)}
+                className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+              >
+                {tg}
+              </span>
+            ))}
+          </div>
+        ) : null}
         {item.transport_detail ? (
           <p className="mt-0.5 text-[12.5px] text-muted-foreground">{item.transport_detail}</p>
         ) : null}

@@ -476,6 +476,7 @@ export type Database = {
           sort_order: number
           start_time: string | null
           status: string
+          tags: string[]
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -504,6 +505,7 @@ export type Database = {
           sort_order?: number
           start_time?: string | null
           status?: string
+          tags?: string[]
           title: string
           transport_detail?: string | null
           transport_mode?: string | null
@@ -532,6 +534,7 @@ export type Database = {
           sort_order?: number
           start_time?: string | null
           status?: string
+          tags?: string[]
           title?: string
           transport_detail?: string | null
           transport_mode?: string | null
@@ -1799,48 +1802,6 @@ export type Database = {
         }
         Relationships: []
       }
-      places: {
-        Row: {
-          address: string | null
-          created_at: string
-          created_via: string
-          id: string
-          name: string
-          note: string | null
-          tags: string[]
-          updated_at: string
-          url: string | null
-          user_id: string
-          visited: boolean
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string
-          created_via?: string
-          id?: string
-          name: string
-          note?: string | null
-          tags?: string[]
-          updated_at?: string
-          url?: string | null
-          user_id: string
-          visited?: boolean
-        }
-        Update: {
-          address?: string | null
-          created_at?: string
-          created_via?: string
-          id?: string
-          name?: string
-          note?: string | null
-          tags?: string[]
-          updated_at?: string
-          url?: string | null
-          user_id?: string
-          visited?: boolean
-        }
-        Relationships: []
-      }
       recipes: {
         Row: {
           created_at: string
@@ -2336,104 +2297,6 @@ export type Database = {
       get_upcoming_subscriptions: {
         Args: { p_days_ahead?: number; p_ledger_id: string; p_user_id: string | null }
         Returns: Json
-      }
-      create_place: {
-        Args: {
-          p_address?: string
-          p_created_via?: string
-          p_name: string
-          p_note?: string
-          p_tags?: string[]
-          p_url?: string
-          p_user_id: string | null
-          p_visited?: boolean
-        }
-        Returns: {
-          address: string | null
-          created_at: string
-          created_via: string
-          id: string
-          name: string
-          note: string | null
-          tags: string[]
-          updated_at: string
-          url: string | null
-          user_id: string
-          visited: boolean
-        }
-      }
-      update_place: {
-        Args: {
-          p_address?: string
-          p_name?: string
-          p_note?: string
-          p_place_id: string
-          p_tags?: string[]
-          p_url?: string
-          p_user_id: string | null
-          p_visited?: boolean
-        }
-        Returns: {
-          address: string | null
-          created_at: string
-          created_via: string
-          id: string
-          name: string
-          note: string | null
-          tags: string[]
-          updated_at: string
-          url: string | null
-          user_id: string
-          visited: boolean
-        }
-      }
-      delete_place: {
-        Args: { p_place_id: string; p_user_id: string | null }
-        Returns: boolean
-      }
-      list_places: {
-        Args: {
-          p_limit?: number
-          p_query?: string
-          p_tag?: string
-          p_user_id: string | null
-          p_visited?: boolean
-        }
-        Returns: {
-          address: string | null
-          created_at: string
-          created_via: string
-          id: string
-          name: string
-          note: string | null
-          tags: string[]
-          updated_at: string
-          url: string | null
-          user_id: string
-          visited: boolean
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "places"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      get_place: {
-        Args: { p_place_id: string; p_user_id: string | null }
-        Returns: {
-          address: string | null
-          created_at: string
-          created_via: string
-          id: string
-          name: string
-          note: string | null
-          tags: string[]
-          updated_at: string
-          url: string | null
-          user_id: string
-          visited: boolean
-        }
       }
       create_recipe: {
         Args: {
@@ -3631,6 +3494,7 @@ export type Database = {
           sort_order: number
           start_time: string | null
           status: string
+          tags: string[]
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -3668,6 +3532,7 @@ export type Database = {
           sort_order: number
           start_time: string | null
           status: string
+          tags: string[]
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -4843,6 +4708,45 @@ export type Database = {
           sort_order: number
           start_time: string | null
           status: string
+          tags: string[]
+          title: string
+          transport_detail: string | null
+          transport_mode: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "itinerary_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_item_tags: {
+        Args: { p_item_id: string; p_tags: string[]; p_user_id: string | null }
+        Returns: {
+          assignees: string[]
+          booking_ref: string | null
+          booking_url: string | null
+          category: string
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          created_via: string
+          currency: string | null
+          day_id: string | null
+          end_day_offset: number
+          end_time: string | null
+          id: string
+          itinerary_id: string
+          lat: number | null
+          lng: number | null
+          notes: string | null
+          owner_id: string
+          place: string | null
+          sort_order: number
+          start_time: string | null
+          status: string
+          tags: string[]
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -4880,6 +4784,7 @@ export type Database = {
           sort_order: number
           start_time: string | null
           status: string
+          tags: string[]
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -4922,6 +4827,7 @@ export type Database = {
           sort_order: number
           start_time: string | null
           status: string
+          tags: string[]
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -4959,6 +4865,7 @@ export type Database = {
           sort_order: number
           start_time: string | null
           status: string
+          tags: string[]
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -5615,6 +5522,7 @@ export type Database = {
           sort_order: number
           start_time: string | null
           status: string
+          tags: string[]
           title: string
           transport_detail: string | null
           transport_mode: string | null
@@ -6038,7 +5946,6 @@ export type HealthSettingsRow = PublicTables['health_settings']['Row']
 export type HealthLogRow = PublicTables['health_logs']['Row']
 export type JournalEntryRow = PublicTables['journal_entries']['Row']
 export type MedicationRow = PublicTables['medications']['Row']
-export type PlaceRow = PublicTables['places']['Row']
 export type RecipeRow = PublicTables['recipes']['Row']
 export type PantryItemRow = PublicTables['pantry_items']['Row']
 export type ShoppingItemRow = PublicTables['shopping_items']['Row']

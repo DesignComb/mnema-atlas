@@ -75,8 +75,6 @@ import type {
   AddShoppingItemsInput,
   UpdateShoppingItemInput,
   SetMealPlanInput,
-  CreatePlaceInput,
-  UpdatePlaceInput,
 } from '@shared/schemas'
 
 export const qk = {
@@ -113,9 +111,6 @@ export const qk = {
   pantry: ['pantry'] as const,
   shopping: ['shopping'] as const,
   mealPlans: (key?: string) => ['meal-plans', key ?? 'all'] as const,
-  // Places (Travel wishlist)
-  places: ['places'] as const,
-  place: (id: string) => ['place', id] as const,
   // Mnema Galleon
   ledgers: ['ledgers'] as const,
   ledger: (id: string) => ['ledger', id] as const,
@@ -518,6 +513,13 @@ export function useSetItemAssignees() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (v: { itemId: string; assignees: string[] }) => api.setItemAssignees(v.itemId, v.assignees),
+    onSuccess: () => bumpTrips(qc),
+  })
+}
+export function useSetItemTags() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { itemId: string; tags: string[] }) => api.setItemTags(v.itemId, v.tags),
     onSuccess: () => bumpTrips(qc),
   })
 }
@@ -945,30 +947,6 @@ export function useUpdateRecipe() {
 export function useDeleteRecipe() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (id: string) => api.deleteRecipe(id), onSuccess: () => bumpKitchen(qc) })
-}
-
-// ════════════════════ Places (Travel wishlist) ════════════════════
-function bumpPlaces(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: qk.places })
-  qc.invalidateQueries({ queryKey: ['place'] })
-}
-export function usePlaces() {
-  return useQuery({ queryKey: qk.places, queryFn: api.listPlaces })
-}
-export function usePlace(id: string) {
-  return useQuery({ queryKey: qk.place(id), queryFn: () => api.getPlace(id), enabled: !!id })
-}
-export function useCreatePlace() {
-  const qc = useQueryClient()
-  return useMutation({ mutationFn: (input: CreatePlaceInput) => api.createPlace(input), onSuccess: () => bumpPlaces(qc) })
-}
-export function useUpdatePlace() {
-  const qc = useQueryClient()
-  return useMutation({ mutationFn: (input: UpdatePlaceInput) => api.updatePlace(input), onSuccess: () => bumpPlaces(qc) })
-}
-export function useDeletePlace() {
-  const qc = useQueryClient()
-  return useMutation({ mutationFn: (id: string) => api.deletePlace(id), onSuccess: () => bumpPlaces(qc) })
 }
 
 export function usePantry() {

@@ -25,7 +25,6 @@ import {
   LogOut,
   Luggage,
   Map as MapIcon,
-  MapPin,
   Moon,
   Plug,
   Plus,
@@ -63,10 +62,7 @@ const NAV_STUDY = [
   { to: '/graph', label: 'Graph', zh: '圖譜', icon: Share2, exact: false },
   { to: '/study', label: 'Study', zh: '學習', icon: GraduationCap, exact: false },
 ] as const
-const NAV_TRAVEL = [
-  { to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false },
-  { to: '/places', label: 'Places', zh: '想去', icon: MapPin, exact: false },
-] as const
+const NAV_TRAVEL = [{ to: '/trips', label: 'Trips', zh: '行程', icon: MapIcon, exact: false }] as const
 const NAV_TEMPO = [{ to: '/tempo', label: 'Tasks', zh: '任務', icon: ListTodo, exact: false }] as const
 const NAV_GALLEON = [{ to: '/galleon', label: 'Money', zh: '記帳', icon: Coins, exact: false }] as const
 const NAV_HEALTH = [{ to: '/health', label: 'Health', zh: '健康', icon: HeartPulse, exact: false }] as const

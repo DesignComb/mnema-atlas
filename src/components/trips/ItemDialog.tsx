@@ -1,7 +1,7 @@
 import { humanizeError } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useCreateItem, useSetItemAssignees, useSetItemDay, useSetItemStatus, useUpdateItem } from '@/lib/hooks'
+import { useCreateItem, useSetItemAssignees, useSetItemDay, useSetItemStatus, useSetItemTags, useUpdateItem } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import { CATEGORIES, CATEGORY_META, categoryOf, type Category } from '@/lib/itinerary'
 import type { ItineraryDay, ItineraryItem } from '@/lib/api'
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { PeopleInput } from '@/components/trips/PeopleInput'
+import { TagInput } from '@/components/editor/TagInput'
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,7 @@ export function ItemDialog({
   itineraryId,
   days,
   travelers = [],
+  tagSuggestions = [],
   defaultDayId,
   defaultCurrency,
   item,
@@ -41,6 +43,8 @@ export function ItemDialog({
   itineraryId: string
   days: ItineraryDay[]
   travelers?: string[]
+  /** Existing tags across the trip's items, for autocomplete suggestions. */
+  tagSuggestions?: string[]
   /** Preselected day when adding (null/undefined → unscheduled). */
   defaultDayId?: string | null
   defaultCurrency?: string | null
@@ -54,6 +58,7 @@ export function ItemDialog({
   const setItemDay = useSetItemDay()
   const setStatus = useSetItemStatus()
   const setAssignees = useSetItemAssignees()
+  const setTags = useSetItemTags()
 
   const STATUSES: { v: ItineraryItem['status']; en: string; zh: string }[] = [
     { v: 'idea', en: 'Idea', zh: '想法' },
@@ -65,6 +70,7 @@ export function ItemDialog({
   const [title, setTitle] = useState('')
   const [status, setStatusV] = useState<ItineraryItem['status']>('planned')
   const [assignees, setAssigneesV] = useState<string[]>([])
+  const [tags, setTagsV] = useState<string[]>([])
   const [category, setCategory] = useState<Category>('sight')
   const [place, setPlace] = useState('')
   const [startTime, setStartTime] = useState('')
@@ -82,6 +88,7 @@ export function ItemDialog({
     setTitle(item?.title ?? '')
     setStatusV(item?.status ?? 'planned')
     setAssigneesV(item?.assignees ?? [])
+    setTagsV(item?.tags ?? [])
     setCategory(categoryOf(item?.category))
     setPlace(item?.place ?? '')
     setStartTime(item?.start_time?.slice(0, 5) ?? '')
@@ -135,6 +142,9 @@ export function ItemDialog({
       if (assignees.join(',') !== (item?.assignees ?? []).join(',')) {
         await setAssignees.mutateAsync({ itemId: id, assignees })
       }
+      if (tags.join(',') !== (item?.tags ?? []).join(',')) {
+        await setTags.mutateAsync({ itemId: id, tags })
+      }
       onOpenChange(false)
     } catch (err) {
       toast.error(humanizeError(err, ['Failed to save activity', '儲存活動失敗']))
@@ -142,7 +152,12 @@ export function ItemDialog({
   }
 
   const pending =
-    create.isPending || update.isPending || setItemDay.isPending || setStatus.isPending || setAssignees.isPending
+    create.isPending ||
+    update.isPending ||
+    setItemDay.isPending ||
+    setStatus.isPending ||
+    setAssignees.isPending ||
+    setTags.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,10 +217,13 @@ export function ItemDialog({
 
           {/* The old "When & where" / "Details" visual headers are now real expanders — auto-open when editing an item that uses them. */}
           <ExpanderSection
-            label={t('Place & people', '地點與人員')}
-            filledCount={(place.trim() ? 1 : 0) + (status !== 'planned' ? 1 : 0) + (assignees.length ? 1 : 0)}
+            label={t('Place, people & tags', '地點、人員與標籤')}
+            filledCount={
+              (place.trim() ? 1 : 0) + (status !== 'planned' ? 1 : 0) + (assignees.length ? 1 : 0) + (tags.length ? 1 : 0)
+            }
             defaultOpen={Boolean(
-              item && (item.place || (item.status && item.status !== 'planned') || item.assignees?.length),
+              item &&
+                (item.place || (item.status && item.status !== 'planned') || item.assignees?.length || item.tags?.length),
             )}
           >
             <div className="grid grid-cols-2 gap-3">
@@ -237,6 +255,14 @@ export function ItemDialog({
             <div className="flex flex-col gap-1.5">
               <Label>{t("Who's going", '誰參加')}</Label>
               <PeopleInput people={assignees} onChange={setAssigneesV} suggestions={travelers} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>{t('Tags', '標籤')}</Label>
+              <TagInput tags={tags} onChange={setTagsV} suggestions={tagSuggestions} listId="trip-item-tags" />
+              <p className="text-[12px] text-muted-foreground/70">
+                {t('Classify "want to go" ideas, e.g. 台南東區 · 甜點', '分類「想去」候選，例如：台南東區 · 甜點')}
+              </p>
             </div>
           </ExpanderSection>
 

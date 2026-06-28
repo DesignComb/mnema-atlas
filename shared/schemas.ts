@@ -347,6 +347,7 @@ export const createChecklistBulkInput = z.object({ itinerary_id: uuid, items: z.
 
 export const setItemStatusInput = z.object({ item_id: uuid, status: itemStatus })
 export const setItemAssigneesInput = z.object({ item_id: uuid, assignees: assigneeList })
+export const setItemTagsInput = z.object({ item_id: uuid, tags: tagArray })
 
 // ── Mnema Tempo: todos / habits / reminders ───────────────────────
 export const taskStatus = z.enum(['todo', 'done', 'cancelled'])
@@ -982,32 +983,6 @@ export const importPayload = z
   })
 export type ImportPayload = z.infer<typeof importPayload>
 
-// ── Places — "想去的店 & 景點" wishlist (Travel space) ─────────────
-const placeFields = {
-  tags: tagArray.optional(),
-  note: z.string().max(2_000).optional(),
-  url: placeUrl.optional(),
-  address: z.string().trim().max(300).optional(),
-  visited: z.boolean().optional(),
-}
-export const createPlaceInput = z.object({ name: z.string().trim().min(1).max(200), ...placeFields })
-export type CreatePlaceInput = z.infer<typeof createPlaceInput>
-export const updatePlaceInput = z.object({
-  place_id: uuid,
-  name: z.string().trim().min(1).max(200).optional(),
-  ...placeFields,
-})
-export type UpdatePlaceInput = z.infer<typeof updatePlaceInput>
-export const deletePlaceInput = z.object({ place_id: uuid })
-export const getPlaceInput = z.object({ place_id: uuid })
-export const listPlacesInput = z.object({
-  query: z.string().trim().min(1).optional(),
-  tag: z.string().trim().min(1).optional(),
-  visited: z.boolean().optional(),
-  limit: z.number().int().min(1).max(1_000).default(200),
-})
-export type ListPlacesInput = z.infer<typeof listPlacesInput>
-
 /** Human-readable descriptions reused as MCP tool descriptions. */
 export const toolDescriptions = {
   create_note: 'Create a study note (markdown body). Optionally set tags inline. Returns the new note id.',
@@ -1065,6 +1040,8 @@ export const toolDescriptions = {
   create_checklist_bulk: 'Add many packing/to-do items to a trip in one call.',
   set_item_status: 'Set an activity’s status: idea, tentative, planned, or done.',
   set_item_assignees: 'Set which travelers an activity is for (a subset of the trip’s travelers).',
+  set_item_tags:
+    'Set an activity’s tags (free-form, replaces the whole set), e.g. area + kind like 台南東區 / 甜點. Used to classify a trip’s "想去" (unscheduled) candidates. Pass an empty array to clear.',
   list_share_links: 'List a trip’s public share links.',
   create_share_link:
     'Create a public read-only share link for a trip. Optionally hide costs. Returns a token; the link is /s/<token>.',
@@ -1155,15 +1132,6 @@ export const toolDescriptions = {
     'Plan a meal for a day. Pass plan_date (YYYY-MM-DD), slot (breakfast/lunch/dinner/snack), and either recipe_id (a saved recipe) or a free-text title. Pass plan_id to update an existing plan. Returns the plan.',
   delete_meal_plan: 'Remove a planned meal.',
   list_meal_plans: 'List planned meals over an optional date range (from/to) — for the week’s menu.',
-  // Places — "想去的店 & 景點" wishlist (Travel space)
-  create_place:
-    'Save a place the user wants to visit (shop/restaurant/sight). Pass name, optional tags (free-form, e.g. area + category like 台南東區 / 甜點), note, url (maps/IG/site), address, visited. NOT tied to a trip — it’s a standalone wishlist. Returns the new place id.',
-  update_place:
-    'Update a saved place (only the fields you pass change). Pass the full tags array to replace it; set visited=true to mark it as already been.',
-  delete_place: 'Delete a saved place from the wishlist.',
-  list_places:
-    'List the user’s saved places (optional name query, single tag filter, visited filter). Want-to-go (not visited) come first. Returns ids + names + tags.',
-  get_place: 'Fetch one saved place with its tags, note, url and address.',
   // Mnema Galleon (money)
   create_ledger: 'Create a money ledger (帳本). Seeds default categories. Returns the new ledger id.',
   update_ledger: 'Rename a ledger, change its base currency, icon, colour, or archive it.',

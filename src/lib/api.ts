@@ -69,8 +69,6 @@ import type {
   SetMealPlanInput,
 } from '@shared/schemas'
 import type { RecipeRow, PantryItemRow, ShoppingItemRow, MealPlanRow } from './database.types'
-import type { CreatePlaceInput, UpdatePlaceInput } from '@shared/schemas'
-import type { PlaceRow } from './database.types'
 import type {
   AccountRow,
   BudgetRow,
@@ -441,6 +439,7 @@ export interface ItineraryItem {
   sort_order: number
   status: 'idea' | 'tentative' | 'planned' | 'done'
   assignees: string[]
+  tags: string[]
 }
 export interface TripBooking {
   id: string
@@ -784,6 +783,9 @@ export async function setItemStatus(itemId: string, status: ItineraryItem['statu
 }
 export async function setItemAssignees(itemId: string, assignees: string[]): Promise<ItineraryItemRow> {
   return unwrap(await supabase.rpc('set_item_assignees', { p_user_id: null, p_item_id: itemId, p_assignees: assignees }))
+}
+export async function setItemTags(itemId: string, tags: string[]): Promise<ItineraryItemRow> {
+  return unwrap(await supabase.rpc('set_item_tags', { p_user_id: null, p_item_id: itemId, p_tags: tags }))
 }
 
 // ── Public share links ────────────────────────────────────────────
@@ -1440,52 +1442,6 @@ export async function deleteRecipe(recipeId: string, imageUrl?: string | null): 
   // Undo-safe by construction: undoableDelete only calls this commit AFTER the
   // grace window, so the storage object outlives any possible Undo.
   if (imageUrl) void removeUploadedImage(imageUrl)
-}
-
-// ── Places — "想去的店 & 景點" wishlist (Travel space) ─────────────
-export async function listPlaces(): Promise<PlaceRow[]> {
-  return unwrap(
-    await supabase
-      .from('places')
-      .select('*')
-      .order('visited', { ascending: true })
-      .order('created_at', { ascending: false })
-      .limit(1000),
-  )
-}
-export async function getPlace(id: string): Promise<PlaceRow | null> {
-  return unwrap(await supabase.from('places').select('*').eq('id', id).maybeSingle())
-}
-export async function createPlace(input: CreatePlaceInput): Promise<PlaceRow> {
-  return unwrap(
-    await supabase.rpc('create_place', {
-      p_user_id: null,
-      p_name: input.name,
-      p_tags: input.tags ?? undefined,
-      p_note: input.note ?? undefined,
-      p_url: input.url ?? undefined,
-      p_address: input.address ?? undefined,
-      p_visited: input.visited ?? undefined,
-    }),
-  )
-}
-export async function updatePlace(input: UpdatePlaceInput): Promise<PlaceRow> {
-  return unwrap(
-    await supabase.rpc('update_place', {
-      p_user_id: null,
-      p_place_id: input.place_id,
-      p_name: input.name ?? undefined,
-      p_tags: input.tags ?? undefined,
-      p_note: input.note ?? undefined,
-      p_url: input.url ?? undefined,
-      p_address: input.address ?? undefined,
-      p_visited: input.visited ?? undefined,
-    }),
-  )
-}
-export async function deletePlace(placeId: string): Promise<void> {
-  const res = await supabase.rpc('delete_place', { p_user_id: null, p_place_id: placeId })
-  if (res.error) throw new Error(res.error.message)
 }
 
 export async function listPantry(): Promise<PantryItemRow[]> {

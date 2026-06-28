@@ -121,14 +121,6 @@ const tripRoute = createRoute({
   },
   component: lazyRouteComponent(() => import('@/routes/trip'), 'TripScreen'),
 })
-const placesRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: 'places',
-  validateSearch: (search: Record<string, unknown>): { tag?: string } => ({
-    tag: typeof search.tag === 'string' ? search.tag : undefined,
-  }),
-  component: lazyRouteComponent(() => import('@/routes/places'), 'PlacesScreen'),
-})
 const tempoRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'tempo',
@@ -260,7 +252,6 @@ const routeTree = rootRoute.addChildren([
     cardsRoute,
     tripsRoute,
     tripRoute,
-    placesRoute,
     tempoRoute,
     galleonRoute,
     healthRoute,
