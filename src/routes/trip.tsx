@@ -227,8 +227,8 @@ export function TripScreen() {
               </Button>
             ) : null}
             {isOwner ? (
-              <Button variant="ghost" size="sm" onClick={() => setMembersDialog(true)} title={t('Collaborators', '協作者')}>
-                <Users className="size-4" />
+              <Button variant="outline" size="sm" onClick={() => setMembersDialog(true)}>
+                <Users className="size-4" /> <span className="hidden sm:inline">{t('Collaborate', '共享')}</span>
               </Button>
             ) : null}
             {canEdit ? (
