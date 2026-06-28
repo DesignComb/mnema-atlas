@@ -424,6 +424,51 @@ function bumpTrips(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['itineraries'] })
 }
 
+// ── Optimistic helpers for one trip's tree (qk.itinerary) ──
+// Item edits patch the cached tree synchronously so 排入/刪除/編輯 reflect
+// instantly, independent of refetch timing; onSettled re-syncs from the server.
+type QC = ReturnType<typeof useQueryClient>
+function patchTripTree(qc: QC, tripId: string, fn: (t: any) => any) {
+  const key = qk.itinerary(tripId)
+  const prev = qc.getQueryData(key)
+  if (prev) qc.setQueryData(key, fn(prev))
+  return { key, prev }
+}
+const mapTreeItem = (t: any, id: string, patch: Record<string, unknown>) => ({
+  ...t,
+  days: t.days.map((d: any) => ({ ...d, items: d.items.map((i: any) => (i.id === id ? { ...i, ...patch } : i)) })),
+  unscheduled: t.unscheduled.map((i: any) => (i.id === id ? { ...i, ...patch } : i)),
+})
+const removeTreeItem = (t: any, id: string) => ({
+  ...t,
+  days: t.days.map((d: any) => ({ ...d, items: d.items.filter((i: any) => i.id !== id) })),
+  unscheduled: t.unscheduled.filter((i: any) => i.id !== id),
+})
+function moveTreeItem(t: any, itemId: string, dayId: string | null) {
+  let moved: any = null
+  const strip = (arr: any[]) => arr.filter((i) => (i.id === itemId ? ((moved = i), false) : true))
+  const days = t.days.map((d: any) => ({ ...d, items: strip(d.items) }))
+  let unscheduled = strip(t.unscheduled)
+  if (!moved) return t
+  const updated = { ...moved, day_id: dayId }
+  if (dayId === null) {
+    unscheduled = [...unscheduled, updated]
+  } else {
+    const di = days.findIndex((d: any) => d.id === dayId)
+    if (di >= 0) days[di] = { ...days[di], items: [...days[di].items, updated] }
+  }
+  return { ...t, days, unscheduled }
+}
+/** Standard onError/onSettled for an optimistic trip mutation. */
+function tripRollback(qc: QC) {
+  return {
+    onError: (_e: unknown, _v: unknown, ctx: any) => {
+      if (ctx?.prev) qc.setQueryData(ctx.key, ctx.prev)
+    },
+    onSettled: () => bumpTrips(qc),
+  }
+}
+
 export function useCreateItinerary() {
   const qc = useQueryClient()
   return useMutation({
@@ -475,17 +520,37 @@ export function useCreateItem() {
 }
 export function useUpdateItem() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (input: UpdateItemInput) => api.updateItem(input), onSuccess: () => bumpTrips(qc) })
+  return useMutation({
+    mutationFn: (input: UpdateItemInput & { tripId: string }) => api.updateItem(input),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: qk.itinerary(v.tripId) })
+      const { item_id, tripId: _t, expected_updated_at: _e, ...rest } = v
+      const patch = Object.fromEntries(Object.entries(rest).filter(([, val]) => val !== undefined))
+      return patchTripTree(qc, v.tripId, (t) => mapTreeItem(t, item_id, patch))
+    },
+    ...tripRollback(qc),
+  })
 }
 export function useDeleteItem() {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: (id: string) => api.deleteItem(id), onSuccess: () => bumpTrips(qc) })
+  return useMutation({
+    mutationFn: (v: { id: string; tripId: string }) => api.deleteItem(v.id),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: qk.itinerary(v.tripId) })
+      return patchTripTree(qc, v.tripId, (t) => removeTreeItem(t, v.id))
+    },
+    ...tripRollback(qc),
+  })
 }
 export function useSetItemDay() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (v: { itemId: string; dayId: string | null }) => api.setItemDay(v.itemId, v.dayId),
-    onSuccess: () => bumpTrips(qc),
+    mutationFn: (v: { itemId: string; dayId: string | null; tripId: string }) => api.setItemDay(v.itemId, v.dayId),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: qk.itinerary(v.tripId) })
+      return patchTripTree(qc, v.tripId, (t) => moveTreeItem(t, v.itemId, v.dayId))
+    },
+    ...tripRollback(qc),
   })
 }
 export function useReorderItems() {
@@ -505,22 +570,36 @@ export function useCreateItemsBulk() {
 export function useSetItemStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (v: { itemId: string; status: ItineraryItem['status'] }) => api.setItemStatus(v.itemId, v.status),
-    onSuccess: () => bumpTrips(qc),
+    mutationFn: (v: { itemId: string; status: ItineraryItem['status']; tripId: string }) =>
+      api.setItemStatus(v.itemId, v.status),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: qk.itinerary(v.tripId) })
+      return patchTripTree(qc, v.tripId, (t) => mapTreeItem(t, v.itemId, { status: v.status }))
+    },
+    ...tripRollback(qc),
   })
 }
 export function useSetItemAssignees() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (v: { itemId: string; assignees: string[] }) => api.setItemAssignees(v.itemId, v.assignees),
-    onSuccess: () => bumpTrips(qc),
+    mutationFn: (v: { itemId: string; assignees: string[]; tripId: string }) =>
+      api.setItemAssignees(v.itemId, v.assignees),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: qk.itinerary(v.tripId) })
+      return patchTripTree(qc, v.tripId, (t) => mapTreeItem(t, v.itemId, { assignees: v.assignees }))
+    },
+    ...tripRollback(qc),
   })
 }
 export function useSetItemTags() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (v: { itemId: string; tags: string[] }) => api.setItemTags(v.itemId, v.tags),
-    onSuccess: () => bumpTrips(qc),
+    mutationFn: (v: { itemId: string; tags: string[]; tripId: string }) => api.setItemTags(v.itemId, v.tags),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: qk.itinerary(v.tripId) })
+      return patchTripTree(qc, v.tripId, (t) => mapTreeItem(t, v.itemId, { tags: v.tags }))
+    },
+    ...tripRollback(qc),
   })
 }
 

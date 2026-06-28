@@ -74,7 +74,8 @@ export function categoryOf(c: string | null | undefined): Category {
 
 /** Activity status presentation (shared by timeline / table / board views). */
 export type ItemStatus = 'idea' | 'tentative' | 'planned' | 'done'
-export const STATUS_ORDER: ItemStatus[] = ['idea', 'tentative', 'planned', 'done']
+// 'tentative' (待確認) is retired from the UI; statusOf maps any legacy value to 'planned'.
+export const STATUS_ORDER: ItemStatus[] = ['idea', 'planned', 'done']
 export const STATUS_META: Record<ItemStatus, { en: string; zh: string; dot: string; text: string; chip: string }> = {
   idea: {
     en: 'Idea',

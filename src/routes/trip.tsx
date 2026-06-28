@@ -178,8 +178,9 @@ export function TripScreen() {
   }
 
   async function removeItem(item: ItineraryItem) {
+    if (!trip) return
     try {
-      await deleteItem.mutateAsync(item.id)
+      await deleteItem.mutateAsync({ id: item.id, tripId: trip.id })
     } catch (err) {
       toast.error(humanizeError(err, ['Failed to delete activity', '刪除活動失敗']))
     }
@@ -250,7 +251,8 @@ export function TripScreen() {
       (unschedCats.size === 0 || unschedCats.has(categoryOf(i.category))) &&
       (!activeUnschedTag || i.tags?.includes(activeUnschedTag)),
   )
-  const scheduleItem = (itemId: string, dayId: string) => setItemDayQuick.mutate({ itemId, dayId })
+  const scheduleItem = (itemId: string, dayId: string) =>
+    setItemDayQuick.mutate({ itemId, dayId, tripId: trip.id })
   const fTrip = filterActive
     ? {
         ...trip,

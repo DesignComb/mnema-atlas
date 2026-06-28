@@ -62,7 +62,6 @@ export function ItemDialog({
 
   const STATUSES: { v: ItineraryItem['status']; en: string; zh: string }[] = [
     { v: 'idea', en: 'Idea', zh: '想法' },
-    { v: 'tentative', en: 'Tentative', zh: '待確認' },
     { v: 'planned', en: 'Planned', zh: '已排' },
     { v: 'done', en: 'Done', zh: '完成' },
   ]
@@ -126,11 +125,11 @@ export function ItemDialog({
     try {
       let id: string
       if (editing && item) {
-        await update.mutateAsync({ item_id: item.id, ...fields, expected_updated_at: undefined })
+        await update.mutateAsync({ item_id: item.id, ...fields, expected_updated_at: undefined, tripId: itineraryId })
         id = item.id
         const nextDay = dayId === UNSCHEDULED ? null : dayId
         if (nextDay !== (item.day_id ?? null)) {
-          await setItemDay.mutateAsync({ itemId: item.id, dayId: nextDay })
+          await setItemDay.mutateAsync({ itemId: item.id, dayId: nextDay, tripId: itineraryId })
         }
       } else {
         const row = await create.mutateAsync(
@@ -138,12 +137,12 @@ export function ItemDialog({
         )
         id = row.id
       }
-      if (status !== (item?.status ?? 'planned')) await setStatus.mutateAsync({ itemId: id, status })
+      if (status !== (item?.status ?? 'planned')) await setStatus.mutateAsync({ itemId: id, status, tripId: itineraryId })
       if (assignees.join(',') !== (item?.assignees ?? []).join(',')) {
-        await setAssignees.mutateAsync({ itemId: id, assignees })
+        await setAssignees.mutateAsync({ itemId: id, assignees, tripId: itineraryId })
       }
       if (tags.join(',') !== (item?.tags ?? []).join(',')) {
-        await setTags.mutateAsync({ itemId: id, tags })
+        await setTags.mutateAsync({ itemId: id, tags, tripId: itineraryId })
       }
       onOpenChange(false)
     } catch (err) {
