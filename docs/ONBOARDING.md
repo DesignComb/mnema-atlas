@@ -421,6 +421,7 @@ npm run apk:release "notes"          # native 一條龍發版（--dry-run 只 bu
 - **`CLAUDE.md`** — 架構決策、完整指令表、測試/發版工作流的權威來源（記錄 shared write-path、BYO-AI DNA、two-package/two-port dev setup，以及 typecheck 是唯一靜態檢查、無 lint 等慣例）。入門先讀這份。
 - **`supabase/migrations/0001_init.sql`** — 頂部註解 + `app.resolve_uid` 是理解 security spine 與 byte-identical 寫入路徑的根本。
 - **`worker/README.md`** — Worker（MCP server + REST + 排程後端）的細節。
+- **`docs/AI_IMPORT.md`** — 使用者向：三條讓「你自己的 AI」幫你寫入的免/輕設定路徑——各 Space 的 REST「用 AI 匯入」、旅遊的 copy-out/paste-back round-trip「用 AI 調整」、Study 的 `mnema` 貼上。
 - **`docs/SELF_HOST.md`** — 自架部署，含 cron 為何可能 inert（workers.dev subdomain）的註記。
 - **`docs/KNOWN_ISSUES.md`** — 目前空的（規矩：發現 bug 記進去、修好刪掉，所以「空」= 無已知未修 bug）。
 - **`docs/UI_GUIDELINES.md`** — §7 Don't 是會直接造成 bug 的硬規則。
