@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import { AlertTriangle, Check, FastForward, Keyboard, Loader2, PartyPopper, Sparkles, Trash2, Undo2 } from 'lucide-react'
+import { AlertTriangle, Check, FastForward, Keyboard, Layers, Loader2, PartyPopper, Sparkles, Trash2, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDecks, useDueCards } from '@/lib/hooks'
@@ -70,7 +70,11 @@ export function StudyScreen() {
 
   const current = queue?.[idx]
   const total = queue?.length ?? 0
+  const deckById = useMemo(() => new Map((decks ?? []).map((d) => [d.id, d.name])), [decks])
   const deckName = deckId ? decks?.find((d) => d.id === deckId)?.name : t('All decks', '所有牌組')
+  // The deck a card belongs to — surfaced on the card so a mixed session
+  // (All decks / a #tag spanning decks) shows where each prompt comes from.
+  const currentDeckName = current?.deck_id ? deckById.get(current.deck_id) : undefined
 
   const gradeCurrent = useCallback(
     (rating: Grade) => {
@@ -368,6 +372,12 @@ export function StudyScreen() {
                   onClick={() => !flipped && setFlipped(true)}
                   className="flex min-h-40 w-full flex-col items-center justify-center gap-4 px-6 py-8 text-center sm:min-h-44 sm:px-8 sm:py-10"
                 >
+                  {currentDeckName ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-muted px-2.5 py-0.5 text-[11px] font-medium text-brand">
+                      <Layers className="size-3" />
+                      {currentDeckName}
+                    </span>
+                  ) : null}
                   <p className="font-serif text-xl leading-snug text-foreground sm:text-2xl">{current.front}</p>
                   {current.image_url ? (
                     <img src={current.image_url} alt="" className="max-h-56 rounded-lg border border-border object-contain" />
