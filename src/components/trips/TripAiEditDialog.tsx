@@ -112,8 +112,8 @@ export function TripAiEditDialog({
               )}
             </Button>
           </div>
-          <pre className="max-h-32 overflow-auto rounded-lg border border-border bg-muted/40 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-            <code>{exportText}</code>
+          <pre className="max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-muted/40 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+            <code className="break-words">{exportText}</code>
           </pre>
         </div>
 

@@ -256,8 +256,8 @@ function RestImportGuide({
           </li>
         </ol>
 
-        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-muted/40 px-4 py-3 text-[12px] leading-relaxed">
-          <code>{prompt}</code>
+        <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-muted/40 px-4 py-3 text-[12px] leading-relaxed">
+          <code className="break-words">{prompt}</code>
         </pre>
 
         {!configured ? (
