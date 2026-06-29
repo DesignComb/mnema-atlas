@@ -83,10 +83,10 @@ export function ShareDialog({
           {active.length ? (
             <div className="space-y-1.5">
               {active.map((l) => (
-                <div key={l.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-                  <Link2 className="size-4 shrink-0 text-muted-foreground" />
+                <div key={l.id} className="flex items-start gap-2 rounded-lg border border-border bg-card px-3 py-2">
+                  <Link2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-mono text-[12px] text-muted-foreground">{shareUrl(l.token)}</p>
+                    <p className="break-all font-mono text-[12px] text-muted-foreground">{shareUrl(l.token)}</p>
                     {l.hide_costs ? (
                       <p className="text-[11px] text-muted-foreground/80">{t('Costs hidden', '隱藏花費')}</p>
                     ) : null}
