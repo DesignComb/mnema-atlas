@@ -28,6 +28,15 @@ export interface Env {
   /** Firebase service-account JSON (secret) — signs FCM HTTP v1 sends for native
    *  Android push. Native push is disabled until set. */
   FCM_SERVICE_ACCOUNT?: string
+  /** Resend API key (secret) — enables collaborator/notification email. Email is
+   *  disabled until set. `wrangler secret put RESEND_API_KEY`. */
+  RESEND_API_KEY?: string
+  /** Resend "from" address on a Resend-verified domain, e.g. "Mnema <noreply@yourdomain>". */
+  RESEND_FROM?: string
+  /** Public URL of the web app (e.g. https://app.example.com) — makes email links
+   *  absolute. Web-push/FCM use relative URLs (resolved by the app), so this is
+   *  only needed for email. */
+  APP_PUBLIC_URL?: string
 }
 
 export interface ToolContext {

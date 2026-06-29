@@ -7,7 +7,7 @@ import { rateLimit } from './ratelimit'
 import { buildOpenApiSpec } from './openapi'
 import { buildLlmsTxt } from './llms'
 import { discoveryIndex } from './discovery'
-import { runReminderScan, runDailyReviewScan, runTodoDigestScan, runHabitReminderScan, scheduled } from './scheduled'
+import { runReminderScan, runDailyReviewScan, runTodoDigestScan, runHabitReminderScan, runCollaboratorNotifyScan, scheduled } from './scheduled'
 import { serviceClient } from './db'
 import { buildPushPayload } from '@block65/webcrypto-web-push'
 import type { Env } from './env'
@@ -137,6 +137,9 @@ app.post('/_cron/run-reminders', async (c) => {
   // (each self-gates on the clock).
   c.executionCtx.waitUntil(runTodoDigestScan(c.env))
   c.executionCtx.waitUntil(runHabitReminderScan(c.env))
+  // Collaborator-added notifications (push now; email once Resend is set) also
+  // ride this per-minute ping — recipients hear within ~1 minute of being added.
+  c.executionCtx.waitUntil(runCollaboratorNotifyScan(c.env))
   return c.json({ ok: true })
 })
 

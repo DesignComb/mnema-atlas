@@ -1,6 +1,7 @@
 import { buildPushPayload } from '@block65/webcrypto-web-push'
 import { serviceClient } from './db'
 import { sendFcm } from './fcm'
+import { sendEmail } from './email'
 import type { Env } from './env'
 
 interface DueReminder {
@@ -10,6 +11,88 @@ interface DueReminder {
   body: string
   subscriptions: { endpoint: string; p256dh: string; auth: string }[]
   fcm_tokens?: string[]
+}
+
+interface DueCollabNotif {
+  id: string
+  itinerary_id: string
+  trip_title: string
+  role: 'viewer' | 'editor'
+  recipient_email: string
+  subscriptions: { endpoint: string; p256dh: string; auth: string }[]
+  fcm_tokens?: string[]
+}
+
+function collabEmailHtml(body: string, link: string): string {
+  const ent: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
+  const safe = (s: string) => s.replace(/[&<>"]/g, (c) => ent[c] ?? c)
+  const button = link
+    ? `<p style="margin:24px 0"><a href="${safe(link)}" style="background:#1f6feb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">開啟行程 · Open trip</a></p>`
+    : ''
+  return `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;color:#1a1a1a">
+  <h2 style="font-size:18px;margin:0 0 8px">行程協作邀請</h2>
+  <p style="font-size:14px;line-height:1.6;color:#444">${safe(body)}</p>
+  ${button}
+  <p style="font-size:12px;color:#999;margin-top:24px">這封信由 Mnema 寄出。</p>
+</div>`
+}
+
+/**
+ * Cron entrypoint (rides the per-minute reminder ping): notify a freshly-added
+ * trip collaborator via Web Push + FCM, and — once Resend is configured — email.
+ * Rows are enqueued by add_member; idempotent via mark_collaborator_notified.
+ */
+export async function runCollaboratorNotifyScan(env: Env): Promise<void> {
+  const sb = serviceClient(env)
+  const { data, error } = await sb.rpc('due_collaborator_notifications_for_cron')
+  if (error || !Array.isArray(data)) return
+  const vapid =
+    env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT && env.VAPID_PUBLIC_KEY
+      ? { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY }
+      : null
+
+  await Promise.allSettled(
+    (data as DueCollabNotif[]).map(async (r) => {
+      const url = `/trips/${r.itinerary_id}`
+      const title = '行程協作邀請'
+      const body =
+        r.role === 'editor'
+          ? `你被加入「${r.trip_title}」,可以一起編輯`
+          : `你被加入「${r.trip_title}」(檢視)`
+
+      // Web Push
+      if (vapid) {
+        await Promise.allSettled(
+          r.subscriptions.map(async (s) => {
+            const subscription = { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } }
+            const message = { data: { title, body, url, tag: `collab-${r.id}`, kind: 'collaborator' }, options: { ttl: 600 as number } }
+            try {
+              const payload = await buildPushPayload(message, subscription, vapid)
+              const res = await fetch(s.endpoint, payload)
+              if (res.status === 404 || res.status === 410) await sb.rpc('prune_push_subscription', { p_endpoint: s.endpoint })
+            } catch {
+              /* best-effort */
+            }
+          }),
+        )
+      }
+
+      // Native (FCM) — data-only, like the reminder path.
+      await sendFcm(env, r.fcm_tokens ?? [], { title, body, url, kind: 'collaborator' })
+
+      // Email (no-op until Resend is configured). Absolute link needs APP_PUBLIC_URL.
+      const link = env.APP_PUBLIC_URL ? `${env.APP_PUBLIC_URL.replace(/\/$/, '')}${url}` : ''
+      await sendEmail(env, {
+        to: r.recipient_email,
+        subject: `${title}:${r.trip_title}`,
+        html: collabEmailHtml(body, link),
+        text: link ? `${body}\n\n${link}` : body,
+      })
+
+      // Mark done so it won't fire again (even if the recipient has no devices).
+      await sb.rpc('mark_collaborator_notified', { p_id: r.id })
+    }),
+  )
 }
 
 /**

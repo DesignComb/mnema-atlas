@@ -30,6 +30,11 @@ routes = [
 VAPID_PUBLIC_KEY = "BJOIOxAJypzGgGZ4v_GsrrRAT2-gGwreLMbhrju_DxZ_2ZmvEunXKHmYuOGUrFI4TVKzY2RLBboN-O0Iy7sbJ38"
 # Public base URL of this worker — the SW POSTs notification actions to {url}/_action.
 WORKER_PUBLIC_URL = "https://mnema-ai.dco.tw"
+# Collaborator-notification email (Resend) — OPTIONAL; email stays off until set.
+# RESEND_API_KEY is a SECRET → `cd worker; wrangler secret put RESEND_API_KEY`.
+# These two are safe to commit once known (uncomment + fill):
+# RESEND_FROM    = "Mnema <noreply@your-verified-domain>"   # Resend-verified sender
+# APP_PUBLIC_URL = "https://your-web-app-url"                # makes email trip links absolute
 
 # ── Secrets (server-only — NEVER commit) ─────────────────────────────
 # Local dev: put them in worker/.dev.vars (see .dev.vars.example).
