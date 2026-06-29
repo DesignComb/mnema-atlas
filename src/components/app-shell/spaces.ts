@@ -17,6 +17,7 @@ import {
   ListTree,
   Luggage,
   Map as MapIcon,
+  Moon,
   Share2,
   Sparkles,
   Ticket,
@@ -88,6 +89,7 @@ export const STUDY_NAV: SubNavItem[] = [
 /** Tempo: ?view= on /tempo; the last item drills into the full-screen list picker. */
 export const TEMPO_VIEWS: SubNavItem[] = [
   { kind: 'param', param: 'view', value: 'today', en: 'Today', zh: '今天', icon: CalendarCheck },
+  { kind: 'param', param: 'view', value: 'tomorrow', en: 'Tomorrow', zh: '明天', icon: Moon },
   { kind: 'param', param: 'view', value: 'upcoming', en: 'Upcoming', zh: '即將', icon: CalendarClock },
   { kind: 'param', param: 'view', value: undefined, en: 'All tasks', zh: '所有任務', icon: ListTodo },
   { kind: 'param', param: 'view', value: 'habits', en: 'Habits', zh: '習慣', icon: Flame },

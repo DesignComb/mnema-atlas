@@ -12,6 +12,7 @@ import {
   Inbox,
   Link2,
   ListTodo,
+  Moon,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -59,12 +60,14 @@ import { PullToRefresh } from '@/lib/use-pull-to-refresh'
 import { HabitCheckButton } from '@/components/tempo/HabitCheckButton'
 import { CalendarView } from '@/components/tempo/CalendarView'
 import { CaptureInbox } from '@/components/tempo/CaptureInbox'
+import { TomorrowPad } from '@/components/tempo/TomorrowPad'
 
-type ViewKey = 'all' | 'today' | 'upcoming' | 'habits' | 'calendar' | 'capture' | 'lists'
+type ViewKey = 'all' | 'today' | 'tomorrow' | 'upcoming' | 'habits' | 'calendar' | 'capture' | 'lists'
 
 const VIEW_LABEL: Record<ViewKey, [string, string]> = {
   all: ['All tasks', '所有任務'],
   today: ['Today', '今天'],
+  tomorrow: ['Tomorrow', '明天'],
   upcoming: ['Upcoming', '即將'],
   habits: ['Habits', '習慣'],
   calendar: ['Calendar', '行事曆'],
@@ -167,7 +170,15 @@ export function TempoScreen() {
         ? selectedList.name
         : t(...VIEW_LABEL[view])
   const headingIcon =
-    view === 'habits' ? <Flame className="size-4" /> : listSel === 'inbox' ? <Inbox className="size-4" /> : <ListTodo className="size-4" />
+    view === 'tomorrow' ? (
+      <Moon className="size-4" />
+    ) : view === 'habits' ? (
+      <Flame className="size-4" />
+    ) : listSel === 'inbox' ? (
+      <Inbox className="size-4" />
+    ) : (
+      <ListTodo className="size-4" />
+    )
   // When a list is focused but the view is a time filter, show that as context.
   const viewContext = selectedList || listSel === 'inbox' ? (view !== 'all' ? t(...VIEW_LABEL[view]) : null) : null
 
@@ -289,14 +300,17 @@ export function TempoScreen() {
       <PageHeader
         title={heading}
         subtitle={
-          tasks
-            ? viewContext
-              ? `${viewContext} · ${t(`${sorted.length} shown`, `${sorted.length} 項`)}`
-              : t(`${sorted.length} shown`, `顯示 ${sorted.length} 項`)
-            : undefined
+          view === 'tomorrow'
+            ? t('Plan the night before', '前一晚先想好')
+            : tasks
+              ? viewContext
+                ? `${viewContext} · ${t(`${sorted.length} shown`, `${sorted.length} 項`)}`
+                : t(`${sorted.length} shown`, `顯示 ${sorted.length} 項`)
+              : undefined
         }
         icon={headingIcon}
         actions={
+          view === 'tomorrow' ? undefined : (
           <div className="flex items-center gap-1.5">
             <AiImportButton />
             {selectedList ? (
@@ -324,10 +338,13 @@ export function TempoScreen() {
               <Plus className="size-4" /> <span className="hidden sm:inline">{t('New task', '新增任務')}</span>
             </Button>
           </div>
+          )
         }
       />
 
-      {view === 'lists' ? (
+      {view === 'tomorrow' ? (
+        <TomorrowPad />
+      ) : view === 'lists' ? (
         <div className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">{t('Lists', '清單')}</h2>

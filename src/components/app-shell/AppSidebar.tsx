@@ -82,6 +82,7 @@ const SPACE_SIDEBAR: Record<SpaceKey, { brandIcon: LucideIcon; brandTitle: strin
 // In the Tempo space the rail shows views (by ?view=) + the user's lists (by ?list=).
 const TEMPO_VIEWS = [
   { key: 'today', en: 'Today', zh: '今天', icon: CalendarCheck },
+  { key: 'tomorrow', en: 'Tomorrow', zh: '明天', icon: Moon },
   { key: 'upcoming', en: 'Upcoming', zh: '即將', icon: CalendarClock },
   { key: 'all', en: 'All tasks', zh: '所有任務', icon: ListTodo },
   { key: 'habits', en: 'Habits', zh: '習慣', icon: Flame },
