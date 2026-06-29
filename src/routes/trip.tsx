@@ -18,6 +18,7 @@ import {
   Pencil,
   Plus,
   Share2,
+  Sparkles,
   SlidersHorizontal,
   Table2,
   Ticket,
@@ -47,6 +48,7 @@ import { SortableList } from '@/components/common/SortableList'
 import { ItemDialog } from '@/components/trips/ItemDialog'
 import { ShareDialog } from '@/components/trips/ShareDialog'
 import { MembersDialog } from '@/components/trips/MembersDialog'
+import { TripAiEditDialog } from '@/components/trips/TripAiEditDialog'
 import { BookingsTab, BudgetTab, PackingTab } from '@/components/trips/TripSections'
 import { ItineraryBoard, ItineraryTable } from '@/components/trips/ItineraryViews'
 import {
@@ -105,6 +107,7 @@ export function TripScreen() {
   const [tripDialog, setTripDialog] = useState(false)
   const [shareDialog, setShareDialog] = useState(false)
   const [membersDialog, setMembersDialog] = useState(false)
+  const [aiEditOpen, setAiEditOpen] = useState(false)
   const [dayDialog, setDayDialog] = useState<{ open: boolean; day?: ItineraryDay }>({ open: false })
   const [itemDialog, setItemDialog] = useState<{ open: boolean; item?: ItineraryItem; dayId?: string | null }>({
     open: false,
@@ -274,6 +277,11 @@ export function TripScreen() {
             {canEdit ? (
               <Button variant="outline" size="sm" onClick={() => setDayDialog({ open: true })}>
                 <CalendarPlus className="size-4" /> <span className="hidden sm:inline">{t('Day', '日期')}</span>
+              </Button>
+            ) : null}
+            {canEdit ? (
+              <Button variant="outline" size="sm" onClick={() => setAiEditOpen(true)}>
+                <Sparkles className="size-4" /> <span className="hidden sm:inline">{t('Edit with AI', '用 AI 調整')}</span>
               </Button>
             ) : null}
             {isOwner ? (
@@ -638,6 +646,7 @@ export function TripScreen() {
       <TripDialog open={tripDialog} onOpenChange={setTripDialog} trip={tripRow(trip)} />
       <ShareDialog open={shareDialog} onOpenChange={setShareDialog} itineraryId={trip.id} />
       <MembersDialog open={membersDialog} onOpenChange={setMembersDialog} itineraryId={trip.id} />
+      <TripAiEditDialog open={aiEditOpen} onOpenChange={setAiEditOpen} trip={trip} />
       <DayDialog
         open={dayDialog.open}
         onOpenChange={(v) => setDayDialog((s) => ({ ...s, open: v }))}
