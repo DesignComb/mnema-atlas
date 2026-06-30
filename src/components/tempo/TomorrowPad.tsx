@@ -6,9 +6,12 @@ import { useT } from '@/lib/i18n'
 import { humanizeError } from '@/lib/utils'
 
 // A single, persistent free-text scratchpad — "what I'll do tomorrow", jotted
-// the night before. No time, no checkboxes: it's just one Note, reused. The
-// note id is remembered per-device in localStorage; if it's missing (first run)
-// or stale (the note was deleted elsewhere), we create a fresh one.
+// the night before. No time, no checkboxes: it's just one Note, reused.
+//
+// The note is resolved by its stable title, NOT only by a localStorage id, so it
+// stays a SINGLE note across devices, cache clears, and private windows (an id
+// that fails to persist would otherwise spawn a fresh note every visit). The
+// localStorage id is kept purely as a fast path to skip the list scan.
 const STORE_KEY = 'mnema:tomorrow-note'
 const NOTE_TITLE = 'Tomorrow · 明天'
 
@@ -22,48 +25,47 @@ export function TomorrowPad() {
   const [status, setStatus] = useState<Status>('idle')
   // Last value persisted to the server — the autosave effect diffs against this.
   const savedRef = useRef('')
-  // Guards the resolve effect against React 18 StrictMode's double-invoke (which
-  // would otherwise create two notes on first visit).
-  const resolving = useRef(false)
 
-  // Resolve (or create) the scratchpad note exactly once on mount.
+  // Resolve (or create) the scratchpad note on mount. `cancelled` (set by the
+  // cleanup) makes StrictMode's mount→unmount→remount land on the second run
+  // instead of getting stuck, and avoids setState after unmount.
   useEffect(() => {
-    let alive = true
+    let cancelled = false
+    const adopt = (note: { id: string; body: string }) => {
+      localStorage.setItem(STORE_KEY, note.id)
+      setNoteId(note.id)
+      setBody(note.body)
+      savedRef.current = note.body
+      setLoading(false)
+    }
     async function resolve() {
-      if (resolving.current) return
-      resolving.current = true
       try {
+        // 1. Fast path: the id we cached last time still resolves.
         const stored = localStorage.getItem(STORE_KEY)
         if (stored) {
           const note = await api.getNote(stored)
-          if (note && alive) {
-            setNoteId(note.id)
-            setBody(note.body)
-            savedRef.current = note.body
-            setLoading(false)
-            return
-          }
-          // Stored id no longer resolves (note deleted) — drop it and recreate.
-          localStorage.removeItem(STORE_KEY)
+          if (cancelled) return
+          if (note) return adopt(note)
         }
+        // 2. Stable path: find the existing pad by title (newest-edited first,
+        //    since listNotes orders by updated_at desc). This is what stops a
+        //    new "Tomorrow" note being spawned when the cached id is gone.
+        const existing = (await api.listNotes()).find((n) => n.title === NOTE_TITLE)
+        if (cancelled) return
+        if (existing) return adopt(existing)
+        // 3. None exists yet — create the one and only pad.
         const created = await api.createNote({ title: NOTE_TITLE, body: '' })
-        if (!alive) return
-        localStorage.setItem(STORE_KEY, created.id)
-        setNoteId(created.id)
-        setBody('')
-        savedRef.current = ''
-        setLoading(false)
+        if (cancelled) return
+        adopt(created)
       } catch (e) {
-        if (!alive) return
+        if (cancelled) return
         setLoading(false)
         toast.error(humanizeError(e, ['Failed to open the pad', '開啟便箋失敗']))
-      } finally {
-        resolving.current = false
       }
     }
     void resolve()
     return () => {
-      alive = false
+      cancelled = true
     }
   }, [])
 
