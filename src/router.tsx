@@ -99,8 +99,10 @@ const deckRoute = createRoute({ getParentRoute: () => appRoute, path: 'decks/$de
 const cardsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'cards',
-  validateSearch: (search: Record<string, unknown>): { tag?: string } => ({
+  // ?important=1 filters the browse list to important (starred) cards only.
+  validateSearch: (search: Record<string, unknown>): { tag?: string; important?: '1' } => ({
     tag: typeof search.tag === 'string' ? search.tag : undefined,
+    important: search.important === '1' ? '1' : undefined,
   }),
   component: CardsScreen,
 })
@@ -197,9 +199,11 @@ const noteRoute = createRoute({
 const studyRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'study',
-  // ?tag=… lets you review one tag across all decks.
-  validateSearch: (search: Record<string, unknown>): { tag?: string } => ({
+  // ?tag=… lets you review one tag across all decks; ?starred=1 reviews only
+  // important cards.
+  validateSearch: (search: Record<string, unknown>): { tag?: string; starred?: '1' } => ({
     tag: typeof search.tag === 'string' && search.tag ? search.tag : undefined,
+    starred: search.starred === '1' ? '1' : undefined,
   }),
   component: lazyRouteComponent(() => import('@/routes/study'), 'StudyScreen'),
 })

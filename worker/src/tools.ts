@@ -33,6 +33,7 @@ import {
   revokeShareLinkInput,
   searchNotesInput,
   setCardTagsInput,
+  setCardStarredInput,
   setDeckParentInput,
   setItemAssigneesInput,
   setItemTagsInput,
@@ -519,6 +520,20 @@ export const tools: ToolDef[] = [
         p_tags: a.tags,
       })
       return { summary: 'Card tags updated', data: card }
+    },
+  },
+  {
+    name: 'set_card_starred',
+    description: toolDescriptions.set_card_starred,
+    schema: setCardStarredInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const card = await callRpc(ctx.env, ctx.userId, 'set_card_starred', {
+        p_card_id: a.card_id,
+        p_starred: a.starred,
+      })
+      return { summary: a.starred ? 'Card marked important' : 'Card unmarked', data: card }
     },
   },
   {

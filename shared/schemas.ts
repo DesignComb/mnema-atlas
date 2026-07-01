@@ -121,6 +121,7 @@ export const setNoteDeckInput = z.object({ note_id: uuid, deck_id: uuid.nullable
 export const setNoteStarredInput = z.object({ note_id: uuid, starred: z.boolean() })
 export const setNoteTagsInput = z.object({ note_id: uuid, tags: tagList })
 export const setCardTagsInput = z.object({ card_id: uuid, tags: tagList })
+export const setCardStarredInput = z.object({ card_id: uuid, starred: z.boolean() })
 export const unlinkNotesInput = z.object({ note_id_a: uuid, note_id_b: uuid })
 
 // ── Travel itineraries ────────────────────────────────────────────
@@ -1008,6 +1009,7 @@ export const toolDescriptions = {
   set_note_starred: 'Star or unstar a note (starred notes pin to the top of the notes list).',
   set_note_tags: 'Replace a note’s whole tag set (drives the graph colours/clusters).',
   set_card_tags: 'Replace a flashcard’s whole tag set (enables study-by-tag).',
+  set_card_starred: 'Mark a flashcard important (starred) or not — important cards are reviewed first, and can be studied on their own.',
   unlink_notes: 'Remove the link between two notes.',
   // Travel itineraries
   list_itineraries: 'List the user’s travel trips (itineraries).',

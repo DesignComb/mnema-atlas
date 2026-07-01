@@ -142,16 +142,26 @@ export async function listCards(deckId?: string, tag?: string): Promise<CardRow[
   return unwrap(await q)
 }
 
-/** Cards due now (the review queue), oldest-due first. Optionally filter by tag. */
-export async function listDueCards(deckId?: string, tag?: string, limit = 60): Promise<CardRow[]> {
+/**
+ * Cards due now (the review queue). Important (starred) cards surface first,
+ * then oldest-due first. Optionally filter by tag, or to important cards only.
+ */
+export async function listDueCards(
+  deckId?: string,
+  tag?: string,
+  limit = 60,
+  importantOnly = false,
+): Promise<CardRow[]> {
   let q = supabase
     .from('cards')
     .select('*')
     .lte('due', new Date().toISOString())
+    .order('starred', { ascending: false })
     .order('due', { ascending: true })
     .limit(limit)
   if (deckId) q = q.eq('deck_id', deckId)
   if (tag) q = q.contains('tags', [tag])
+  if (importantOnly) q = q.eq('starred', true)
   return unwrap(await q)
 }
 
@@ -159,16 +169,23 @@ export async function listLinks(): Promise<NoteLinkRow[]> {
   return unwrap(await supabase.from('note_links').select('*'))
 }
 
-/** Not-yet-due cards (soonest first) — the "study ahead / cram" queue. */
-export async function listAheadCards(deckId?: string, tag?: string, limit = 30): Promise<CardRow[]> {
+/** Not-yet-due cards (important first, then soonest) — the "study ahead / cram" queue. */
+export async function listAheadCards(
+  deckId?: string,
+  tag?: string,
+  limit = 30,
+  importantOnly = false,
+): Promise<CardRow[]> {
   let q = supabase
     .from('cards')
     .select('*')
     .gt('due', new Date().toISOString())
+    .order('starred', { ascending: false })
     .order('due', { ascending: true })
     .limit(limit)
   if (deckId) q = q.eq('deck_id', deckId)
   if (tag) q = q.contains('tags', [tag])
+  if (importantOnly) q = q.eq('starred', true)
   return unwrap(await q)
 }
 
@@ -293,6 +310,13 @@ export async function setNoteTags(noteId: string, tags: string[]): Promise<NoteR
 /** Replace the whole tag set on a flashcard (enables study-by-tag). */
 export async function setCardTags(cardId: string, tags: string[]): Promise<CardRow> {
   return unwrap(await supabase.rpc('set_card_tags', { p_user_id: null, p_card_id: cardId, p_tags: tags }))
+}
+
+/** Mark a flashcard important/unimportant — important cards are reviewed first. */
+export async function setCardStarred(cardId: string, starred: boolean): Promise<CardRow> {
+  return unwrap(
+    await supabase.rpc('set_card_starred', { p_user_id: null, p_card_id: cardId, p_starred: starred }),
+  )
 }
 
 export async function createCard(input: CreateFlashcardInput): Promise<CardRow> {

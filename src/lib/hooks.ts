@@ -37,7 +37,7 @@ import type {
   UpdateTaskListInput,
 } from '@shared/schemas'
 import type { ItineraryItem, TaskFilters, TxnFilters } from './api'
-import type { NoteRow } from './database.types'
+import type { CardRow, NoteRow } from './database.types'
 import { uploadImage, removeUploadedImage } from './upload'
 import { firstImageUrl } from './sketch'
 import type { SketchScene } from './sketch'
@@ -83,7 +83,8 @@ export const qk = {
   note: (id: string) => ['note', id] as const,
   cards: (deckId?: string) => ['cards', deckId ?? 'all'] as const,
   cardsByNote: (noteId: string) => ['cards-by-note', noteId] as const,
-  due: (deckId?: string, tag?: string) => ['due', deckId ?? 'all', tag ?? 'all'] as const,
+  due: (deckId?: string, tag?: string, importantOnly?: boolean) =>
+    ['due', deckId ?? 'all', tag ?? 'all', importantOnly ? 'important' : 'all'] as const,
   graph: ['graph'] as const,
   itineraries: ['itineraries'] as const,
   itinerary: (id: string) => ['itinerary', id] as const,
@@ -144,8 +145,11 @@ export function useCards(deckId?: string) {
   return useQuery({ queryKey: qk.cards(deckId), queryFn: () => api.listCards(deckId) })
 }
 
-export function useDueCards(deckId?: string, tag?: string) {
-  return useQuery({ queryKey: qk.due(deckId, tag), queryFn: () => api.listDueCards(deckId, tag) })
+export function useDueCards(deckId?: string, tag?: string, importantOnly?: boolean) {
+  return useQuery({
+    queryKey: qk.due(deckId, tag, importantOnly),
+    queryFn: () => api.listDueCards(deckId, tag, undefined, importantOnly),
+  })
 }
 
 export function useCardsByNote(noteId: string) {
@@ -316,6 +320,35 @@ export function useSetNoteStarred() {
     onSettled: (_d, _e, v) => {
       void qc.invalidateQueries({ queryKey: ['notes'] })
       void qc.invalidateQueries({ queryKey: qk.note(v.noteId) })
+    },
+  })
+}
+
+/** Mark a flashcard important (starred). Optimistic — a star toggle must feel instant. */
+export function useSetCardStarred() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { cardId: string; starred: boolean }) => api.setCardStarred(v.cardId, v.starred),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: ['cards'] })
+      await qc.cancelQueries({ queryKey: ['due'] })
+      await qc.cancelQueries({ queryKey: ['cards-by-note'] })
+      const prev = qc.getQueriesData<CardRow[]>({ queryKey: ['cards'] })
+        .concat(qc.getQueriesData<CardRow[]>({ queryKey: ['due'] }))
+        .concat(qc.getQueriesData<CardRow[]>({ queryKey: ['cards-by-note'] }))
+      for (const [key, rows] of prev) {
+        if (rows) qc.setQueryData(key, rows.map((c) => (c.id === v.cardId ? { ...c, starred: v.starred } : c)))
+      }
+      return { prev }
+    },
+    onError: (e, _v, ctx) => {
+      for (const [key, rows] of ctx?.prev ?? []) qc.setQueryData(key, rows)
+      toast.error(humanizeError(e, ['Could not save', '無法儲存']))
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['cards'] })
+      void qc.invalidateQueries({ queryKey: ['due'] })
+      void qc.invalidateQueries({ queryKey: ['cards-by-note'] })
     },
   })
 }

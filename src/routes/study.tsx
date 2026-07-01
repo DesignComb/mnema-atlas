@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import { AlertTriangle, Check, FastForward, Keyboard, Layers, Loader2, PartyPopper, Sparkles, Trash2, Undo2 } from 'lucide-react'
+import { AlertTriangle, Check, FastForward, Keyboard, Layers, Loader2, PartyPopper, Sparkles, Star, Trash2, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { useDecks, useDueCards } from '@/lib/hooks'
+import { useDecks, useDueCards, useSetCardStarred } from '@/lib/hooks'
 import { deleteCard, listAheadCards, recordReviewSafe } from '@/lib/api'
 import { undoableDelete } from '@/lib/undoable'
 import { grade, previewIntervals, Rating, RATING_META, type IntervalHint } from '@/lib/srs'
@@ -29,10 +29,12 @@ export function StudyScreen() {
   const t = useT()
   const params = useParams({ strict: false }) as { deckId?: string }
   const deckId = params.deckId
-  const search = useSearch({ strict: false }) as { tag?: string }
+  const search = useSearch({ strict: false }) as { tag?: string; starred?: '1' }
   const tag = search.tag
+  const importantOnly = search.starred === '1'
   const { data: decks } = useDecks()
-  const { data: dueCards, isLoading } = useDueCards(deckId, tag)
+  const { data: dueCards, isLoading } = useDueCards(deckId, tag, importantOnly)
+  const setCardStarred = useSetCardStarred()
   const qc = useQueryClient()
 
   const [queue, setQueue] = useState<CardRow[] | null>(null)
@@ -61,7 +63,7 @@ export function StudyScreen() {
     setUnsaved(0)
     setCram(false)
     setLastGrade(null)
-  }, [deckId, tag])
+  }, [deckId, tag, importantOnly])
 
   // Snapshot the due queue once so grading doesn't reshuffle mid-session.
   useEffect(() => {
@@ -193,7 +195,7 @@ export function StudyScreen() {
   const startCram = useCallback(async () => {
     setCramLoading(true)
     try {
-      const ahead = await listAheadCards(deckId, tag, 30)
+      const ahead = await listAheadCards(deckId, tag, 30, importantOnly)
       if (!ahead.length) {
         toast.success(t('Nothing scheduled ahead yet — add more cards.', '目前沒有可超前的閃卡 — 多新增一些吧。'))
         return
@@ -210,7 +212,16 @@ export function StudyScreen() {
     } finally {
       setCramLoading(false)
     }
-  }, [deckId, tag, t])
+  }, [deckId, tag, importantOnly, t])
+
+  // Toggle the current card's "important" flag mid-review — flag what matters as
+  // you meet it. Update the snapshot queue too so the star reflects instantly.
+  const toggleStar = useCallback(() => {
+    if (!current) return
+    const next = !current.starred
+    setQueue((q) => (q ? q.map((c) => (c.id === current.id ? { ...c, starred: next } : c)) : q))
+    setCardStarred.mutate({ cardId: current.id, starred: next })
+  }, [current, setCardStarred])
 
   // When the session ends, refresh due counts everywhere.
   const done = queue !== null && idx >= total
@@ -267,7 +278,15 @@ export function StudyScreen() {
     <>
       <PageHeader
         title={t('Study', '學習')}
-        subtitle={cram ? t('Studying ahead', '超前學習') : tag ? `#${tag}` : (deckName ?? undefined)}
+        subtitle={
+          cram
+            ? t('Studying ahead', '超前學習')
+            : importantOnly
+              ? t('Important cards', '重要閃卡')
+              : tag
+                ? `#${tag}`
+                : (deckName ?? undefined)
+        }
         icon={<Sparkles className="size-4" />}
         actions={
           <div className="flex items-center gap-2">
@@ -365,8 +384,24 @@ export function StudyScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.2 }}
-                className="overflow-hidden rounded-2xl border border-border bg-card shadow-pop"
+                className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-pop"
               >
+                {/* Mark this card important without leaving the review flow. */}
+                <button
+                  type="button"
+                  onClick={toggleStar}
+                  aria-pressed={current.starred}
+                  title={current.starred ? t('Unmark important', '取消重要') : t('Mark important', '標記為重要')}
+                  className="absolute right-2.5 top-2.5 z-10 rounded-md p-1.5 outline-none transition hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                  <Star
+                    className={cn(
+                      'size-4',
+                      current.starred ? 'fill-warning text-warning' : 'text-muted-foreground/40 hover:text-warning',
+                    )}
+                  />
+                </button>
+
                 {/* Front */}
                 <button
                   onClick={() => !flipped && setFlipped(true)}

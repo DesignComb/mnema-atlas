@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { GraduationCap, Layers, Sparkles, X } from 'lucide-react'
+import { GraduationCap, Layers, Sparkles, Star, X } from 'lucide-react'
 import { useCards, useDecks, useDueCards, useNotes, useSeedSample } from '@/lib/hooks'
 import { buildDeckTree, flattenTree } from '@/lib/deck-tree'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
@@ -30,10 +30,13 @@ export function CardsScreen() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
-  // Selected tag filter (in the URL so it's shareable / survives refresh).
-  const { tag: activeTag } = useSearch({ from: '/_app/cards' }) as { tag?: string }
+  // Selected tag / important filter (in the URL so it's shareable / survives refresh).
+  const { tag: activeTag, important } = useSearch({ from: '/_app/cards' }) as { tag?: string; important?: '1' }
+  const activeImportant = important === '1'
   const selectTag = (tg: string | undefined) =>
     navigate({ to: '/cards', search: tg ? { tag: tg } : {} })
+  const toggleImportant = () =>
+    navigate({ to: '/cards', search: activeImportant ? {} : { important: '1' } })
 
   // Tag overview → filter the browse list (and a Study jump from the filtered view).
   const tagTotal = new Map<string, number>()
@@ -42,9 +45,17 @@ export function CardsScreen() {
   due?.forEach((c) => c.tags?.forEach((tg) => tagDue.set(tg, (tagDue.get(tg) ?? 0) + 1)))
   const tagList = Array.from(tagTotal.keys()).sort()
 
-  // Filtered browse: every card carrying the selected tag, across all decks.
-  const filtered = activeTag ? (cards ?? []).filter((c) => c.tags?.includes(activeTag)) : null
-  const filteredDue = activeTag ? tagDue.get(activeTag) ?? 0 : 0
+  // Important (starred) cards — the priority-review set.
+  const importantTotal = cards?.filter((c) => c.starred).length ?? 0
+  const importantDue = due?.filter((c) => c.starred).length ?? 0
+
+  // Filtered browse: important cards, or every card carrying the selected tag.
+  const filtered = activeImportant
+    ? (cards ?? []).filter((c) => c.starred)
+    : activeTag
+      ? (cards ?? []).filter((c) => c.tags?.includes(activeTag))
+      : null
+  const filteredDue = activeImportant ? importantDue : activeTag ? tagDue.get(activeTag) ?? 0 : 0
   const noteTitleById = new Map((notes ?? []).map((n) => [n.id, n.title]))
 
   const countByDeck = new Map<string, number>()
@@ -117,13 +128,34 @@ export function CardsScreen() {
                 <StateTile label={t('Due now', '現在到期')} n={totalDue} cls="text-brand" />
               </div>
 
-              {/* Filter by tag — click a tag to browse its cards across all decks. */}
-              {tagList.length ? (
+              {/* Filter — the "重要" priority set, then tags. */}
+              {tagList.length || importantTotal > 0 ? (
                 <div className="mb-1.5">
                   <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                    {t('Filter by tag', '依標籤篩選')}
+                    {t('Filter', '篩選')}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
+                    {importantTotal > 0 ? (
+                      <button
+                        type="button"
+                        onClick={toggleImportant}
+                        aria-pressed={activeImportant}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-85',
+                          activeImportant
+                            ? 'border-warning/50 bg-warning/10 text-warning ring-1 ring-warning/40'
+                            : 'border-border text-muted-foreground hover:border-warning/40 hover:text-foreground',
+                        )}
+                        title={t('Important cards', '重要閃卡')}
+                      >
+                        <Star className={cn('size-3', activeImportant && 'fill-warning')} />
+                        {t('Important', '重要')}
+                        <span className="tabular-nums opacity-70">
+                          {importantDue > 0 ? `${importantDue}/${importantTotal}` : importantTotal}
+                        </span>
+                        {activeImportant ? <X className="size-3" /> : null}
+                      </button>
+                    ) : null}
                     {tagList.map((tg) => {
                       const n = tagTotal.get(tg) ?? 0
                       const d = tagDue.get(tg) ?? 0
@@ -153,25 +185,35 @@ export function CardsScreen() {
                 </div>
               ) : null}
 
-              {/* Filtered browse: the selected tag's cards, with a Study jump. */}
-              {activeTag ? (
+              {/* Filtered browse: important cards or the selected tag's cards, with a Study jump. */}
+              {filtered ? (
                 <section className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <span style={tagChipStyle(activeTag, isDark)} className="rounded-full border px-2 py-0.5 text-[12px]">
-                        {activeTag}
-                      </span>
+                      {activeImportant ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-warning/50 bg-warning/10 px-2 py-0.5 text-[12px] text-warning">
+                          <Star className="size-3 fill-warning" /> {t('Important', '重要')}
+                        </span>
+                      ) : (
+                        <span style={tagChipStyle(activeTag!, isDark)} className="rounded-full border px-2 py-0.5 text-[12px]">
+                          {activeTag}
+                        </span>
+                      )}
                       <span className="text-muted-foreground">
                         {t(`${filtered?.length ?? 0} card${(filtered?.length ?? 0) === 1 ? '' : 's'}`, `${filtered?.length ?? 0} 張閃卡`)}
                       </span>
                     </h3>
                     <div className="flex items-center gap-1.5">
-                      <Button variant="ghost" size="sm" onClick={() => selectTag(undefined)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => (activeImportant ? toggleImportant() : selectTag(undefined))}
+                      >
                         <X className="size-4" /> {t('Clear', '清除')}
                       </Button>
                       {filteredDue > 0 ? (
                         <Button asChild variant="brand" size="sm">
-                          <Link to="/study" search={{ tag: activeTag }}>
+                          <Link to="/study" search={activeImportant ? { starred: '1' } : { tag: activeTag }}>
                             <GraduationCap className="size-4" /> {t('Study', '學習')} ({filteredDue})
                           </Link>
                         </Button>
@@ -186,7 +228,9 @@ export function CardsScreen() {
                     </div>
                   ) : (
                     <p className="rounded-xl border border-dashed border-border px-4 py-4 text-[13px] text-muted-foreground">
-                      {t('No cards with this tag.', '沒有帶此標籤的閃卡。')}
+                      {activeImportant
+                        ? t('No important cards yet.', '還沒有標記為重要的閃卡。')
+                        : t('No cards with this tag.', '沒有帶此標籤的閃卡。')}
                     </p>
                   )}
                 </section>

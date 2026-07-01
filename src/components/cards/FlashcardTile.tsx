@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { FileText, Pencil } from 'lucide-react'
+import { FileText, Pencil, Star } from 'lucide-react'
 import type { CardRow } from '@/lib/database.types'
-import { relativeDue } from '@/lib/utils'
+import { cn, relativeDue } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
+import { useSetCardStarred } from '@/lib/hooks'
 import { tagChipStyle } from '@/lib/tags'
 import { NewCardDialog } from './NewCardDialog'
 
@@ -22,16 +23,36 @@ export function FlashcardTile({ card, noteTitle }: { card: CardRow; noteTitle?: 
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const meta = STATE_META[card.state] ?? STATE_META[0]
+  const setStarred = useSetCardStarred()
   return (
-    <div className="group relative rounded-xl border border-border bg-card p-3.5 shadow-soft">
-      <button
-        onClick={() => setEditing(true)}
-        className="absolute right-2 top-2 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 outline-none transition hover:text-brand focus-visible:text-brand focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
-        title={t('Edit card', '編輯閃卡')}
-      >
-        <Pencil className="size-3.5" />
-      </button>
-      <p className="line-clamp-2 pr-7 font-serif text-sm font-medium text-foreground">{card.front}</p>
+    <div
+      className={cn(
+        'group relative rounded-xl border bg-card p-3.5 shadow-soft',
+        card.starred ? 'border-warning/40' : 'border-border',
+      )}
+    >
+      <div className="absolute right-2 top-2 flex items-center gap-1">
+        <button
+          type="button"
+          aria-pressed={card.starred}
+          title={card.starred ? t('Unmark important', '取消重要') : t('Mark important', '標記為重要')}
+          onClick={() => setStarred.mutate({ cardId: card.id, starred: !card.starred })}
+          className={cn(
+            'rounded-md border border-border bg-card p-1.5 outline-none transition hover:text-warning focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100',
+            card.starred ? 'text-warning opacity-100' : 'text-muted-foreground opacity-0',
+          )}
+        >
+          <Star className={cn('size-3.5', card.starred && 'fill-warning')} />
+        </button>
+        <button
+          onClick={() => setEditing(true)}
+          className="rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 outline-none transition hover:text-brand focus-visible:text-brand focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
+          title={t('Edit card', '編輯閃卡')}
+        >
+          <Pencil className="size-3.5" />
+        </button>
+      </div>
+      <p className="line-clamp-2 pr-14 font-serif text-sm font-medium text-foreground">{card.front}</p>
       <p className="mt-1 line-clamp-2 font-serif text-[13px] text-muted-foreground">{card.back}</p>
       {card.image_url ? (
         <img src={card.image_url} alt="" loading="lazy" className="mt-2 max-h-24 rounded-md border border-border object-contain" />
