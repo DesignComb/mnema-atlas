@@ -36,11 +36,23 @@ export function SortableList<T extends Identifiable>({
   orderRef.current = order
   const movedRef = useRef(false)
 
-  const idsKey = items.map((i) => i.id).join('|')
+  // Keep `order` mirroring the latest props. An ids-only key would re-sync on
+  // add/remove/reorder but MISS an in-place content edit (same id, same slot) —
+  // the row would render a stale snapshot until remount. So compare by object
+  // reference and adopt fresh props whenever anything actually changed. The one
+  // case we hold back is an optimistic reorder the server hasn't confirmed yet
+  // (same id set, our local order) — and never mid-drag.
   useEffect(() => {
-    if (!movedRef.current) setOrder(items)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsKey])
+    if (movedRef.current) return
+    const cur = orderRef.current
+    if (cur.length === items.length && cur.every((c, i) => c === items[i])) return
+    const pendingReorder =
+      cur.length === items.length &&
+      !cur.every((c, i) => c.id === items[i].id) &&
+      cur.every((c) => items.some((it) => it.id === c.id))
+    if (pendingReorder) return
+    setOrder(items)
+  })
 
   // Keyboard path: the grip is a real button, so ArrowUp/Down must reorder too
   // — pointer drag alone would lock keyboard users out of reordering entirely.
