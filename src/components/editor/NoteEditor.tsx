@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
+import { Wikilink } from './wikilink-extension'
+import { useNoteResolver } from '@/components/common/Wikilinked'
 import { Bold, Brush, Code, Eye, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Pencil, Quote, Strikethrough } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, humanizeError } from '@/lib/utils'
@@ -257,14 +260,40 @@ export function NoteEditor({
 
 /** Read-only TipTap render of markdown — used only for the Preview tab. */
 function MarkdownPreview({ markdown }: { markdown: string }) {
-  const editor = useEditor({
-    editable: false,
-    // Image: StarterKit has no image node, so without it `![](url)` markdown
-    // (incl. our own uploads) silently vanishes from the preview.
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] } }), Image, Markdown.configure({ html: false })],
-    content: markdown,
-    editorProps: { attributes: { class: 'mnema-prose max-w-none px-1' } },
-  })
+  const navigate = useNavigate()
+  const resolve = useNoteResolver()
+  const editor = useEditor(
+    {
+      editable: false,
+      // Image: StarterKit has no image node, so without it `![](url)` markdown
+      // (incl. our own uploads) silently vanishes from the preview.
+      // Wikilink: renders `[[title]]` as a resolvable in-app link.
+      extensions: [
+        StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+        Image,
+        Wikilink.configure({ resolve }),
+        Markdown.configure({ html: false }),
+      ],
+      content: markdown,
+      editorProps: {
+        attributes: { class: 'mnema-prose max-w-none px-1' },
+        // Plain click on a resolved wikilink → client-side nav. Let modifier /
+        // non-left clicks fall through so the anchor's href opens a new tab.
+        handleClickOn(_view, _pos, node, _nodePos, event) {
+          if (node.type.name !== 'wikilink') return false
+          const e = event as MouseEvent
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false
+          const id = resolve(String(node.attrs.title ?? ''))
+          if (!id) return false
+          navigate({ to: '/notes/$noteId', params: { noteId: id } })
+          return true
+        },
+      },
+    },
+    // Rebuild when the body changes (preview re-open) or once notes load so
+    // links that were unresolved on first paint re-render as resolved.
+    [markdown, resolve],
+  )
   if (!editor) return null
   return <EditorContent editor={editor} />
 }

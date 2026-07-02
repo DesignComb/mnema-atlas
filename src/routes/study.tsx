@@ -12,6 +12,7 @@ import type { Grade } from 'ts-fsrs'
 import type { CardRow } from '@/lib/database.types'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
 import { Button } from '@/components/ui/button'
+import { Wikilinked } from '@/components/common/Wikilinked'
 import { cn, humanizeError } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 
@@ -402,9 +403,18 @@ export function StudyScreen() {
                   />
                 </button>
 
-                {/* Front */}
-                <button
+                {/* Front — a role=button (not <button>) so an in-text wikilink
+                    can be a real <a> without nesting interactives. */}
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => !flipped && setFlipped(true)}
+                  onKeyDown={(e) => {
+                    if (!flipped && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      setFlipped(true)
+                    }
+                  }}
                   className="flex min-h-40 w-full flex-col items-center justify-center gap-4 px-6 py-8 text-center sm:min-h-44 sm:px-8 sm:py-10"
                 >
                   {currentDeckName ? (
@@ -413,11 +423,13 @@ export function StudyScreen() {
                       {currentDeckName}
                     </span>
                   ) : null}
-                  <p className="font-serif text-xl leading-snug text-foreground sm:text-2xl">{current.front}</p>
+                  <p className="font-serif text-xl leading-snug text-foreground sm:text-2xl">
+                    <Wikilinked text={current.front} />
+                  </p>
                   {current.image_url ? (
                     <img src={current.image_url} alt="" className="max-h-56 rounded-lg border border-border object-contain" />
                   ) : null}
-                </button>
+                </div>
 
                 {/* Back */}
                 <AnimatePresence>
@@ -430,7 +442,7 @@ export function StudyScreen() {
                     >
                       <div className="px-6 py-6 text-center sm:px-8 sm:py-8">
                         <p className="whitespace-pre-wrap font-serif text-base leading-relaxed text-foreground sm:text-[17px]">
-                          {current.back}
+                          <Wikilinked text={current.back} />
                         </p>
                       </div>
                     </motion.div>

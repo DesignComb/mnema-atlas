@@ -490,14 +490,26 @@
   color: var(--muted-foreground);
   opacity: 0.6;
 }
-/* Wikilink mention chips (Phase 4) */
-.mnema-prose .wikilink {
+/* [[wikilink]] chips — global (flashcards render them outside .mnema-prose). */
+.wikilink {
   color: var(--brand);
   background: var(--brand-muted);
   border-radius: 5px;
   padding: 0.05em 0.32em;
   font-weight: 500;
   cursor: pointer;
+  text-decoration: none;
+}
+.wikilink:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* Unresolved [[title]] — no matching note yet: muted and inert. */
+.wikilink-unresolved {
+  color: var(--muted-foreground);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: default;
 }
 
 /* cmdk command-palette group headings */
