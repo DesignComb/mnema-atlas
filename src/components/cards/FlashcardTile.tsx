@@ -7,6 +7,7 @@ import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import { useSetCardStarred } from '@/lib/hooks'
 import { tagChipStyle } from '@/lib/tags'
+import { Wikilinked } from '@/components/common/Wikilinked'
 import { NewCardDialog } from './NewCardDialog'
 
 /** FSRS state → label + colour, so each card shows its learning status at a glance. */
@@ -52,8 +53,12 @@ export function FlashcardTile({ card, noteTitle }: { card: CardRow; noteTitle?: 
           <Pencil className="size-3.5" />
         </button>
       </div>
-      <p className="line-clamp-2 pr-14 font-serif text-sm font-medium text-foreground">{card.front}</p>
-      <p className="mt-1 line-clamp-2 font-serif text-[13px] text-muted-foreground">{card.back}</p>
+      <p className="line-clamp-2 pr-14 font-serif text-sm font-medium text-foreground">
+        <Wikilinked text={card.front} />
+      </p>
+      <p className="mt-1 line-clamp-2 font-serif text-[13px] text-muted-foreground">
+        <Wikilinked text={card.back} />
+      </p>
       {card.image_url ? (
         <img src={card.image_url} alt="" loading="lazy" className="mt-2 max-h-24 rounded-md border border-border object-contain" />
       ) : null}
