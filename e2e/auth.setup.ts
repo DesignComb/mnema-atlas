@@ -39,15 +39,15 @@ setup('authenticate', async () => {
   expect(Object.keys(captured).length, 'session persisted to storage').toBeGreaterThan(0)
 
   mkdirSync('e2e/.auth', { recursive: true })
+  const localStorage = [
+    ...Object.entries(captured).map(([name, value]) => ({ name, value })),
+    // Mark the first-run product tour as already seen (see src/lib/tour.tsx,
+    // TOUR_SEEN_KEY) so its auto-launching dialog never overlays the authed
+    // specs — the test account acts as a returning user.
+    { name: 'mnema:tour-seen', value: '1' },
+  ]
   writeFileSync(
     STATE,
-    JSON.stringify(
-      {
-        cookies: [],
-        origins: [{ origin: ORIGIN, localStorage: Object.entries(captured).map(([name, value]) => ({ name, value })) }],
-      },
-      null,
-      2,
-    ),
+    JSON.stringify({ cookies: [], origins: [{ origin: ORIGIN, localStorage }] }, null, 2),
   )
 })
