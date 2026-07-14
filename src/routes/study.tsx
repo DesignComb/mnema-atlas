@@ -1,16 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import { AlertTriangle, Check, FastForward, Keyboard, Layers, Loader2, PartyPopper, Sparkles, Star, Trash2, Undo2 } from 'lucide-react'
+import { AlertTriangle, Check, FastForward, GraduationCap, Keyboard, Layers, Loader2, PartyPopper, Star, Trash2, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDecks, useDueCards, useSetCardStarred } from '@/lib/hooks'
-import { deleteCard, listAheadCards, recordReviewSafe } from '@/lib/api'
+import { deleteCard, isCardNotFound, listAheadCards, recordReviewSafe } from '@/lib/api'
 import { undoableDelete } from '@/lib/undoable'
 import { grade, previewIntervals, Rating, RATING_META, type IntervalHint } from '@/lib/srs'
+import { clearStudySession, patchStudySession, restoreStudySession, saveStudySession } from '@/lib/study-session'
 import type { Grade } from 'ts-fsrs'
 import type { CardRow } from '@/lib/database.types'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { Button } from '@/components/ui/button'
 import { Wikilinked } from '@/components/common/Wikilinked'
 import { cn, humanizeError } from '@/lib/utils'
@@ -26,6 +28,29 @@ const TONE: Record<string, string> = {
 
 const cardLabel = (s: string) => (s.length > 24 ? `${s.slice(0, 24)}…` : s)
 
+// One-level undo (A12): the pre-grade row, where it sat in the queue, and the
+// grade's (settled) write promise so the undo can sequence after it.
+type LastGrade = {
+  row: CardRow
+  index: number
+  requeued: boolean
+  write: Promise<unknown>
+}
+
+// The live session, mirrored into the study-session store so a wikilink
+// round-trip (tap a [[link]] on a card, read the note, come back) resumes
+// mid-queue instead of restarting at card 1. `flipped` is deliberately not
+// part of it: resuming onto a card's back side would turn the "Space =
+// reveal" habit into a silent Good grade.
+type SessionSnapshot = {
+  queue: CardRow[]
+  idx: number
+  reviewed: number
+  unsaved: number
+  cram: boolean
+  lastGrade: LastGrade | null
+}
+
 export function StudyScreen() {
   const t = useT()
   const params = useParams({ strict: false }) as { deckId?: string }
@@ -38,38 +63,76 @@ export function StudyScreen() {
   const setCardStarred = useSetCardStarred()
   const qc = useQueryClient()
 
-  const [queue, setQueue] = useState<CardRow[] | null>(null)
-  const [idx, setIdx] = useState(0)
-  const [flipped, setFlipped] = useState(false)
-  const [reviewed, setReviewed] = useState(0)
-  const [unsaved, setUnsaved] = useState(0) // reviews that failed every retry
-  const [cram, setCram] = useState(false) // studying ahead (not-yet-due cards)
-  const [cramLoading, setCramLoading] = useState(false)
-  // One-level undo (A12): the pre-grade row, where it sat in the queue, and the
-  // grade's (settled) write promise so the undo can sequence after it.
-  const [lastGrade, setLastGrade] = useState<{
-    row: CardRow
-    index: number
-    requeued: boolean
-    write: Promise<unknown>
-  } | null>(null)
+  // The filter identity — a saved session only resumes under the same filter.
+  const sessionKey = `${deckId ?? ''}|${tag ?? ''}|${importantOnly ? 'starred' : ''}`
+  // Resume an in-progress session (left via a wikilink, came back). Restoring in
+  // the lazy initializer — not an effect — so the snapshot effect below never
+  // sees a null queue on the mount commit and clobbers the restore with a
+  // cached due list (idx would then point into the wrong queue).
+  const [resumed] = useState(() => restoreStudySession<SessionSnapshot>(sessionKey))
 
-  // Reset the whole session when the filter (deck or tag) changes — the route
-  // component is reused across /study, /study/$deckId, and /study?tag=…
-  useEffect(() => {
-    setQueue(null)
-    setIdx(0)
-    setReviewed(0)
+  const [queue, setQueue] = useState<CardRow[] | null>(resumed?.queue ?? null)
+  const [idx, setIdx] = useState(resumed?.idx ?? 0)
+  const [flipped, setFlipped] = useState(false)
+  const [reviewed, setReviewed] = useState(resumed?.reviewed ?? 0)
+  const [unsaved, setUnsaved] = useState(resumed?.unsaved ?? 0) // reviews that failed every retry
+  const [cram, setCram] = useState(resumed?.cram ?? false) // studying ahead (not-yet-due cards)
+  const [cramLoading, setCramLoading] = useState(false)
+  const [lastGrade, setLastGrade] = useState<LastGrade | null>(resumed?.lastGrade ?? null)
+  // A restored session already earned its slot — remember that, because the
+  // restored state alone may show no progress (flipped isn't restored) and the
+  // mirror effect must not clear the slot on the resume commit itself (a cram
+  // queue would then survive exactly one wikilink round-trip).
+  const [touched, setTouched] = useState(resumed !== null)
+  // One-shot cue announcing the resume — re-entering mid-queue must be
+  // explained, not silent (the counter suddenly starts at e.g. 6/20).
+  const [resumeNotice, setResumeNotice] = useState<SessionSnapshot | null>(resumed)
+
+  // Live key so async callbacks (startCram, grade failures, discard-undo) can
+  // tell whether the filter changed since they were created. Written in the
+  // adjust block below (not an effect) so it can never lag the reset.
+  const keyRef = useRef(sessionKey)
+
+  // Reset (or resume) the session when the filter changes — a search/param
+  // change (/study?tag=a → ?tag=b, /study/$deckId A → B) reuses this component
+  // instance. Done during render (React's adjust-state-on-prop-change
+  // pattern), NOT in an effect: an effect-based reset lets one commit pair the
+  // new key with the old session's state, so the mirror effect below would
+  // save the old session under the new key and then destroy that key's slot.
+  const [prevKey, setPrevKey] = useState(sessionKey)
+  if (prevKey !== sessionKey) {
+    setPrevKey(sessionKey)
+    keyRef.current = sessionKey
+    const next = restoreStudySession<SessionSnapshot>(sessionKey)
+    setQueue(next?.queue ?? null)
+    setIdx(next?.idx ?? 0)
     setFlipped(false)
-    setUnsaved(0)
-    setCram(false)
-    setLastGrade(null)
-  }, [deckId, tag, importantOnly])
+    setReviewed(next?.reviewed ?? 0)
+    setUnsaved(next?.unsaved ?? 0)
+    setCram(next?.cram ?? false)
+    setLastGrade(next?.lastGrade ?? null)
+    setTouched(next !== null)
+    setResumeNotice(next)
+  }
 
   // Snapshot the due queue once so grading doesn't reshuffle mid-session.
   useEffect(() => {
     if (dueCards && queue === null) setQueue(dueCards)
   }, [dueCards, queue])
+
+  // Mirror the live session into the resume store; drop the slot once the
+  // session ends. Only sessions with interaction are kept, so merely rendering
+  // another filter's study screen can't evict a real session from the store's
+  // small LRU.
+  useEffect(() => {
+    const active = queue !== null && queue.length > 0 && idx < queue.length
+    const progressed = touched || idx > 0 || reviewed > 0 || flipped || lastGrade !== null
+    if (active && progressed) {
+      saveStudySession(sessionKey, { queue, idx, reviewed, unsaved, cram, lastGrade } satisfies SessionSnapshot)
+    } else {
+      clearStudySession(sessionKey)
+    }
+  }, [sessionKey, queue, idx, flipped, reviewed, unsaved, cram, lastGrade, touched])
 
   const current = queue?.[idx]
   const total = queue?.length ?? 0
@@ -87,8 +150,29 @@ export function StudyScreen() {
       // doesn't silently lose the grade. If every retry fails, flag it loudly.
       // Keep the (settled) promise so an undo can sequence AFTER this write —
       // otherwise a retrying grade write could land after the restore.
-      const write = recordReviewSafe(current.id, card, log).catch((err) => {
-        setUnsaved((u) => u + 1)
+      const cardId = current.id
+      const write = recordReviewSafe(cardId, card, log).catch((err) => {
+        // Deleted on another device / via MCP mid-session: the grade has
+        // nothing to apply to — say so instead of a scary "couldn't save",
+        // and disarm the undo for it (Z would replay 'card not found' and
+        // rewind onto the phantom). The id guard keeps a later grade's undo
+        // intact; the store patch covers firing after unmount.
+        if (isCardNotFound(err)) {
+          toast.error(t('This card was deleted elsewhere — grade skipped.', '這張閃卡已在其他地方被刪除，這筆評分已略過。'))
+          setLastGrade((g) => (g?.row.id === cardId ? null : g))
+          patchStudySession<SessionSnapshot>(sessionKey, (s) =>
+            s.lastGrade?.row.id === cardId ? { ...s, lastGrade: null } : s,
+          )
+          return
+        }
+        // Count the failure on the session it belongs to: setState only if the
+        // filter hasn't changed (this instance may now show another session);
+        // the store patch covers both that case and firing after unmount.
+        // Known gap: leave AND return before this fires re-mounts a fresh
+        // instance whose next mirror save overwrites the patch — the counter
+        // can undercount there; the loud toast remains the primary signal.
+        if (keyRef.current === sessionKey) setUnsaved((u) => u + 1)
+        patchStudySession<SessionSnapshot>(sessionKey, (s) => ({ ...s, unsaved: s.unsaved + 1 }))
         toast.error(
           err instanceof Error
             ? t(`Couldn't save a review: ${err.message}`, `有一筆複習未能儲存：${err.message}`)
@@ -96,6 +180,16 @@ export function StudyScreen() {
           { duration: 6000 },
         )
       })
+      // Keep the cached due lists truthful as we go: if the resume store
+      // misses (expired/evicted), the queue re-seeds from this cache, and a
+      // stale entry would resurrect an already-graded card — regrading it from
+      // its pre-grade FSRS row. Also keeps /today's due count live. The
+      // Again-requeued copy lives only in the local queue; a real refetch
+      // re-includes it once its +1m due passes. Best-effort, not a guarantee:
+      // a concurrent cache writer (the star-toggle's onError rollback, an
+      // invalidation refetch snapshotted before this grade landed) can put the
+      // entry back.
+      qc.setQueriesData<CardRow[]>({ queryKey: ['due'] }, (rows) => rows?.filter((c) => c.id !== cardId))
       // A11: an Again card re-enters this session with its updated FSRS state,
       // so the "1m" hint it showed is actually honoured.
       const requeued = rating === Rating.Again
@@ -108,7 +202,7 @@ export function StudyScreen() {
       setFlipped(false)
       setIdx((i) => i + 1)
     },
-    [current, idx, t],
+    [current, idx, qc, sessionKey, t],
   )
 
   // A12: one-level undo — a misclick must not silently rewrite FSRS state.
@@ -146,14 +240,19 @@ export function StudyScreen() {
     // request can never land after (and overwrite) the undo.
     void write
       .then(() => recordReviewSafe(row.id, cardJson, undoLog))
+      .then(() => {
+        // The grade pruned this card from the due caches; after a successful
+        // undo it is due again, so let them refetch.
+        void qc.invalidateQueries({ queryKey: ['due'] })
+      })
       .catch(() => {
-        toast.error(t('Couldn’t undo on the server — the grade may stick.', '伺服器端復原失敗,原評分可能仍生效。'))
+        toast.error(t('Couldn’t undo on the server — the grade may stick.', '伺服器端復原失敗，原評分可能仍生效。'))
       })
     if (requeued) setQueue((q) => (q ? q.slice(0, -1) : q))
     setReviewed((r) => Math.max(0, r - 1))
     setFlipped(false)
     setIdx(index)
-  }, [lastGrade, t])
+  }, [lastGrade, qc, t])
 
   // Discard the current card mid-session — a typo, dupe, or card you no longer
   // want. It leaves the in-session queue at once; the server delete fires after
@@ -174,14 +273,30 @@ export function StudyScreen() {
       errorMessage: t('Discard failed — the card is back', '丟棄失敗，閃卡已還原'),
       commit: () => deleteCard(row.id),
       onUndo: () => {
-        setQueue((q) => {
-          const base = q ?? []
-          const next = [...base]
-          next.splice(Math.min(at, base.length), 0, row)
-          return next
+        // The undo toast outlives this session two ways. Filter switched on
+        // this same instance: the setState below would splice a foreign card
+        // into the NEW session's live queue — the keyRef guard skips it and
+        // the store patch repairs the right session. Screen unmounted: the
+        // setState is a no-op and the patch again does the repair. (Known gap:
+        // leave AND return within the toast's ~4s re-mounts an instance that
+        // won't see the patch and whose next mirror save overwrites it — the
+        // card then only returns on a later reseed; the delete is still
+        // cancelled server-side either way.)
+        if (keyRef.current === sessionKey) {
+          setQueue((q) => {
+            const base = q ?? []
+            const next = [...base]
+            next.splice(Math.min(at, base.length), 0, row)
+            return next
+          })
+          setIdx(at)
+          setFlipped(false)
+        }
+        patchStudySession<SessionSnapshot>(sessionKey, (s) => {
+          const next = [...s.queue]
+          next.splice(Math.min(at, next.length), 0, row)
+          return { ...s, queue: next, idx: at }
         })
-        setIdx(at)
-        setFlipped(false)
       },
       onSettled: () =>
         Promise.all([
@@ -190,13 +305,17 @@ export function StudyScreen() {
           qc.invalidateQueries({ queryKey: ['cards-by-note'] }),
         ]),
     })
-  }, [current, idx, qc, t])
+  }, [current, idx, qc, sessionKey, t])
 
   // Study-ahead: pull not-yet-due cards into a fresh queue (cramming).
   const startCram = useCallback(async () => {
+    const keyAtStart = sessionKey
     setCramLoading(true)
     try {
       const ahead = await listAheadCards(deckId, tag, 30, importantOnly)
+      // The filter can change while the fetch is in flight — don't seed (and
+      // persist) the old filter's cards under the new key.
+      if (keyRef.current !== keyAtStart) return
       if (!ahead.length) {
         toast.success(t('Nothing scheduled ahead yet — add more cards.', '目前沒有可超前的閃卡 — 多新增一些吧。'))
         return
@@ -213,7 +332,7 @@ export function StudyScreen() {
     } finally {
       setCramLoading(false)
     }
-  }, [deckId, tag, importantOnly, t])
+  }, [deckId, tag, importantOnly, sessionKey, t])
 
   // Toggle the current card's "important" flag mid-review — flag what matters as
   // you meet it. Update the snapshot queue too so the star reflects instantly.
@@ -223,6 +342,19 @@ export function StudyScreen() {
     setQueue((q) => (q ? q.map((c) => (c.id === current.id ? { ...c, starred: next } : c)) : q))
     setCardStarred.mutate({ cardId: current.id, starred: next })
   }, [current, setCardStarred])
+
+  // Announce a resumed session once. Cleared before the toast so StrictMode's
+  // re-run (and any re-render) can't repeat it; the id dedupes regardless.
+  useEffect(() => {
+    if (!resumeNotice) return
+    setResumeNotice(null)
+    toast(
+      resumeNotice.cram
+        ? t('Resumed your study-ahead session', '已從上次的超前學習繼續')
+        : t('Resumed where you left off', '已從上次的進度繼續'),
+      { id: 'study-resume' },
+    )
+  }, [resumeNotice, t])
 
   // When the session ends, refresh due counts everywhere.
   const done = queue !== null && idx >= total
@@ -288,9 +420,10 @@ export function StudyScreen() {
                 ? `#${tag}`
                 : (deckName ?? undefined)
         }
-        icon={<Sparkles className="size-4" />}
+        icon={<GraduationCap className="size-4" />}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <AiImportButton />
             {lastGrade ? (
               <Button variant="ghost" size="sm" onClick={undoLast} title={t('Undo last grade (Z)', '復原上一筆評分 (Z)')}>
                 <Undo2 className="size-4" /> {t('Undo', '復原')}
@@ -317,7 +450,10 @@ export function StudyScreen() {
       ) : null}
 
       <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto bg-dots px-4 py-6 sm:px-6 sm:py-10">
-        {isLoading ? (
+        {isLoading && queue === null ? (
+          // Only gate on the query while there's no queue yet — a restored
+          // session must render at once, even if the due cache was GC'd and
+          // the (display-irrelevant) refetch is still in flight.
           <div className="h-64 w-full max-w-xl animate-pulse rounded-2xl bg-card" />
         ) : total === 0 ? (
           <EmptyState

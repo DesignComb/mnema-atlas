@@ -71,7 +71,6 @@ export function AppLayout() {
   const sidebarProps = {
     onOpenCommand: () => setCmdOpen(true),
     onNewDeck: () => setDeckOpen(true),
-    onOpenImport: () => setImportOpen(true),
   }
 
   return (
@@ -110,7 +109,6 @@ export function AppLayout() {
           open={profileOpen}
           onOpenChange={setProfileOpen}
           onOpenCommand={() => setCmdOpen(true)}
-          onOpenImport={() => setImportOpen(true)}
         />
         <CaptureDialog open={captureOpen} onOpenChange={setCaptureOpen} />
         <CommandPalette

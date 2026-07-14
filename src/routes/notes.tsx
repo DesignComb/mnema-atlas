@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useCreateNote, useDeleteNote, useNotes, useSetNoteStarred, useSketchSave } from '@/lib/hooks'
 import { AiChip, useNewSince } from '@/components/common/AiChip'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { Button } from '@/components/ui/button'
 import { downloadText, relativeDue, humanizeError, untitledLabel, cn } from '@/lib/utils'
 import { tagColor } from '@/lib/tags'
@@ -142,6 +143,7 @@ export function NotesScreen() {
         }
         actions={
           <div className="flex items-center gap-1.5">
+            <AiImportButton />
             {notes && notes.length > 0 ? (
               <Button
                 variant="outline"

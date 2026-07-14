@@ -4,6 +4,7 @@ import { Library, Plus } from 'lucide-react'
 import { useT } from '@/lib/i18n'
 import { useDecks, useReorderDecks } from '@/lib/hooks'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { DeckTreeNav } from '@/components/app-shell/AppSidebar'
 import { NewDeckDialog } from '@/components/app-shell/NewDeckDialog'
 import { Button } from '@/components/ui/button'
@@ -26,9 +27,12 @@ export function DecksScreen() {
         title={t('Decks', '牌組')}
         icon={<Library className="size-4" />}
         actions={
-          <Button variant="brand" size="sm" onClick={() => setNewOpen(true)}>
-            <Plus className="size-4" /> <span className="hidden sm:inline">{t('New deck', '新增牌組')}</span>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <AiImportButton />
+            <Button variant="brand" size="sm" onClick={() => setNewOpen(true)}>
+              <Plus className="size-4" /> <span className="hidden sm:inline">{t('New deck', '新增牌組')}</span>
+            </Button>
+          </div>
         }
       />
       <div className="flex-1 overflow-y-auto">

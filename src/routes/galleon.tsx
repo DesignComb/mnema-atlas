@@ -170,7 +170,11 @@ export function GalleonScreen() {
   if (isLoading) {
     return (
       <>
-        <PageHeader title={t('Money', '記帳')} icon={<Coins className="size-4" />} />
+        <PageHeader
+          title={t('Money', '記帳')}
+          icon={<Coins className="size-4" />}
+          actions={<AiImportButton />}
+        />
         <div className="mx-auto max-w-3xl px-4 py-6">
           <div className="h-40 animate-pulse rounded-xl bg-card" />
         </div>
@@ -182,7 +186,11 @@ export function GalleonScreen() {
   if (ledgersError) {
     return (
       <>
-        <PageHeader title={t('Money', '記帳')} icon={<Coins className="size-4" />} />
+        <PageHeader
+          title={t('Money', '記帳')}
+          icon={<Coins className="size-4" />}
+          actions={<AiImportButton />}
+        />
         <div className="flex-1 overflow-y-auto">
           <ErrorState onRetry={() => void refetchLedgers()} />
         </div>
@@ -193,7 +201,11 @@ export function GalleonScreen() {
   if (!active.length) {
     return (
       <>
-        <PageHeader title={t('Money', '記帳')} icon={<Coins className="size-4" />} />
+        <PageHeader
+          title={t('Money', '記帳')}
+          icon={<Coins className="size-4" />}
+          actions={<AiImportButton />}
+        />
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
             <EmptyState

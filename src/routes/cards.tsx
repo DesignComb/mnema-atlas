@@ -4,6 +4,7 @@ import { useCards, useDecks, useDueCards, useNotes, useSeedSample } from '@/lib/
 import { buildDeckTree, flattenTree } from '@/lib/deck-tree'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
@@ -93,13 +94,16 @@ export function CardsScreen() {
         }
         icon={<Layers className="size-4" />}
         actions={
-          totalDue > 0 ? (
-            <Button asChild variant="brand" size="sm">
-              <Link to="/study">
-                <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '學習')} </span>({totalDue})
-              </Link>
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-1.5">
+            <AiImportButton />
+            {totalDue > 0 ? (
+              <Button asChild variant="brand" size="sm">
+                <Link to="/study">
+                  <GraduationCap className="size-4" /> <span className="hidden sm:inline">{t('Study', '學習')} </span>({totalDue})
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         }
       />
       <div className="flex-1 overflow-y-auto">

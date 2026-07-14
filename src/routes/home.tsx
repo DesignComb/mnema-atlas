@@ -40,6 +40,7 @@ import {
 import { readLayoutMirror } from '@/lib/api'
 import { useHiddenKeys } from '@/lib/undoable'
 import { PageHeader } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { Button } from '@/components/ui/button'
 import { HabitCheckButton } from '@/components/tempo/HabitCheckButton'
 import { useI18n } from '@/lib/i18n'
@@ -160,14 +161,17 @@ export function HomeScreen() {
         title={t('Today', '今天')}
         subtitle={`${greeting(lang)} · ${today}`}
         actions={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t('Customise Today', '自訂「今天」')}
-            onClick={() => setCustomizeOpen(true)}
-          >
-            <Settings2 className="size-4 text-muted-foreground" />
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <AiImportButton />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('Customise Today', '自訂「今天」')}
+              onClick={() => setCustomizeOpen(true)}
+            >
+              <Settings2 className="size-4 text-muted-foreground" />
+            </Button>
+          </div>
         }
       />
       {/* Today aggregates every space, so a pull refreshes everything: only the

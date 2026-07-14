@@ -27,6 +27,7 @@ import { NewCardDialog } from '@/components/cards/NewCardDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
 import { AskAiDialog } from '@/components/cards/AskAiDialog'
 import { PageHeader } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/lib/i18n'
 
@@ -148,6 +149,7 @@ export function NoteScreen() {
         subtitle={<SaveIndicator status={status} />}
         actions={
           <>
+            <AiImportButton />
             <Button
               variant="ghost"
               size="sm"

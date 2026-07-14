@@ -12,6 +12,7 @@ import { useTheme } from '@/lib/theme'
 import { useT } from '@/lib/i18n'
 import { tagHue } from '@/lib/tags'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 
 type Layout = 'force' | 'radial' | 'tree'
 type ColorBy = 'tag' | 'deck'
@@ -50,7 +51,12 @@ export function GraphScreen() {
 
   return (
     <>
-      <PageHeader title={t('Graph', '圖譜')} subtitle={t('How your notes connect', '你的筆記如何相連')} icon={<Waypoints className="size-4" />} />
+      <PageHeader
+        title={t('Graph', '圖譜')}
+        subtitle={t('How your notes connect', '你的筆記如何相連')}
+        icon={<Waypoints className="size-4" />}
+        actions={<AiImportButton />}
+      />
       <div className="relative flex-1 overflow-hidden bg-dots">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">

@@ -14,6 +14,7 @@ import {
 import { ancestors, buildDeckTree, compareDecks, descendantIds, flattenTree } from '@/lib/deck-tree'
 import type { DeckRow } from '@/lib/database.types'
 import { PageHeader, EmptyState } from '@/components/app-shell/PageHeader'
+import { AiImportButton } from '@/components/app-shell/AiImportButton'
 import { NewCardDialog } from '@/components/cards/NewCardDialog'
 import { NewDeckDialog } from '@/components/app-shell/NewDeckDialog'
 import { FlashcardTile } from '@/components/cards/FlashcardTile'
@@ -142,6 +143,7 @@ export function DeckScreen() {
         icon={<Layers className="size-4" />}
         actions={
           <>
+            <AiImportButton />
             <Button variant="outline" size="sm" onClick={() => setCardOpen(true)}>
               <Plus className="size-4" /> <span className="hidden sm:inline">{t('Card', '閃卡')}</span>
             </Button>

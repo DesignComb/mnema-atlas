@@ -4,16 +4,24 @@ import { useShell } from '@/lib/mobile-nav'
 import { useT } from '@/lib/i18n'
 
 /**
- * Header affordance that opens the Space-aware "Import from AI" dialog. The
- * dialog itself reads the current route to pick the right Space's prompt, so
- * this button is identical everywhere — drop it into any Space's PageHeader
- * `actions`. Label collapses to just the icon below `sm`.
+ * Mobile "Import from AI" affordance: a brand pill dropped into a Space's
+ * PageHeader `actions`. Hidden at `lg+`, where the always-visible sidebar
+ * button (AppSidebar) carries it instead — so desktop shows it once, in the
+ * chrome, and phones show it in-header. Opens the Space-aware import dialog
+ * (reads the route to pick the right flow). Label collapses to the icon below `sm`.
  */
 export function AiImportButton() {
   const t = useT()
   const { openImport } = useShell()
   return (
-    <Button variant="ghost" size="sm" onClick={openImport} title={t('Import with AI', '用 AI 匯入')}>
+    <Button
+      variant="brand-soft"
+      size="sm"
+      onClick={openImport}
+      aria-label={t('Import with AI', '用 AI 匯入')}
+      title={t('Import with AI', '用 AI 匯入')}
+      className="lg:hidden"
+    >
       <Sparkles className="size-4" />
       <span className="hidden sm:inline">{t('Import with AI', '用 AI 匯入')}</span>
     </Button>

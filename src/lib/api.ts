@@ -387,6 +387,16 @@ export async function recordReview(
 }
 
 /**
+ * The card behind a review no longer exists (deleted on another device or via
+ * MCP). unwrap() flattens PostgrestError to a plain Error, so the P0002 code
+ * is gone — match record_review's raise text ('card not found', 0001_init.sql;
+ * migrations are append-only, so the literal is stable).
+ */
+export function isCardNotFound(err: unknown): boolean {
+  return err instanceof Error && err.message.includes('card not found')
+}
+
+/**
  * record_review with retry — the review queue advances optimistically, so a
  * transient network blip must not silently lose a grade. Retries a few times
  * with backoff; throws only if every attempt fails (caller surfaces that).
@@ -402,6 +412,9 @@ export async function recordReviewSafe(
     try {
       return await recordReview(cardId, card, log)
     } catch (err) {
+      // Permanent: the card was deleted (another device, MCP) — retrying can
+      // only burn the backoff budget before failing the same way.
+      if (isCardNotFound(err)) throw err
       lastErr = err
       if (attempt < retries) await new Promise((r) => setTimeout(r, 400 * 2 ** attempt))
     }

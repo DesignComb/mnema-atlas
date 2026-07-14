@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import { Browser } from '@capacitor/browser'
 import { App as CapApp } from '@capacitor/app'
 import { supabase } from './supabase'
+import { clearAllStudySessions } from './study-session'
 
 // Custom-scheme deep link the Capacitor shell registers (see AndroidManifest.xml)
 // and that Supabase redirects to after Google sign-in. Must also be in Supabase
@@ -43,6 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         void import('@/router').then((m) => m.router.invalidate())
       }
+      // Like the localStorage purge in signOut(): per-user in-memory caches
+      // must not leak into the next account. On native neither sign-out nor
+      // sign-in reloads the page, so module memory survives an account switch.
+      if (event === 'SIGNED_OUT') clearAllStudySessions()
     })
 
     // Native only: catch the OAuth deep-link redirect. The system browser sends

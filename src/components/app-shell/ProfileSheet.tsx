@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { HelpCircle, Languages, LogOut, Moon, Plug, Search, Sparkles, Sun } from 'lucide-react'
+import { HelpCircle, Languages, LogOut, Moon, Plug, Search, Sun } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
@@ -12,18 +12,18 @@ import { VersionStamp } from './AppSidebar'
 /**
  * Account & settings, relocated out of the old nav drawer into a bottom sheet
  * opened by the header avatar. Holds only cross-cutting utilities (Search/⌘K,
- * help, connect/import AI, language, theme, sign out) — no navigation altitude.
+ * help, connect AI, language, theme, sign out) — no navigation altitude.
+ * ("Import from AI" is not here — it's a prominent header action on every
+ * screen via <AiImportButton>, not buried behind the avatar.)
  */
 export function ProfileSheet({
   open,
   onOpenChange,
   onOpenCommand,
-  onOpenImport,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   onOpenCommand: () => void
-  onOpenImport: () => void
 }) {
   const { user, signOut } = useAuth()
   const { theme, toggle } = useTheme()
@@ -57,14 +57,6 @@ export function ProfileSheet({
           />
           <RowLink icon={<HelpCircle className="size-4" />} label={t('How it works', '使用教學')} to="/guide" onNavigate={close} />
           <RowLink icon={<Plug className="size-4" />} label={t('Connect an AI', '連接 AI')} to="/settings/integrations" onNavigate={close} />
-          <Row
-            icon={<Sparkles className="size-4" />}
-            label={t('Import from AI', '從 AI 匯入')}
-            onClick={() => {
-              close()
-              onOpenImport()
-            }}
-          />
 
           <div className="my-1 h-px bg-border" />
 

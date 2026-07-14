@@ -40,6 +40,7 @@ import { activeSpace, type SpaceKey } from './spaces'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
+import { useShell } from '@/lib/mobile-nav'
 import { useDecks, useReorderDecks, useReorderTaskLists, useTaskLists } from '@/lib/hooks'
 import { buildDeckTree, type DeckNode } from '@/lib/deck-tree'
 import type { DeckRow } from '@/lib/database.types'
@@ -99,12 +100,10 @@ const TRIP_SECTIONS = [
 export function AppSidebar({
   onOpenCommand,
   onNewDeck,
-  onOpenImport,
   className,
 }: {
   onOpenCommand: () => void
   onNewDeck: () => void
-  onOpenImport: () => void
   /** Width + display are set by the caller (the persistent desktop rail). */
   className?: string
 }) {
@@ -117,6 +116,7 @@ export function AppSidebar({
   const reorderDecks = useReorderDecks()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
+  const { openImport } = useShell()
 
   // Top-level space — the pathname flips the rail. Single source of truth in spaces.ts.
   const space = activeSpace(pathname)
@@ -156,6 +156,18 @@ export function AppSidebar({
           <kbd className="ml-auto rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
             {modKey}K
           </kbd>
+        </button>
+      </div>
+
+      {/* Import with AI — the BYO-AI write path, kept prominent in the chrome
+          (not buried in the avatar menu) and visible on every screen/state. */}
+      <div className="px-3 pb-2">
+        <button
+          onClick={openImport}
+          className="flex w-full items-center gap-2 rounded-md bg-brand px-2.5 py-1.5 text-[13px] font-medium text-brand-foreground shadow-sm transition hover:bg-brand/90"
+        >
+          <Sparkles className="size-3.5" />
+          <span>{t('Import with AI', '用 AI 匯入')}</span>
         </button>
       </div>
 
@@ -374,9 +386,6 @@ export function AppSidebar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="top" className="w-56 max-w-[calc(100vw-1.5rem)]">
-            <DropdownMenuItem onSelect={() => onOpenImport()}>
-              <Sparkles /> {t('Import from AI', '從 AI 匯入')}
-            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to="/settings/integrations">
                 <Plug /> {t('Connect an AI', '連接 AI')}
