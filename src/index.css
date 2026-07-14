@@ -372,34 +372,28 @@
 
 /* ── AI affordances ──────────────────────────────────────────────
    One fixed (never re-hued) treatment for the BYO-AI entry points, so they read
-   as a recognisable family. `.ai-cta` is the prominent "Import with AI" button:
-   a graphite grey gradient with a slow diagonal sheen — visible at a glance but
-   easy on the eyes (no loud colour). `.ai-soft` is the weaker sibling (e.g.
-   "Edit trip with AI"): a lighter grey gradient + grey ink + a hairline ring,
-   no sheen. The global prefers-reduced-motion rule already stills the sheen. */
-@keyframes ai-sheen {
-  0% { transform: translateX(-160%) skewX(-14deg); }
-  50%, 100% { transform: translateX(360%) skewX(-14deg); }
-}
+   as a recognisable family — a "glass graphite" look with NO motion (nothing
+   sweeps or flashes). `.ai-cta` is the prominent "Import with AI" button: a grey
+   gradient with a soft top-left highlight + a fine light edge, so it looks
+   distinct and premium. `.ai-soft` is the weaker sibling (e.g. "Edit trip with
+   AI"): a lighter grey gradient + grey ink + a hairline ring. */
 .ai-cta {
   position: relative;
-  overflow: hidden;
-  background-image: linear-gradient(105deg, var(--ai-grad-from), var(--ai-grad-to));
+  /* Static "glass" graphite: a soft top-left highlight layered over the grey
+     gradient reads as premium and distinct — no motion, nothing abrupt. The
+     Sparkles icon carries the "AI" meaning. */
+  background-image:
+    linear-gradient(150deg, oklch(1 0 0 / 0.14), transparent 42%),
+    linear-gradient(150deg, var(--ai-grad-from), var(--ai-grad-to));
   color: var(--ai-fg);
-}
-.ai-cta::after {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 45%;
-  pointer-events: none;
-  /* A soft white glint sweeping across — the "special effect". */
-  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.5), transparent);
-  filter: blur(2px);
-  animation: ai-sheen 3.6s ease-in-out infinite;
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.12),
+    inset 0 0 0 1px oklch(1 0 0 / 0.05);
 }
 .ai-soft {
-  background-image: linear-gradient(105deg, var(--ai-soft-from), var(--ai-soft-to));
+  background-image:
+    linear-gradient(150deg, oklch(1 0 0 / 0.2), transparent 45%),
+    linear-gradient(150deg, var(--ai-soft-from), var(--ai-soft-to));
   color: var(--ai-ink);
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-ink) 20%, transparent);
 }
