@@ -13,6 +13,7 @@ import {
   ChefHat,
   ChevronRight,
   Coins,
+  Compass,
   FileText,
   Flame,
   GraduationCap,
@@ -45,6 +46,7 @@ import { useDecks, useReorderDecks, useReorderTaskLists, useTaskLists } from '@/
 import { buildDeckTree, type DeckNode } from '@/lib/deck-tree'
 import type { DeckRow } from '@/lib/database.types'
 import { cn, modKey } from '@/lib/utils'
+import { AiImportButton } from './AiImportButton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SortableList } from '@/components/common/SortableList'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -116,7 +118,7 @@ export function AppSidebar({
   const reorderDecks = useReorderDecks()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
-  const { openImport } = useShell()
+  const { startTour } = useShell()
 
   // Top-level space — the pathname flips the rail. Single source of truth in spaces.ts.
   const space = activeSpace(pathname)
@@ -149,7 +151,6 @@ export function AppSidebar({
       <div className="px-3 pb-2">
         <button
           onClick={onOpenCommand}
-          data-tour="search"
           className="flex w-full items-center gap-2 rounded-md border border-transparent bg-sidebar-accent/60 px-2.5 py-1.5 text-[13px] text-muted-foreground transition hover:border-border hover:bg-card"
         >
           <Search className="size-3.5" />
@@ -161,16 +162,10 @@ export function AppSidebar({
       </div>
 
       {/* Import with AI — the BYO-AI write path, kept prominent in the chrome
-          (not buried in the avatar menu) and visible on every screen/state. */}
+          (not buried in the avatar menu) and visible on every screen/state. The
+          SAME fixed-violet button used in every Space's mobile header. */}
       <div className="px-3 pb-2">
-        <button
-          onClick={openImport}
-          data-tour="import"
-          className="flex w-full items-center gap-2 rounded-md bg-brand px-2.5 py-1.5 text-[13px] font-medium text-brand-foreground shadow-sm transition hover:bg-brand/90"
-        >
-          <Sparkles className="size-3.5" />
-          <span>{t('Import with AI', '用 AI 匯入')}</span>
-        </button>
+        <AiImportButton block />
       </div>
 
       {/* Primary nav */}
@@ -392,6 +387,9 @@ export function AppSidebar({
               <Link to="/settings/integrations">
                 <Plug /> {t('Connect an AI', '連接 AI')}
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => startTour()}>
+              <Compass /> {t('Take a tour', '使用導覽')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

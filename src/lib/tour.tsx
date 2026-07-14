@@ -43,6 +43,14 @@ type TourStep = {
 
 const STEPS: TourStep[] = [
   {
+    selector: '[data-tour="import"]',
+    title: ['Bring in your own AI', '帶進你自己的 AI'],
+    body: [
+      "This is the heart of Mnema: connect ChatGPT, Claude or any AI and let it fill your spaces for you. Whenever you want AI to add content, start here.",
+      'Mnema 的核心：連接 ChatGPT、Claude 或任何 AI，讓它幫你充實各個空間。想讓 AI 新增內容時，都從這裡開始。',
+    ],
+  },
+  {
     selector: '[data-tour="spaces"]',
     title: ['Switch between spaces', '切換各個空間'],
     body: [
@@ -56,22 +64,6 @@ const STEPS: TourStep[] = [
     body: [
       'Got a fleeting thought? Drop it here and sort it out later — or let your AI file it into the right space.',
       '有稍縱即逝的靈感？先丟進來，之後再整理 —— 或交給 AI 幫你歸到正確的空間。',
-    ],
-  },
-  {
-    selector: '[data-tour="search"]',
-    title: ['Find anything instantly', '一瞬間找到任何東西'],
-    body: [
-      'Search every note, card and task from one box. Press ⌘K / Ctrl-K anywhere to open it.',
-      '用一個搜尋框找遍所有筆記、閃卡與任務。任何地方按 ⌘K / Ctrl-K 都能開。',
-    ],
-  },
-  {
-    selector: '[data-tour="import"]',
-    title: ['Bring in your own AI', '帶進你自己的 AI'],
-    body: [
-      "This is the heart of Mnema: connect ChatGPT, Claude or any AI and let it fill your spaces for you. Whenever you want AI to add content, start here.",
-      'Mnema 的核心：連接 ChatGPT、Claude 或任何 AI，讓它幫你充實各個空間。想讓 AI 新增內容時，都從這裡開始。',
     ],
   },
 ]

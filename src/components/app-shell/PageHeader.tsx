@@ -35,7 +35,6 @@ export function PageHeader({
         <button
           type="button"
           onClick={openCommand}
-          data-tour="search"
           aria-label={t('Search', '搜尋')}
           className="shrink-0 rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
         >

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { HelpCircle, Languages, LogOut, Moon, Plug, Search, Sun } from 'lucide-react'
+import { Compass, HelpCircle, Languages, LogOut, Moon, Plug, Search, Sun } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { useI18n } from '@/lib/i18n'
+import { useShell } from '@/lib/mobile-nav'
 import { modKey } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -28,6 +29,7 @@ export function ProfileSheet({
   const { user, signOut } = useAuth()
   const { theme, toggle } = useTheme()
   const { t, lang, setLang } = useI18n()
+  const { startTour } = useShell()
   const navigate = useNavigate()
   const initials = (user?.email ?? '?').slice(0, 2).toUpperCase()
   const close = () => onOpenChange(false)
@@ -56,6 +58,14 @@ export function ProfileSheet({
             }}
           />
           <RowLink icon={<HelpCircle className="size-4" />} label={t('How it works', '使用教學')} to="/guide" onNavigate={close} />
+          <Row
+            icon={<Compass className="size-4" />}
+            label={t('Take a tour', '使用導覽')}
+            onClick={() => {
+              close()
+              startTour()
+            }}
+          />
           <RowLink icon={<Plug className="size-4" />} label={t('Connect an AI', '連接 AI')} to="/settings/integrations" onNavigate={close} />
 
           <div className="my-1 h-px bg-border" />

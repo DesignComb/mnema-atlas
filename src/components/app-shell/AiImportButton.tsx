@@ -2,29 +2,34 @@ import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useShell } from '@/lib/mobile-nav'
 import { useT } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 
 /**
- * Mobile "Import from AI" affordance: a brand pill dropped into a Space's
- * PageHeader `actions`. Hidden at `lg+`, where the always-visible sidebar
- * button (AppSidebar) carries it instead — so desktop shows it once, in the
- * chrome, and phones show it in-header. Opens the Space-aware import dialog
- * (reads the route to pick the right flow). Label collapses to the icon below `sm`.
+ * The ONE "Import with AI" affordance — a single, distinctive button rendered
+ * identically everywhere (the desktop sidebar + every Space's mobile header). It
+ * uses the FIXED violet `--color-ai` accent, NOT the per-Space brand hue, so the
+ * BYO-AI front door reads as one recognisable global action that never changes
+ * colour by Space (mirrors how Capture is a fixed, non-re-hued affordance).
+ *
+ *  - default : a compact pill for a PageHeader `actions` slot. Hidden at `lg+`,
+ *    where the sidebar carries it; the label collapses to the icon below `sm`.
+ *  - `block` : full-width, for the sidebar chrome (shown at `lg+`).
  */
-export function AiImportButton() {
+export function AiImportButton({ block }: { block?: boolean }) {
   const t = useT()
   const { openImport } = useShell()
   return (
     <Button
-      variant="brand-soft"
+      variant="ai"
       size="sm"
       onClick={openImport}
       data-tour="import"
       aria-label={t('Import with AI', '用 AI 匯入')}
       title={t('Import with AI', '用 AI 匯入')}
-      className="lg:hidden"
+      className={cn(block ? 'w-full justify-start' : 'lg:hidden')}
     >
       <Sparkles className="size-4" />
-      <span className="hidden sm:inline">{t('Import with AI', '用 AI 匯入')}</span>
+      <span className={cn(!block && 'hidden sm:inline')}>{t('Import with AI', '用 AI 匯入')}</span>
     </Button>
   )
 }
