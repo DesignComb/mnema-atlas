@@ -123,14 +123,15 @@
   --capture: oklch(0.58 0.13 250);
   --capture-foreground: oklch(0.99 0.003 95);
 
-  /* AI affordances — a soft blue→teal gradient (--ai-grad-*) on the prominent
-     button, a light tint (--ai-soft) + accent ink (--ai-ink) on the weak one.
-     Fixed across every space (never re-hued). */
-  --ai-grad-from: oklch(0.63 0.12 248);
-  --ai-grad-to: oklch(0.68 0.1 205);
+  /* AI affordances — a graphite grey gradient (--ai-grad-*) on the prominent
+     button, a lighter grey gradient (--ai-soft-*) + grey ink (--ai-ink) on the
+     weak one. Fixed across every space (never re-hued). */
+  --ai-grad-from: oklch(0.52 0.006 260);
+  --ai-grad-to: oklch(0.4 0.006 260);
   --ai-fg: oklch(0.99 0.003 95);
-  --ai-soft: oklch(0.96 0.025 225);
-  --ai-ink: oklch(0.5 0.11 235);
+  --ai-soft-from: oklch(0.965 0.003 260);
+  --ai-soft-to: oklch(0.915 0.004 260);
+  --ai-ink: oklch(0.44 0.008 260);
 
   /* Sidebar — a hair warmer/greyer than the page */
   --sidebar: oklch(0.978 0.004 85);
@@ -183,11 +184,12 @@
   --capture: oklch(0.72 0.12 250);
   --capture-foreground: oklch(0.2 0.02 250);
 
-  --ai-grad-from: oklch(0.58 0.13 248);
-  --ai-grad-to: oklch(0.62 0.1 205);
+  --ai-grad-from: oklch(0.5 0.007 260);
+  --ai-grad-to: oklch(0.38 0.007 260);
   --ai-fg: oklch(0.99 0.003 95);
-  --ai-soft: oklch(0.33 0.05 235);
-  --ai-ink: oklch(0.82 0.1 225);
+  --ai-soft-from: oklch(0.34 0.006 260);
+  --ai-soft-to: oklch(0.29 0.006 260);
+  --ai-ink: oklch(0.82 0.008 260);
 
   --sidebar: oklch(0.235 0.012 70);
   --sidebar-foreground: oklch(0.8 0.01 80);
@@ -371,10 +373,10 @@
 /* ── AI affordances ──────────────────────────────────────────────
    One fixed (never re-hued) treatment for the BYO-AI entry points, so they read
    as a recognisable family. `.ai-cta` is the prominent "Import with AI" button:
-   a soft blue→teal gradient with a slow diagonal sheen — visible at a glance
-   but easy on the eyes (no loud flat fill). `.ai-soft` is the weaker sibling
-   (e.g. "Edit trip with AI"): a light tint + accent ink + a hairline ring, no
-   sheen. The global prefers-reduced-motion rule already stills the sheen. */
+   a graphite grey gradient with a slow diagonal sheen — visible at a glance but
+   easy on the eyes (no loud colour). `.ai-soft` is the weaker sibling (e.g.
+   "Edit trip with AI"): a lighter grey gradient + grey ink + a hairline ring,
+   no sheen. The global prefers-reduced-motion rule already stills the sheen. */
 @keyframes ai-sheen {
   0% { transform: translateX(-160%) skewX(-14deg); }
   55%, 100% { transform: translateX(340%) skewX(-14deg); }
@@ -396,12 +398,12 @@
   animation: ai-sheen 5s ease-in-out infinite;
 }
 .ai-soft {
-  background-color: var(--ai-soft);
+  background-image: linear-gradient(105deg, var(--ai-soft-from), var(--ai-soft-to));
   color: var(--ai-ink);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-ink) 24%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-ink) 20%, transparent);
 }
 .ai-soft:hover {
-  background-color: color-mix(in oklch, var(--ai-soft) 84%, var(--ai-ink));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-ink) 40%, transparent);
 }
 
 @layer utilities {
