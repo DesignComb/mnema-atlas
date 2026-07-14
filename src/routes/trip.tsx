@@ -280,7 +280,7 @@ export function TripScreen() {
               </Button>
             ) : null}
             {canEdit ? (
-              <Button variant="outline" size="sm" onClick={() => setAiEditOpen(true)}>
+              <Button variant="ai-soft" size="sm" onClick={() => setAiEditOpen(true)}>
                 <Sparkles className="size-4" /> <span className="hidden sm:inline">{t('Edit with AI', '用 AI 調整')}</span>
               </Button>
             ) : null}
