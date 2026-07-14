@@ -6,6 +6,7 @@ import { cn, humanizeError, untitledLabel } from '@/lib/utils'
 import { ShellContext } from '@/lib/mobile-nav'
 import { useSwipeNav } from '@/lib/swipe-nav'
 import { saveLastRoute } from '@/lib/last-route'
+import { ProductTour, hasSeenTour, markTourSeen } from '@/lib/tour'
 import { AppSidebar } from './AppSidebar'
 import { SpaceRail } from './SpaceRail'
 import { BottomTabs } from './BottomTabs'
@@ -23,6 +24,7 @@ export function AppLayout() {
   const [captureOpen, setCaptureOpen] = useState(false)
   const [spacesOpen, setSpacesOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [tourOpen, setTourOpen] = useState(false)
   const navigate = useNavigate()
   const createNote = useCreateNote()
   const mainRef = useRef<HTMLElement>(null)
@@ -59,6 +61,19 @@ export function AppLayout() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // First run: auto-launch the product tour once. The delay lets the shell paint
+  // so the chrome the tour spotlights is measurable; the flag makes it one-time.
+  useEffect(() => {
+    if (hasSeenTour()) return
+    const id = setTimeout(() => setTourOpen(true), 900)
+    return () => clearTimeout(id)
+  }, [])
+
+  const closeTour = useCallback(() => {
+    markTourSeen()
+    setTourOpen(false)
+  }, [])
+
   const newNote = useCallback(async () => {
     try {
       const note = await createNote.mutateAsync({ title: untitledLabel(), body: '' })
@@ -75,7 +90,12 @@ export function AppLayout() {
 
   return (
     <ShellContext.Provider
-      value={{ openProfile: () => setProfileOpen(true), openCommand: () => setCmdOpen(true), openImport: () => setImportOpen(true) }}
+      value={{
+        openProfile: () => setProfileOpen(true),
+        openCommand: () => setCmdOpen(true),
+        openImport: () => setImportOpen(true),
+        startTour: () => setTourOpen(true),
+      }}
     >
       <div
         // Pad past the device status bar (top) so content isn't drawn under it on
@@ -120,6 +140,7 @@ export function AppLayout() {
         />
         <NewDeckDialog open={deckOpen} onOpenChange={setDeckOpen} />
         <QuickImportDialog open={importOpen} onOpenChange={setImportOpen} />
+        <ProductTour run={tourOpen} onClose={closeTour} />
       </div>
     </ShellContext.Provider>
   )

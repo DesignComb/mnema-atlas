@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   BookOpenCheck,
+  Compass,
   FileText,
   GraduationCap,
   Layers,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/app-shell/PageHeader'
 import { SPACES, type SpaceKey } from '@/components/app-shell/spaces'
+import { useShell } from '@/lib/mobile-nav'
 import { useT } from '@/lib/i18n'
 import { modKey } from '@/lib/utils'
 
@@ -36,6 +38,7 @@ const SPACE_BLURB: Record<SpaceKey, [string, string]> = {
 
 export function GuideScreen() {
   const t = useT()
+  const { startTour } = useShell()
   return (
     <>
       <PageHeader title={t('How Mnema works', 'Mnema 如何運作')} subtitle={t('A 2-minute guide', '2 分鐘上手指南')} icon={<BookOpenCheck className="size-4" />} />
@@ -50,6 +53,13 @@ export function GuideScreen() {
                 'Mnema 是一個由你自己的 AI 驅動的個人筆記 + 助理工作區。它本身不內建任何 AI —— 你連接你已經在用的助理(ChatGPT、Claude、Cursor…),由它幫你充實與整理。你的內容分成幾個專注的區塊。',
               )}
             </p>
+            <button
+              type="button"
+              onClick={startTour}
+              className="inline-flex items-center gap-2 rounded-md bg-brand px-3.5 py-2 text-[13px] font-medium text-brand-foreground shadow-sm transition hover:bg-brand/90"
+            >
+              <Compass className="size-4" /> {t('Take the quick tour', '看快速使用導覽')}
+            </button>
           </section>
 
           {/* Spaces — rendered from SPACES so the guide always matches the rail. */}

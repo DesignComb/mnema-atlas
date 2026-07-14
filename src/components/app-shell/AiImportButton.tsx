@@ -18,6 +18,7 @@ export function AiImportButton() {
       variant="brand-soft"
       size="sm"
       onClick={openImport}
+      data-tour="import"
       aria-label={t('Import with AI', '用 AI 匯入')}
       title={t('Import with AI', '用 AI 匯入')}
       className="lg:hidden"

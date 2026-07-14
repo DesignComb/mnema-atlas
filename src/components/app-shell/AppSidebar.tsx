@@ -149,6 +149,7 @@ export function AppSidebar({
       <div className="px-3 pb-2">
         <button
           onClick={onOpenCommand}
+          data-tour="search"
           className="flex w-full items-center gap-2 rounded-md border border-transparent bg-sidebar-accent/60 px-2.5 py-1.5 text-[13px] text-muted-foreground transition hover:border-border hover:bg-card"
         >
           <Search className="size-3.5" />
@@ -164,6 +165,7 @@ export function AppSidebar({
       <div className="px-3 pb-2">
         <button
           onClick={openImport}
+          data-tour="import"
           className="flex w-full items-center gap-2 rounded-md bg-brand px-2.5 py-1.5 text-[13px] font-medium text-brand-foreground shadow-sm transition hover:bg-brand/90"
         >
           <Sparkles className="size-3.5" />

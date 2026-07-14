@@ -12,12 +12,15 @@ export type ShellApi = {
   openCommand: () => void
   /** Opens the Space-aware "Import from AI" dialog (lives in AppLayout). */
   openImport: () => void
+  /** Replays the first-run product tour (lives in AppLayout). */
+  startTour: () => void
 }
 
 export const ShellContext = createContext<ShellApi>({
   openProfile: () => {},
   openCommand: () => {},
   openImport: () => {},
+  startTour: () => {},
 })
 
 export function useShell() {

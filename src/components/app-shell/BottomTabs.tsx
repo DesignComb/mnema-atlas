@@ -100,6 +100,7 @@ function SpacesTab({
     <button
       type="button"
       onClick={onOpen}
+      data-tour="spaces"
       aria-haspopup="dialog"
       aria-current={active ? 'page' : undefined}
       className={cn(
@@ -130,6 +131,7 @@ function CenterCapture({ label, onCapture }: { label: string; onCapture: () => v
       <motion.button
         type="button"
         aria-label={label}
+        data-tour="capture"
         whileTap={{ scale: 0.9 }}
         onClick={() => {
           setBursts((b) => [...b, seq.current++])

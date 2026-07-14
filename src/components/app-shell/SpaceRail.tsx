@@ -14,6 +14,7 @@ export function SpaceRail({ onCapture }: { onCapture: () => void }) {
   return (
     <nav
       aria-label={t('Spaces', '空間')}
+      data-tour="spaces"
       className="hidden w-16 shrink-0 flex-col items-center gap-1.5 border-r border-sidebar-border bg-sidebar py-3 lg:flex"
     >
       <Link
@@ -48,6 +49,7 @@ export function SpaceRail({ onCapture }: { onCapture: () => void }) {
 
       <button
         onClick={onCapture}
+        data-tour="capture"
         title={t('Capture', '暫存')}
         aria-label={t('Capture anything for your AI', '隨手暫存,交給 AI')}
         className="mt-1 flex size-11 flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-border text-[9px] font-medium text-muted-foreground transition-colors hover:border-brand/50 hover:text-brand"

@@ -9,7 +9,7 @@ import * as api from '@/lib/api'
 import { useDecks } from '@/lib/hooks'
 import { useT } from '@/lib/i18n'
 import { activeSpace, brandTitleFor, type SpaceKey } from '@/components/app-shell/spaces'
-import { SPACE_IMPORT, buildRestPrompt } from '@/lib/ai-import'
+import { SPACE_IMPORT, buildRestPrompt, type SpaceImportConfig } from '@/lib/ai-import'
 import { REST_URL } from '@/lib/endpoints'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -51,6 +51,47 @@ const PREAMBLE = `When I ask you to save notes or flashcards to Mnema, reply wit
 
 Keep fronts and backs concise. The "note" field links a card to a note by its title. Output nothing but the block.`
 
+/** Shared: a Space-specific "what your AI can add here" checklist, so the user
+ *  knows the scope before they ask. Driven by SPACE_IMPORT (single source). */
+function CapabilityList({ cfg }: { cfg: SpaceImportConfig }) {
+  const t = useT()
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3">
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {t('What your AI can add here', 'AI 在這裡能幫你新增')}
+      </p>
+      <ul className="space-y-1">
+        {cfg.capabilitiesEn.map((en, i) => (
+          <li key={en} className="flex items-start gap-1.5 text-[13px] text-foreground">
+            <Check className="mt-0.5 size-3.5 shrink-0 text-brand" />
+            <span>{t(en, cfg.capabilitiesZh[i])}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** Shared: a few natural example requests the user can copy the phrasing of. */
+function ExampleChips({ cfg }: { cfg: SpaceImportConfig }) {
+  const t = useT()
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[12px] font-medium text-muted-foreground">{t('Try asking:', '可以這樣說：')}</p>
+      <div className="flex flex-col gap-1.5">
+        {cfg.examplesEn.map((en, i) => (
+          <span
+            key={en}
+            className="rounded-lg border border-dashed border-border bg-card px-2.5 py-1.5 text-[12.5px] leading-snug text-muted-foreground"
+          >
+            “{t(en, cfg.examplesZh[i])}”
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /** Study: the AI replies with a `mnema` block; we parse + write notes/cards here. */
 function StudyPasteImport({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const [text, setText] = useState('')
@@ -59,6 +100,7 @@ function StudyPasteImport({ open, onOpenChange }: { open: boolean; onOpenChange:
   const navigate = useNavigate()
   const { data: decks } = useDecks()
   const t = useT()
+  const cfg = SPACE_IMPORT.study
 
   const parsed = useMemo(() => (text.trim() ? parseMnema(text) : null), [text])
   const data = parsed?.ok ? parsed.data : undefined
@@ -114,13 +156,26 @@ function StudyPasteImport({ open, onOpenChange }: { open: boolean; onOpenChange:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('Import from AI', '從 AI 匯入')}</DialogTitle>
           <DialogDescription>
-            {t('Paste a ', '貼上來自 ChatGPT、Gemini 或任何 AI 的 ')}<code className="rounded bg-muted px-1">mnema</code>{t(' block from ChatGPT, Gemini, or any AI.', ' 區塊。')}
+            {t(
+              'Ask any AI (ChatGPT, Gemini, Claude…) to write notes & flashcards, then paste its ',
+              '請任何 AI（ChatGPT、Gemini、Claude…）幫你寫筆記與閃卡，再把它回覆的 ',
+            )}
+            <code className="rounded bg-muted px-1">mnema</code>
+            {t(' reply back here.', ' 區塊貼回這裡。')}
           </DialogDescription>
         </DialogHeader>
+
+        <CapabilityList cfg={cfg} />
+
+        <ol className="list-decimal space-y-1 pl-5 text-[13px] leading-relaxed text-muted-foreground">
+          <li>{t('Copy the prompt below and paste it into your AI chat.', '複製下方提示詞，貼到你的 AI 對話中。')}</li>
+          <li>{t('Tell it what you want — like the examples below.', '告訴它你要什麼 —— 像下面的例子。')}</li>
+          <li>{t('Paste its reply here and press Import.', '把它的回覆貼回這裡，按「匯入」。')}</li>
+        </ol>
 
         <button
           type="button"
@@ -132,6 +187,8 @@ function StudyPasteImport({ open, onOpenChange }: { open: boolean; onOpenChange:
         >
           <Copy className="size-3.5" /> {t('Copy the prompt to give your AI', '複製要給 AI 的提示詞')}
         </button>
+
+        <ExampleChips cfg={cfg} />
 
         <Textarea
           value={text}
@@ -233,6 +290,8 @@ function RestImportGuide({
           </DialogDescription>
         </DialogHeader>
 
+        <CapabilityList cfg={cfg} />
+
         <ol className="list-decimal space-y-2 pl-5 text-[13px] leading-relaxed text-muted-foreground">
           <li>
             {t('Get an API key in ', '到 ')}
@@ -252,9 +311,11 @@ function RestImportGuide({
             )}
           </li>
           <li>
-            {t(`Then just tell it what to add, e.g. “${cfg.exampleEn}”.`, `接著直接告訴它要新增什麼，例如「${cfg.exampleZh}」。`)}
+            {t('Then just tell it what to add — like the examples below.', '接著直接告訴它要新增什麼 —— 像下面的例子。')}
           </li>
         </ol>
+
+        <ExampleChips cfg={cfg} />
 
         <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-muted/40 px-4 py-3 text-[12px] leading-relaxed">
           <code className="break-words">{prompt}</code>
