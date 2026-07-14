@@ -49,8 +49,8 @@ export function GuideScreen() {
             <h2 className="font-serif text-xl text-foreground">{t('The idea', '核心概念')}</h2>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
               {t(
-                'Mnema is a personal notes + assistant workspace you run with your own AI. It hosts no AI itself — you connect the assistant you already use (ChatGPT, Claude, Cursor…) and it fills and organizes everything for you. Your stuff lives in a few focused spaces.',
-                'Mnema 是一個由你自己的 AI 驅動的個人筆記 + 助理工作區。它本身不內建任何 AI —— 你連接你已經在用的助理(ChatGPT、Claude、Cursor…),由它幫你充實與整理。你的內容分成幾個專注的區塊。',
+                'A personal workspace you run with your own AI. Mnema hosts no AI itself — connect the assistant you already use (ChatGPT, Claude…) and it fills your spaces for you.',
+                '一個由你自己的 AI 驅動的個人工作區。Mnema 不內建 AI —— 連接你已經在用的助理（ChatGPT、Claude…），由它幫你充實各個空間。',
               )}
             </p>
             <button
@@ -72,8 +72,8 @@ export function GuideScreen() {
             </div>
             <p className="text-[13px] text-muted-foreground">
               {t(
-                'Switch spaces from the rail on the left (or the tabs below on a phone). More may arrive over time — and your connected AI can work in any of them.',
-                '從左側的空間列(手機則是下方分頁)切換區塊。未來可能還會加入更多 —— 而你連接的 AI 在每個區塊都能幫你做事。',
+                'Switch from the rail on the left (tabs below on a phone). Your AI can work in any of them.',
+                '從左側空間列切換（手機在下方分頁）。你的 AI 在每個區塊都能幫你做事。',
               )}
             </p>
           </section>
@@ -97,17 +97,18 @@ export function GuideScreen() {
             </div>
             <p className="text-[14px] leading-relaxed text-muted-foreground">
               {t(
-                'Already chatting with ChatGPT, Claude, or another AI? Connect it once and it can create notes, draft whole trips, and add tasks or reminders straight into Mnema — it figures out which space from what you ask. The full setup — create a key, pick your assistant, see what it can do — lives on',
-                '已經在用 ChatGPT、Claude 或其他 AI 聊天了嗎？只要連接一次，它就能直接幫你建立筆記、草擬整趟行程、新增任務或提醒到 Mnema —— 它會依你說的內容判斷該放進哪個區塊。完整設定 — 建立金鑰、挑選你的助理、了解它能做什麼 — 都在',
+                'Connect ChatGPT, Claude or any AI once and it adds notes, trips, tasks and more straight into Mnema — picking the right space from what you ask. Set it up in',
+                '連接一次 ChatGPT、Claude 或任何 AI，它就能直接新增筆記、行程、任務等到 Mnema —— 並依你說的判斷該放哪個區塊。到',
               )}{' '}
-              <Link to="/settings/integrations" className="font-medium text-brand hover:underline">{t('Connect an AI', '連接 AI')}</Link>.
+              <Link to="/settings/integrations" className="font-medium text-brand hover:underline">{t('Connect an AI', '連接 AI')}</Link>
+              {t('.', ' 設定。')}
             </p>
             <div className="rounded-xl border border-dashed border-border p-3.5 text-[13px] leading-relaxed text-muted-foreground">
               <strong className="text-foreground">{t('No setup? (plain ChatGPT / Gemini)', '不想設定？（一般的 ChatGPT / Gemini）')}</strong>{' '}
               {t('Press', '按')}{' '}
               <kbd className="rounded border border-border bg-card px-1.5 text-[11px]">{modKey}+I</kbd> {t('for', '開啟')}{' '}
               <strong className="text-foreground">{t('Import from AI', '從 AI 匯入')}</strong>
-              {t(': copy the prompt, paste it to your AI, then paste its answer back here.', '：複製提示詞，貼給你的 AI，再把它的回覆貼回這裡。')}
+              {t(': copy the prompt, give it to your AI, paste the answer back.', '：複製提示詞給 AI，再把回覆貼回來。')}
             </div>
           </section>
 
@@ -117,11 +118,11 @@ export function GuideScreen() {
             <div>
               <h3 className="text-sm font-semibold text-foreground">{t('Is it safe?', '安全嗎？')}</h3>
               <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                {t('Yes. Keys are', '安全。金鑰預設為')}{' '}
+                {t('Yes. Keys are', '安全。金鑰預設')}{' '}
                 <strong className="text-foreground">{t('add-only', '僅可新增')}</strong>{' '}
                 {t(
-                  'by default — an AI can only add to your spaces and read what you can access, never change, complete, or delete anything. (Reading does include data you share, like a shared ledger.) Revoke a key anytime in',
-                  '— AI 只能為你的各個區塊新增內容,並讀取你有權存取的資料,無法修改、完成或刪除任何東西。(讀取範圍包含你參與分享的資料,例如共享帳本。)你隨時可以在',
+                  'by default — an AI can only add to your spaces and read what you can access, never change or delete anything. Revoke a key anytime in',
+                  '—— AI 只能新增內容並讀取你有權存取的資料，不能修改或刪除。你隨時可在',
                 )}{' '}
                 <Link to="/settings/integrations" className="text-brand hover:underline">{t('Connect an AI', '連接 AI')}</Link>
                 {t('.', ' 撤銷金鑰。')}
