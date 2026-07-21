@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { z } from 'zod'
 import { authenticateAssistant } from './auth'
+import { serviceClient } from './db'
 import { cleanError } from './errors'
 import type { Env } from './env'
 import { toolAllowed, toolByName, tools } from './tools'
@@ -72,6 +73,28 @@ assistant.post('/', async (c) => {
   if (text.length > 10_000) return c.json({ error: 'text is too long' }, 400)
 
   const scopes = c.get('scopes')
+  let ledgerHint = ''
+  try {
+    const { data: rows } = await serviceClient(c.env)
+      .from('ledgers')
+      .select('id, name, base_currency')
+      .eq('owner_id', c.get('userId'))
+      .eq('is_archived', false)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .limit(1)
+    const ledger = rows?.[0] as { id: string; name: string; base_currency: string } | undefined
+    if (ledger) {
+      ledgerHint =
+        ` The user's default money ledger id is ${ledger.id} (base currency ${ledger.base_currency}).` +
+        ' When the request involves spending or receiving money — a price, a bill, a purchase, or a paid meal —' +
+        ' record it with create_transaction using that ledger_id: choose type "expense" or "income",' +
+        ' put the item name as the payee, set amount to the number given, and omit account_id.' +
+        ' A priced meal is a transaction, not a health log.'
+    }
+  } catch {
+    // A missing ledger or read failure should not prevent the assistant from responding.
+  }
   // OpenAI caps `tools` at 128 functions per request. Send only WRITE tools —
   // voice is for taking actions, not reading — which is both under the cap and
   // higher-signal for the model (the ~40 list/get/search tools just add noise).
@@ -88,7 +111,7 @@ assistant.post('/', async (c) => {
       },
     }))
   const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt() },
+    { role: 'system', content: systemPrompt() + ledgerHint },
     { role: 'user', content: text },
   ]
   const actions: Array<{ tool: string; summary: string }> = []
