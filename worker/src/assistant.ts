@@ -58,14 +58,21 @@ assistant.post('/', async (c) => {
   if (text.length > 10_000) return c.json({ error: 'text is too long' }, 400)
 
   const scopes = c.get('scopes')
-  const openAiTools = tools.filter((tool) => toolAllowed(tool, scopes)).map((tool) => ({
-    type: 'function' as const,
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: zodToJsonSchema(tool.schema as z.ZodType, { $refStrategy: 'none' }),
-    },
-  }))
+  // OpenAI caps `tools` at 128 functions per request. Send only WRITE tools —
+  // voice is for taking actions, not reading — which is both under the cap and
+  // higher-signal for the model (the ~40 list/get/search tools just add noise).
+  // The slice is a hard backstop so adding tools can never re-breach the limit.
+  const openAiTools = tools
+    .filter((tool) => !tool.readOnly && toolAllowed(tool, scopes))
+    .slice(0, 128)
+    .map((tool) => ({
+      type: 'function' as const,
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: zodToJsonSchema(tool.schema as z.ZodType, { $refStrategy: 'none' }),
+      },
+    }))
   const messages: ChatMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'user', content: text },
