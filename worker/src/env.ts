@@ -8,6 +8,8 @@ export interface Env {
   SUPABASE_URL: string
   /** Service/secret key (sb_secret_…). BYPASSES RLS — server-only, never shipped to the browser. */
   SUPABASE_SECRET_KEY: string
+  /** Server-side hackathon key for GPT tool calling. Per-user keys are future work. */
+  OPENAI_API_KEY?: string
   /** KV namespace the OAuth provider uses to store grants/tokens (bound in wrangler.toml). */
   OAUTH_KV?: KVNamespace
   /** Per-API-key rate limiter (authed traffic). Optional so a missing binding never 500s. */

@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { authenticate } from './auth'
 import { handleMcpRequest } from './mcp'
 import { rest } from './rest'
+import { assistant } from './assistant'
 import { rateLimit } from './ratelimit'
 import { buildOpenApiSpec } from './openapi'
 import { buildLlmsTxt } from './llms'
@@ -93,6 +94,7 @@ app.get('/holidays/:country/:year', async (c) => {
 })
 
 app.route('/rest', rest)
+app.route('/assistant', assistant)
 
 // Debug: send a test push to the authenticated caller's own subscriptions.
 // Use this to verify VAPID/encryption before relying on the cron.

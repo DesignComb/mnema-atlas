@@ -22,5 +22,6 @@ if (!WORKER_BASE && typeof console !== 'undefined') {
 
 export const MCP_URL = (import.meta.env.VITE_MCP_URL as string | undefined) || (WORKER_BASE ? `${WORKER_BASE}/mcp` : '')
 export const REST_URL = (import.meta.env.VITE_REST_URL as string | undefined) || (WORKER_BASE ? `${WORKER_BASE}/rest` : '')
+export const ASSISTANT_URL = WORKER_BASE ? `${WORKER_BASE}/assistant` : ''
 export const OPENAPI_URL = WORKER_BASE ? `${WORKER_BASE}/openapi.json` : ''
 export const LLMS_URL = WORKER_BASE ? `${WORKER_BASE}/llms.txt` : ''

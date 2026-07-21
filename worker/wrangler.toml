@@ -40,6 +40,7 @@ WORKER_PUBLIC_URL = "https://mnema-ai.dco.tw"
 # Local dev: put them in worker/.dev.vars (see .dev.vars.example).
 # Production:  wrangler secret put SUPABASE_URL
 #              wrangler secret put SUPABASE_SECRET_KEY
+#              wrangler secret put OPENAI_API_KEY
 #
 # SUPABASE_URL         = https://YOUR-PROJECT.supabase.co
 # SUPABASE_SECRET_KEY  = sb_secret_...   (service/secret key — bypasses RLS)

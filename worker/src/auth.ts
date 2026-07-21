@@ -43,3 +43,18 @@ export async function authenticate(env: Env, request: Request): Promise<ApiKeyAu
   if (!key) return null
   return userIdFromApiKey(env, key)
 }
+
+/**
+ * Authenticate the in-app assistant. API keys retain their normal scoped
+ * access; a Supabase session belongs to its owner, so it receives full access.
+ * This is intentionally not used by MCP or REST, which remain API-key-only.
+ */
+export async function authenticateAssistant(env: Env, request: Request): Promise<ApiKeyAuth | null> {
+  const token = bearerToken(request)
+  if (!token) return null
+  if (token.startsWith('mk_')) return userIdFromApiKey(env, token)
+
+  const { data, error } = await serviceClient(env).auth.getUser(token)
+  if (error || !data.user) return null
+  return { userId: data.user.id, scopes: ['create', 'edit'] }
+}

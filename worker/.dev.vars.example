@@ -1,3 +1,5 @@
 # Copy to worker/.dev.vars for local `wrangler dev`. NEVER commit the real file.
 SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 SUPABASE_SECRET_KEY=sb_secret_your_service_key_here
+# Server-side only. Create your own key; never commit worker/.dev.vars.
+OPENAI_API_KEY=sk-your_openai_key_here
