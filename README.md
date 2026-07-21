@@ -1,110 +1,42 @@
-# Mnema Atlas · 讀書筆記背誦閃卡
+# Mnema 🎙️ — talk to your life OS
 
-A study-notes flashcard app where **you don't add the content — an AI does**, by calling the app
-as a *tool* (MCP server + REST API), not by embedding a chatbot. Notes become FSRS
-spaced-repetition flashcards and connect into an Obsidian-style knowledge graph. Notion-clean UI.
+A bilingual (EN / 繁中) multi-Space **"life OS" you drive with your own AI**.
+For **OpenAI Build Week**, we used **Codex + GPT-5.6** to give it a **voice**.
 
-- **Frontend**: React 19 · Vite 8 · TanStack Router/Query · Tailwind v4 · TipTap (markdown) · react-force-graph · ts-fsrs · motion
-- **Backend**: Supabase (Postgres + Auth + RLS). Every write goes through shared `SECURITY DEFINER` RPCs.
-- **AI access**: a Cloudflare Worker exposing an **MCP server** (`mcp-lite`) + a **REST API** (`hono`), both calling the same RPCs — so AI-added content is identical to UI-added content.
-
-> Architecture & decisions: `.claude/plans/woolly-greeting-whisper.md`.
+- **Live:** https://mnema-atlas.dco.tw · **Repo:** https://github.com/DesignComb/mnema-atlas
+- **AI endpoint:** https://mnema-ai.dco.tw (`/mcp`, `/rest`, `/llms.txt`)
 
 ---
 
-## 1. Prerequisites
+## What Mnema already was
 
-- Node **≥ 20.19** (you have v24 ✓)
-- A **Supabase** project (free tier) — or the Supabase CLI for a local stack
-- *(For the AI worker)* a **Cloudflare** account + `wrangler` (already in `worker/`)
+One React 19 + Vite + Supabase app hosting six Spaces — **Study, Travel, Tempo (tasks), Money, Health, Kitchen**. Its core idea is **BYO-AI**: there's no in-app chatbot — you connect your *own* AI (Claude, Cursor, a script) over **MCP + REST**, and it drives the app through **160 tools**. Every write — UI, MCP, or REST — goes through the *same* Postgres `SECURITY DEFINER` RPC, so **AI-added content is byte-identical to what you type by hand**.
 
-## 2. Run the app (frontend + database)
+## What Codex + GPT-5.6 added (Build Week)
 
-```bash
-npm install
+A **voice assistant**: tap the mic, say one messy sentence, and **GPT-5.6** files it into the right Spaces.
 
-# Apply the schema to your Supabase project. Either:
-#   a) Supabase CLI:   supabase link --project-ref <ref>   &&   supabase db push
-#   b) Or paste supabase/migrations/0001_init.sql into the Supabase SQL editor and run it.
+> *One sentence → a trip in **Travel**, a reminder in **Tempo**, and an expense in **Money** — in a single request.*
 
-cp .env.example .env.local
-#   VITE_SUPABASE_URL=...            (Project settings → API)
-#   VITE_SUPABASE_PUBLISHABLE_KEY=...(the publishable / anon key — safe for the browser)
+- **Codex reused the existing registry instead of writing new code.** The Worker already turns each tool's **Zod** schema into JSON Schema (for its OpenAPI doc); Codex fed that *same* conversion into **GPT-5.6 function calling**. The voice path runs through the *same* `SECURITY DEFINER` RPC as everything else — **no new write path, RPC, schema, or migration.**
+- **Runtime** (`worker/src/assistant.ts`): `model: 'gpt-5.6'` on `/v1/chat/completions`, `tool_choice: 'auto'`, a multi-round tool loop (≤ 6 rounds). Speech → text happens client-side via the **Web Speech API**, then the transcript is POSTed as `{ text }` to `/assistant`.
+- **Constraints solved:** OpenAI's 128-function cap → send only the **120 write tools** (of 160); `reasoning_effort: 'none'` (required for GPT-5.6 tool calls on chat/completions); the user's ledger id is resolved **server-side** so it can log money without inventing an id.
 
-npm run dev          # http://localhost:5173
-```
+**Codex-authored:** `worker/src/assistant.ts`, `src/components/app-shell/CaptureDialog.tsx`, `src/lib/assistant-spaces.ts` (+ `auth.ts`, `index.ts`, `endpoints.ts`). Build specs live in `.claude/plans/voice-*-codex.md`.
 
-Sign up, create a deck, write a note, add flashcards, hit **Study** to review with FSRS, and open
-**Graph** to see linked notes. (Email confirmation can be turned off in Supabase Auth settings for
-quick local testing.)
+---
 
-## 3. Run the AI worker (MCP + REST)
+## Run it (two servers)
 
 ```bash
-cd worker
-npm install
-cp .dev.vars.example .dev.vars
-#   SUPABASE_URL=...
-#   SUPABASE_SECRET_KEY=sb_secret_...   ← the SECRET/service key. Server-only. NEVER put in the browser.
-
-npm run dev          # wrangler dev → http://localhost:8787
+# frontend → http://localhost:5173
+npm install && npm run dev
+# worker: MCP + REST + /assistant → http://localhost:8787
+cd worker && npm install && npm run dev
 ```
 
-In the app, go to **Settings → API keys & MCP**, mint a key, then:
+- **Frontend `.env.local`:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_MCP_URL`, `VITE_REST_URL`
+- **Worker `worker/.dev.vars`** (server-only): `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `OPENAI_API_KEY` (needed for `/assistant`)
 
-**REST** (any script / the Claude API):
-```bash
-curl -X POST http://localhost:8787/rest/create_flashcard \
-  -H "Authorization: Bearer mk_your_key" -H "Content-Type: application/json" \
-  -d '{"front":"What is FSRS?","back":"A modern spaced-repetition scheduling algorithm."}'
-```
-
-**MCP** (Claude Code / Cursor — accept a static Bearer):
-```jsonc
-// e.g. Claude Code: claude mcp add --transport http mnema-atlas http://localhost:8787/mcp \
-//        --header "Authorization: Bearer mk_your_key"
-```
-The new card is immediately due and shows up in **Study** with `created_via = "mcp"`.
-
-> **claude.ai web/desktop connector** accepts **OAuth 2.1 only** (no API-key field). Enabling it is
-> Phase 3b — see `worker/README.md`.
-
-## 4. Deploy
-
-```bash
-# Frontend → any static host (Cloudflare Pages / Vercel / Netlify). Set the VITE_* env vars there.
-npm run build
-
-# Worker
-cd worker
-npx wrangler secret put SUPABASE_URL
-npx wrangler secret put SUPABASE_SECRET_KEY
-npx wrangler deploy
-# Then set VITE_MCP_URL / VITE_REST_URL in the frontend env so the Settings screen shows them.
-```
-
-## Project layout
-
-```
-src/            React app (routes, components, lib: supabase/api/srs/hooks/auth)
-shared/         Zod schemas shared by the app AND the worker (single source of truth)
-supabase/       migrations/0001_init.sql  (tables, RLS, shared write RPCs)
-worker/         Cloudflare Worker: MCP server + REST API
-.claude/plans/  the approved architecture & build plan
-```
-
-## Status
-
-| Phase | What | State |
-|---|---|---|
-| 0 | Scaffold, design system, Supabase schema + RLS + RPCs | ✅ builds & typechecks |
-| 1 | Auth, decks/notes CRUD, TipTap markdown editor | ✅ (needs Supabase to run) |
-| 2 | Flashcards + FSRS study loop | ✅ (needs Supabase to run) |
-| 3 | MCP server + REST (Bearer key) on the shared write path | ✅ builds & bundles |
-| 3b | OAuth 2.1 for the claude.ai connector | ⏳ documented, not wired |
-| 4 | Force-directed note graph | ✅ renders `note_links` |
-| 4b | `[[wikilink]]` autocomplete that auto-creates links | ⏳ next |
-| 5 | Editable mindmap (React Flow) + pgvector semantic search | ⏳ deferred |
-
-> Phases 1–4 are implemented and **build/typecheck cleanly**, but have **not been run end-to-end**
-> yet because that needs your Supabase project + env. Section 2 gets you there.
+**Stack:** React 19 · Vite · TypeScript · Supabase (Postgres + RLS) · Cloudflare Worker (Hono) · Zod · MCP (`mcp-lite`) · Tailwind v4 · Capacitor.
+**Deploy:** push `main` → GitHub Actions → Cloudflare Worker (`mnema-ai.dco.tw`) + Pages (`mnema-atlas.dco.tw`).
