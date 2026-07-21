@@ -51,6 +51,21 @@ jobs:
           accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
           command: deploy
+      # Server-only secrets that CI must keep in sync (persist across deploys, but
+      # set here so a fresh account/worker is configured from the GitHub secret).
+      # Add the secret in repo → Settings → Secrets → Actions. Skipped if unset.
+      - name: Sync Worker secrets
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -n "$OPENAI_API_KEY" ]; then
+            printf '%s' "$OPENAI_API_KEY" | npx wrangler secret put OPENAI_API_KEY
+          else
+            echo "OPENAI_API_KEY not set — skipping"
+          fi
 
   frontend:
     runs-on: ubuntu-latest
