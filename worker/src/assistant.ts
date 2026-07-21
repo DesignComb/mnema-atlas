@@ -6,8 +6,20 @@ import { cleanError } from './errors'
 import type { Env } from './env'
 import { toolAllowed, toolByName, tools } from './tools'
 
-const SYSTEM_PROMPT =
-  "You are a tool-calling agent for Mnema, a personal life OS. Turn the user's request into the smallest correct set of tool calls. Infer the right Space from context. Dates are YYYY-MM-DD. If the request is a vague single thought that does not map cleanly to a tool, call create_capture so it lands in the inbox. Never invent data the user did not give."
+/** System prompt, stamped with today's date so relative dates ("tomorrow",
+ *  "next month", "ten days before") resolve correctly. */
+function systemPrompt(): string {
+  const today = new Date().toISOString().slice(0, 10)
+  return (
+    'You are a tool-calling agent for Mnema, a personal life OS. ' +
+    "Turn the user's request into the smallest correct set of tool calls. " +
+    'Infer the right Space from context. ' +
+    `Today's date is ${today}. All dates are YYYY-MM-DD; resolve relative dates against today. ` +
+    'Do NOT ask clarifying questions — choose sensible defaults and act. ' +
+    'If a vague single thought does not map cleanly to a tool, call create_capture so it lands in the inbox. ' +
+    'Never invent ids or data the user did not give.'
+  )
+}
 const MAX_TOOL_ROUNDS = 6
 
 type ChatMessage = {
@@ -32,7 +44,9 @@ async function complete(apiKey: string, messages: ChatMessage[], openAiTools: un
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-5.6', messages, tools: openAiTools, tool_choice: 'auto' }),
+    // gpt-5.6 rejects function tools on /chat/completions unless reasoning is
+    // off ("reasoning_effort must be 'none'"); the alternative is /v1/responses.
+    body: JSON.stringify({ model: 'gpt-5.6', reasoning_effort: 'none', messages, tools: openAiTools, tool_choice: 'auto' }),
   })
   const body = (await response.json().catch(() => ({}))) as ChatCompletion
   if (!response.ok) throw new Error(body.error?.message || 'OpenAI request failed')
@@ -74,7 +88,7 @@ assistant.post('/', async (c) => {
       },
     }))
   const messages: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt() },
     { role: 'user', content: text },
   ]
   const actions: Array<{ tool: string; summary: string }> = []
