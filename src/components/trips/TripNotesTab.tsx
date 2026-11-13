@@ -392,6 +392,7 @@ function NotePane({
           value={draft}
           onChange={edit}
           checklist
+          split
           defaultMode={note.body.trim() ? 'preview' : 'write'}
           placeholder={t('The first line becomes the title…', '第一行就是標題……')}
           renderPreview={(md) => <ChecklistPreview markdown={md} onToggle={toggleCheck} />}
