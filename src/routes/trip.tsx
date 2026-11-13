@@ -14,6 +14,7 @@ import {
   Columns3,
   List,
   Luggage,
+  NotebookPen,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -50,6 +51,7 @@ import { ShareDialog } from '@/components/trips/ShareDialog'
 import { MembersDialog } from '@/components/trips/MembersDialog'
 import { TripAiEditDialog } from '@/components/trips/TripAiEditDialog'
 import { BookingsTab, BudgetTab, PackingTab } from '@/components/trips/TripSections'
+import { TripNotesTab } from '@/components/trips/TripNotesTab'
 import { ItineraryBoard, ItineraryTable } from '@/components/trips/ItineraryViews'
 import {
   DropdownMenu,
@@ -59,7 +61,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-type TripTab = 'itinerary' | 'bookings' | 'budget' | 'packing'
+type TripTab = 'itinerary' | 'bookings' | 'budget' | 'packing' | 'notes'
 type ItinView = 'timeline' | 'table' | 'board'
 import { Button } from '@/components/ui/button'
 import {
@@ -352,6 +354,7 @@ export function TripScreen() {
                 ['bookings', 'Reservations', '訂位', Ticket],
                 ['budget', 'Budget', '預算', Wallet],
                 ['packing', 'Packing', '打包', Luggage],
+                ['notes', 'Notes', '備忘錄', NotebookPen],
               ] as const
             ).map(([k, en, zh, Icon]) => (
               <button
@@ -368,6 +371,7 @@ export function TripScreen() {
           {tab === 'bookings' ? <BookingsTab trip={trip} canEdit={canEdit} /> : null}
           {tab === 'budget' ? <BudgetTab trip={trip} /> : null}
           {tab === 'packing' ? <PackingTab trip={trip} canEdit={canEdit} /> : null}
+          {tab === 'notes' ? <TripNotesTab trip={trip} canEdit={canEdit} /> : null}
 
           {tab === 'itinerary' ? (
             <>

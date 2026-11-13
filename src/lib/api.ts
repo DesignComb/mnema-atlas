@@ -27,6 +27,7 @@ import type {
   CreateItineraryInput,
   CreateNoteInput,
   CreateTripBulkInput,
+  CreateTripNoteInput,
   LinkNotesInput,
   UpdateBookingInput,
   UpdateChecklistInput,
@@ -34,6 +35,7 @@ import type {
   UpdateItemInput,
   UpdateItineraryInput,
   UpdateNoteInput,
+  UpdateTripNoteInput,
 } from '@shared/schemas'
 import type {
   AddReminderInput,
@@ -813,6 +815,55 @@ export async function updateChecklistItem(input: UpdateChecklistInput): Promise<
 }
 export async function deleteChecklistItem(id: string): Promise<void> {
   const res = await supabase.rpc('delete_checklist_item', { p_user_id: null, p_item_id: id })
+  if (res.error) throw new Error(res.error.message)
+}
+
+// ── Trip notes (備忘錄) — shared per trip; read via RPC for editor display names ──
+export interface TripNote {
+  id: string
+  itinerary_id: string
+  title: string
+  body: string
+  pinned: boolean
+  created_via: 'ui' | 'rest' | 'mcp'
+  created_by: string | null
+  updated_by: string | null
+  created_by_name: string | null
+  updated_by_name: string | null
+  created_at: string
+  /** Also the optimistic-concurrency version — pass it back as `expected_updated_at`. */
+  updated_at: string
+}
+export async function listTripNotes(itineraryId: string): Promise<TripNote[]> {
+  return unwrap(await supabase.rpc('list_trip_notes', { p_user_id: null, p_itinerary_id: itineraryId })) as unknown as TripNote[]
+}
+export async function createTripNote(input: CreateTripNoteInput): Promise<TripNote> {
+  return unwrap(
+    await supabase.rpc('create_trip_note', {
+      p_user_id: null,
+      p_itinerary_id: input.itinerary_id,
+      p_title: input.title ?? '',
+      p_body: input.body ?? '',
+      p_pinned: input.pinned ?? false,
+      p_created_via: 'ui',
+    }),
+  ) as unknown as TripNote
+}
+/** Throws Error('conflict') when `expected_updated_at` is stale (see isNoteConflict). */
+export async function updateTripNote(input: UpdateTripNoteInput): Promise<TripNote> {
+  return unwrap(
+    await supabase.rpc('update_trip_note', {
+      p_user_id: null,
+      p_note_id: input.note_id,
+      p_title: input.title,
+      p_body: input.body,
+      p_pinned: input.pinned,
+      p_expected_updated_at: input.expected_updated_at,
+    }),
+  ) as unknown as TripNote
+}
+export async function deleteTripNote(id: string): Promise<void> {
+  const res = await supabase.rpc('delete_trip_note', { p_user_id: null, p_note_id: id })
   if (res.error) throw new Error(res.error.message)
 }
 export async function setItemStatus(itemId: string, status: ItineraryItem['status']): Promise<ItineraryItemRow> {

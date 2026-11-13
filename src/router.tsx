@@ -115,10 +115,13 @@ const tripRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'trips/$tripId',
   // ?tab=… selects the trip section (driven from the sidebar on desktop).
-  validateSearch: (search: Record<string, unknown>): { tab?: 'itinerary' | 'bookings' | 'budget' | 'packing' } => {
+  validateSearch: (search: Record<string, unknown>): { tab?: 'itinerary' | 'bookings' | 'budget' | 'packing' | 'notes' } => {
     const tab = search.tab
     return {
-      tab: tab === 'bookings' || tab === 'budget' || tab === 'packing' || tab === 'itinerary' ? tab : undefined,
+      tab:
+        tab === 'bookings' || tab === 'budget' || tab === 'packing' || tab === 'notes' || tab === 'itinerary'
+          ? tab
+          : undefined,
     }
   },
   component: lazyRouteComponent(() => import('@/routes/trip'), 'TripScreen'),

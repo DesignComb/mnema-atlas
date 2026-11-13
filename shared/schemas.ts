@@ -346,6 +346,27 @@ export type UpdateChecklistInput = z.infer<typeof updateChecklistInput>
 export const deleteChecklistInput = z.object({ item_id: uuid })
 export const createChecklistBulkInput = z.object({ itinerary_id: uuid, items: z.array(z.object(checklistFields)).min(1).max(200) })
 
+// ── Trip notes (備忘錄): shared markdown notes per trip ──
+const tripNoteBody = z.string().max(100_000)
+export const listTripNotesInput = z.object({ itinerary_id: uuid })
+export const createTripNoteInput = z.object({
+  itinerary_id: uuid,
+  title: z.string().trim().max(300).optional(),
+  body: tripNoteBody.default(''),
+  pinned: z.boolean().optional(),
+})
+export type CreateTripNoteInput = z.infer<typeof createTripNoteInput>
+export const updateTripNoteInput = z.object({
+  note_id: uuid,
+  title: z.string().trim().max(300).optional(),
+  body: tripNoteBody.optional(),
+  pinned: z.boolean().optional(),
+  /** The `updated_at` the edit was based on — a mismatch fails with 'conflict' instead of overwriting. */
+  expected_updated_at: z.string().trim().min(1).max(40).optional(),
+})
+export type UpdateTripNoteInput = z.infer<typeof updateTripNoteInput>
+export const deleteTripNoteInput = z.object({ note_id: uuid })
+
 export const setItemStatusInput = z.object({ item_id: uuid, status: itemStatus })
 export const setItemAssigneesInput = z.object({ item_id: uuid, assignees: assigneeList })
 export const setItemTagsInput = z.object({ item_id: uuid, tags: tagArray })
@@ -1040,6 +1061,12 @@ export const toolDescriptions = {
   update_checklist_item: 'Update a packing/to-do item (text, category, assignee, or done state).',
   delete_checklist_item: 'Delete a packing/to-do item.',
   create_checklist_bulk: 'Add many packing/to-do items to a trip in one call.',
+  list_trip_notes: 'List a trip’s shared notes (備忘錄) — markdown bodies, pinned first, then most recently edited.',
+  create_trip_note:
+    'Add a shared note (備忘錄) to a trip — markdown body; `- [ ] item` lines render as tappable checkboxes. Title defaults to the first line.',
+  update_trip_note:
+    'Update a trip note’s title, markdown body, or pinned state. Pass expected_updated_at to fail with a conflict instead of overwriting a collaborator’s newer edit.',
+  delete_trip_note: 'Delete a trip note.',
   set_item_status: 'Set an activity’s status: idea, tentative, planned, or done.',
   set_item_assignees: 'Set which travelers an activity is for (a subset of the trip’s travelers).',
   set_item_tags:

@@ -1646,6 +1646,56 @@ export type Database = {
           },
         ]
       }
+      trip_notes: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          created_via: string
+          id: string
+          itinerary_id: string
+          owner_id: string
+          pinned: boolean
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          created_via?: string
+          id?: string
+          itinerary_id: string
+          owner_id: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          created_via?: string
+          id?: string
+          itinerary_id?: string
+          owner_id?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_notes_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       health_settings: {
         Row: {
           created_at: string
@@ -3948,6 +3998,36 @@ export type Database = {
         Args: { p_category_id: string; p_user_id: string | null }
         Returns: boolean
       }
+      list_trip_notes: {
+        Args: { p_itinerary_id: string; p_user_id: string | null }
+        Returns: Json
+      }
+      create_trip_note: {
+        Args: {
+          p_body?: string
+          p_created_via?: string
+          p_itinerary_id: string
+          p_pinned?: boolean
+          p_title?: string
+          p_user_id: string | null
+        }
+        Returns: Json
+      }
+      update_trip_note: {
+        Args: {
+          p_body?: string
+          p_expected_updated_at?: string
+          p_note_id: string
+          p_pinned?: boolean
+          p_title?: string
+          p_user_id: string | null
+        }
+        Returns: Json
+      }
+      delete_trip_note: {
+        Args: { p_note_id: string; p_user_id: string | null }
+        Returns: boolean
+      }
       delete_checklist_item: {
         Args: { p_item_id: string; p_user_id: string | null }
         Returns: boolean
@@ -5980,6 +6060,7 @@ export type ShareLinkRow = PublicTables['share_links']['Row']
 export type ItineraryMemberRow = PublicTables['itinerary_members']['Row']
 export type TripBookingRow = PublicTables['trip_bookings']['Row']
 export type TripChecklistRow = PublicTables['trip_checklist']['Row']
+export type TripNoteRow = PublicTables['trip_notes']['Row']
 export type TaskListRow = PublicTables['task_lists']['Row']
 export type TaskRow = PublicTables['tasks']['Row']
 export type CaptureRow = PublicTables['captures']['Row']

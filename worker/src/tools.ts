@@ -9,6 +9,10 @@ import {
   createBookingsBulkInput,
   createChecklistBulkInput,
   createChecklistInput,
+  createTripNoteInput,
+  deleteTripNoteInput,
+  listTripNotesInput,
+  updateTripNoteInput,
   createItemsBulkInput,
   createItineraryInput,
   createNoteInput,
@@ -994,6 +998,61 @@ export const tools: ToolDef[] = [
     run: async (ctx, a) => {
       await callRpc(ctx.env, ctx.userId, 'delete_checklist_item', { p_item_id: a.item_id })
       return { summary: 'Checklist item deleted', data: { ok: true } }
+    },
+  },
+  // ── Trip notes (備忘錄) ──
+  {
+    name: 'list_trip_notes',
+    description: toolDescriptions.list_trip_notes,
+    schema: listTripNotesInput,
+    readOnly: true,
+    run: async (ctx, a) => {
+      const notes = await callRpc<unknown[]>(ctx.env, ctx.userId, 'list_trip_notes', { p_itinerary_id: a.itinerary_id })
+      return { summary: `${notes.length} note(s)`, data: notes }
+    },
+  },
+  {
+    name: 'create_trip_note',
+    description: toolDescriptions.create_trip_note,
+    schema: createTripNoteInput,
+    readOnly: false,
+    run: async (ctx, a) => {
+      const n = await callRpc<{ id: string; title: string }>(ctx.env, ctx.userId, 'create_trip_note', {
+        p_itinerary_id: a.itinerary_id,
+        p_title: a.title ?? null,
+        p_body: a.body ?? '',
+        p_pinned: a.pinned ?? false,
+        p_created_via: ctx.via,
+      })
+      return { summary: `Added trip note${n.title ? ` “${n.title}”` : ''} (${n.id})`, data: n }
+    },
+  },
+  {
+    name: 'update_trip_note',
+    description: toolDescriptions.update_trip_note,
+    schema: updateTripNoteInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      const n = await callRpc(ctx.env, ctx.userId, 'update_trip_note', {
+        p_note_id: a.note_id,
+        p_title: a.title ?? null,
+        p_body: a.body ?? null,
+        p_pinned: a.pinned ?? null,
+        p_expected_updated_at: a.expected_updated_at ?? null,
+      })
+      return { summary: 'Trip note updated', data: n }
+    },
+  },
+  {
+    name: 'delete_trip_note',
+    description: toolDescriptions.delete_trip_note,
+    schema: deleteTripNoteInput,
+    readOnly: false,
+    requiresScope: 'edit',
+    run: async (ctx, a) => {
+      await callRpc(ctx.env, ctx.userId, 'delete_trip_note', { p_note_id: a.note_id })
+      return { summary: 'Trip note deleted', data: { ok: true } }
     },
   },
   {

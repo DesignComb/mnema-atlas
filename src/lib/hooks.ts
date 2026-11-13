@@ -9,6 +9,8 @@ import { seedSampleDeck } from './sampleDeck'
 import type {
   CreateBookingInput,
   CreateChecklistInput,
+  CreateTripNoteInput,
+  UpdateTripNoteInput,
   CreateDayInput,
   CreateDeckInput,
   CreateFlashcardInput,
@@ -90,6 +92,7 @@ export const qk = {
   itinerary: (id: string) => ['itinerary', id] as const,
   shareLinks: (itineraryId: string) => ['share-links', itineraryId] as const,
   members: (itineraryId: string) => ['members', itineraryId] as const,
+  tripNotes: (itineraryId: string) => ['trip-notes', itineraryId] as const,
   // Mnema Tempo
   taskLists: ['task-lists'] as const,
   tasks: (listId?: string, status?: string) => ['tasks', listId ?? 'all', status ?? 'todo'] as const,
@@ -736,11 +739,46 @@ export function useItineraryRealtime(itineraryId: string) {
         { event: '*', schema: 'public', table: 'itinerary_days', filter: `itinerary_id=eq.${itineraryId}` },
         refetch,
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'trip_notes', filter: `itinerary_id=eq.${itineraryId}` },
+        () => qc.invalidateQueries({ queryKey: qk.tripNotes(itineraryId) }),
+      )
       .subscribe()
     return () => {
       void supabase.removeChannel(channel)
     }
   }, [itineraryId, qc])
+}
+
+// ── Trip notes (備忘錄) ──
+export function useTripNotes(itineraryId: string) {
+  return useQuery({ queryKey: qk.tripNotes(itineraryId), queryFn: () => api.listTripNotes(itineraryId) })
+}
+export function useCreateTripNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateTripNoteInput) => api.createTripNote(input),
+    onSuccess: (n) => qc.invalidateQueries({ queryKey: qk.tripNotes(n.itinerary_id) }),
+  })
+}
+/** No invalidate on success — the editor merges the returned row itself so typing isn't clobbered by a refetch. */
+export function useUpdateTripNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: UpdateTripNoteInput) => api.updateTripNote(input),
+    onSuccess: (n) =>
+      qc.setQueryData<api.TripNote[]>(qk.tripNotes(n.itinerary_id), (prev) =>
+        prev?.map((x) => (x.id === n.id ? n : x)),
+      ),
+  })
+}
+export function useDeleteTripNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; itineraryId: string }) => api.deleteTripNote(v.id),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: qk.tripNotes(v.itineraryId) }),
+  })
 }
 
 // ════════════════════ Mnema Tempo (todos / habits / reminders) ════════════════════

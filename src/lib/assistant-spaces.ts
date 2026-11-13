@@ -18,7 +18,8 @@ const TRAVEL_TOOLS = [
   'create_items_bulk', 'update_item', 'delete_item', 'set_item_location', 'set_item_day', 'reorder_items',
   'set_item_status', 'set_item_assignees', 'set_item_tags', 'create_booking', 'create_bookings_bulk',
   'update_booking', 'delete_booking', 'create_checklist_item', 'create_checklist_bulk',
-  'update_checklist_item', 'delete_checklist_item', 'list_share_links', 'create_share_link', 'revoke_share_link',
+  'update_checklist_item', 'delete_checklist_item', 'list_trip_notes', 'create_trip_note', 'update_trip_note',
+  'delete_trip_note', 'list_share_links', 'create_share_link', 'revoke_share_link',
 ] as const
 
 const TEMPO_TOOLS = [

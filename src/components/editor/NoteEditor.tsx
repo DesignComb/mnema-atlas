@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -6,7 +6,7 @@ import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
 import { Wikilink } from './wikilink-extension'
 import { useNoteResolver } from '@/components/common/Wikilinked'
-import { Bold, Brush, Code, Eye, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Pencil, Quote, Strikethrough } from 'lucide-react'
+import { Bold, Brush, ListChecks, Code, Eye, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Pencil, Quote, Strikethrough } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, humanizeError } from '@/lib/utils'
 import { uploadImage } from '@/lib/upload'
@@ -26,12 +26,18 @@ export function NoteEditor({
   onChange,
   placeholder = 'Start writing — markdown supported. Your notes become flashcards and graph nodes…',
   defaultMode = 'write',
+  checklist = false,
+  renderPreview,
 }: {
   value: string
   onChange: (markdown: string) => void
   placeholder?: string
   /** Initial tab — pass 'preview' for notes with content (reading first). */
   defaultMode?: Mode
+  /** Show a "checklist" (`- [ ] `) toolbar button — for surfaces whose preview renders tappable checkboxes. */
+  checklist?: boolean
+  /** Replace the default rendered preview (e.g. trip notes' interactive checklist view). */
+  renderPreview?: (markdown: string) => ReactNode
 }) {
   const t = useT()
   const [mode, setMode] = useState<Mode>(defaultMode)
@@ -136,6 +142,7 @@ export function NoteEditor({
     { icon: Heading2, label: t('Heading', '標題'), run: () => linePrefix('## ') },
     { icon: List, label: t('Bullet list', '項目符號'), run: () => linePrefix('- ') },
     { icon: ListOrdered, label: t('Numbered list', '編號清單'), run: () => linePrefix('1. ') },
+    ...(checklist ? [{ icon: ListChecks, label: t('Checklist', '核取清單'), run: () => linePrefix('- [ ] ') }] : []),
     { icon: Quote, label: t('Quote', '引言'), run: () => linePrefix('> ') },
     { icon: Code, label: t('Inline code', '行內程式碼'), run: () => wrap('`') },
     { icon: Link2, label: t('Link', '連結'), run: () => wrap('[', '](url)') },
@@ -241,7 +248,7 @@ export function NoteEditor({
           )}
         />
       ) : value.trim() ? (
-        <MarkdownPreview markdown={value} />
+        renderPreview ? renderPreview(value) : <MarkdownPreview markdown={value} />
       ) : (
         <p className="px-1 py-10 text-center text-sm text-muted-foreground/60">{t('Nothing to preview yet.', '還沒有可預覽的內容。')}</p>
       )}
@@ -258,8 +265,8 @@ export function NoteEditor({
   )
 }
 
-/** Read-only TipTap render of markdown — used only for the Preview tab. */
-function MarkdownPreview({ markdown }: { markdown: string }) {
+/** Read-only TipTap render of markdown — the Preview tab (and trip notes' rendered view). */
+export function MarkdownPreview({ markdown }: { markdown: string }) {
   const navigate = useNavigate()
   const resolve = useNoteResolver()
   const editor = useEditor(

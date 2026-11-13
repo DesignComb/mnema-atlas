@@ -25,6 +25,7 @@ import {
   ListTodo,
   LogOut,
   Luggage,
+  NotebookPen,
   Map as MapIcon,
   Moon,
   Plug,
@@ -97,6 +98,7 @@ const TRIP_SECTIONS = [
   { key: 'bookings', en: 'Reservations', zh: '訂位', icon: Ticket },
   { key: 'budget', en: 'Budget', zh: '預算', icon: Wallet },
   { key: 'packing', en: 'Packing', zh: '打包', icon: Luggage },
+  { key: 'notes', en: 'Notes', zh: '備忘錄', icon: NotebookPen },
 ] as const
 
 export function AppSidebar({
