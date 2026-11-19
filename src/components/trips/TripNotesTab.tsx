@@ -9,8 +9,8 @@ import { useAuth } from '@/lib/auth'
 import { useI18n, useT } from '@/lib/i18n'
 import { undoableDelete, useHiddenKeys } from '@/lib/undoable'
 import { cn, humanizeError, relativeDue } from '@/lib/utils'
-import { deriveTitle, isNoteConflict, noteSnippet, noteTitle, setChecklistLine, splitChecklist } from '@/lib/trip-notes'
-import { NoteEditor, MarkdownPreview } from '@/components/editor/NoteEditor'
+import { deriveTitle, isNoteConflict, noteSnippet, noteTitle } from '@/lib/trip-notes'
+import { RichNoteEditor } from '@/components/trips/RichNoteEditor'
 import { EmptyState } from '@/components/app-shell/PageHeader'
 import { AiChip } from '@/components/common/AiChip'
 import { Button } from '@/components/ui/button'
@@ -267,13 +267,6 @@ function NotePane({
     timer.current = setTimeout(flush, SAVE_DEBOUNCE_MS)
   }
 
-  function toggleCheck(line: number, checked: boolean) {
-    const next = setChecklistLine(draftRef.current, line, checked)
-    if (next === draftRef.current) return
-    edit(next)
-    flush() // a tap is a complete intent — save now, don't wait for the debounce
-  }
-
   // A collaborator (or AI) saved a newer version: adopt it when we have nothing
   // unsaved; otherwise surface the conflict instead of overwriting either side.
   useEffect(() => {
@@ -387,55 +380,15 @@ function NotePane({
         </div>
       ) : null}
 
-      {canEdit ? (
-        <NoteEditor
+      {canEdit || draft.trim() ? (
+        <RichNoteEditor
           value={draft}
-          onChange={edit}
-          checklist
-          split
-          defaultMode={note.body.trim() ? 'preview' : 'write'}
+          onChange={canEdit ? edit : undefined}
+          editable={canEdit}
           placeholder={t('The first line becomes the title…', '第一行就是標題……')}
-          renderPreview={(md) => <ChecklistPreview markdown={md} onToggle={toggleCheck} />}
         />
-      ) : draft.trim() ? (
-        <ChecklistPreview markdown={draft} />
       ) : (
         <p className="py-10 text-center text-sm text-muted-foreground">{t('This note is empty.', '這則備忘錄是空的。')}</p>
-      )}
-    </div>
-  )
-}
-
-/** Rendered note with `- [ ]` lines as real, tappable checkboxes (read-only when no onToggle). */
-function ChecklistPreview({ markdown, onToggle }: { markdown: string; onToggle?: (line: number, checked: boolean) => void }) {
-  return (
-    <div className="space-y-1">
-      {splitChecklist(markdown).map((seg, i) =>
-        seg.kind === 'markdown' ? (
-          seg.text.trim() ? <MarkdownPreview key={`m${i}`} markdown={seg.text} /> : null
-        ) : (
-          <button
-            key={`c${seg.line}`}
-            type="button"
-            role="checkbox"
-            aria-checked={seg.checked}
-            disabled={!onToggle}
-            onClick={() => onToggle?.(seg.line, !seg.checked)}
-            className="flex w-full items-start gap-2.5 rounded-md px-1 py-1 text-left transition enabled:hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-default"
-          >
-            <span
-              className={cn(
-                'mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded-full border transition',
-                seg.checked ? 'border-brand bg-brand text-brand-foreground' : 'border-input',
-              )}
-            >
-              {seg.checked ? <Check className="size-3" /> : null}
-            </span>
-            <span className={cn('text-sm', seg.checked ? 'text-muted-foreground line-through' : 'text-foreground')}>
-              {seg.text}
-            </span>
-          </button>
-        ),
       )}
     </div>
   )

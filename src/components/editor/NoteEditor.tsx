@@ -1,4 +1,4 @@
-import { useDeferredValue, useRef, useState, type ReactNode } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -6,24 +6,14 @@ import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
 import { Wikilink } from './wikilink-extension'
 import { useNoteResolver } from '@/components/common/Wikilinked'
-import { Bold, Brush, Columns2, ListChecks, Code, Eye, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Pencil, Quote, Strikethrough } from 'lucide-react'
+import { Bold, Brush, Code, Eye, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Pencil, Quote, Strikethrough } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, humanizeError } from '@/lib/utils'
 import { uploadImage } from '@/lib/upload'
 import { useT } from '@/lib/i18n'
 import { WhiteboardDialog } from '@/components/whiteboard/WhiteboardDialog'
 
-type Mode = 'write' | 'preview' | 'split'
-
-const SPLIT_PREF_KEY = 'mnema:note-editor-split'
-const isWide = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
-function readSplitPref(): boolean {
-  try {
-    return localStorage.getItem(SPLIT_PREF_KEY) === '1'
-  } catch {
-    return false
-  }
-}
+type Mode = 'write' | 'preview'
 
 /**
  * A faithful **markdown** note editor: you edit the raw markdown directly (the
@@ -36,35 +26,15 @@ export function NoteEditor({
   onChange,
   placeholder = 'Start writing — markdown supported. Your notes become flashcards and graph nodes…',
   defaultMode = 'write',
-  checklist = false,
-  split = false,
-  renderPreview,
 }: {
   value: string
   onChange: (markdown: string) => void
   placeholder?: string
   /** Initial tab — pass 'preview' for notes with content (reading first). */
   defaultMode?: Mode
-  /** Show a "checklist" (`- [ ] `) toolbar button — for surfaces whose preview renders tappable checkboxes. */
-  checklist?: boolean
-  /** Offer a desktop (lg+) side-by-side write | preview mode; the choice is remembered per device. */
-  split?: boolean
-  /** Replace the default rendered preview (e.g. trip notes' interactive checklist view). */
-  renderPreview?: (markdown: string) => ReactNode
 }) {
   const t = useT()
-  const [mode, setModeState] = useState<Mode>(() => (split && readSplitPref() && isWide() ? 'split' : defaultMode))
-  function setMode(m: Mode) {
-    setModeState(m)
-    if (!split) return
-    try {
-      localStorage.setItem(SPLIT_PREF_KEY, m === 'split' ? '1' : '0')
-    } catch {
-      /* storage blocked — the toggle still works for this session */
-    }
-  }
-  // Split view re-renders the preview on every keystroke; let typing win.
-  const previewValue = useDeferredValue(value)
+  const [mode, setMode] = useState<Mode>(defaultMode)
   const ref = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(0)
@@ -166,19 +136,12 @@ export function NoteEditor({
     { icon: Heading2, label: t('Heading', '標題'), run: () => linePrefix('## ') },
     { icon: List, label: t('Bullet list', '項目符號'), run: () => linePrefix('- ') },
     { icon: ListOrdered, label: t('Numbered list', '編號清單'), run: () => linePrefix('1. ') },
-    ...(checklist ? [{ icon: ListChecks, label: t('Checklist', '核取清單'), run: () => linePrefix('- [ ] ') }] : []),
     { icon: Quote, label: t('Quote', '引言'), run: () => linePrefix('> ') },
     { icon: Code, label: t('Inline code', '行內程式碼'), run: () => wrap('`') },
     { icon: Link2, label: t('Link', '連結'), run: () => wrap('[', '](url)') },
     { icon: ImagePlus, label: t('Add image', '加入圖片'), run: () => fileRef.current?.click() },
     { icon: Brush, label: t('Sketch', '隨手畫'), run: () => setBoardOpen(true) },
   ]
-
-  function renderedPreview(md: string) {
-    if (!md.trim())
-      return <p className="px-1 py-10 text-center text-sm text-muted-foreground/60">{t('Nothing to preview yet.', '還沒有可預覽的內容。')}</p>
-    return renderPreview ? renderPreview(md) : <MarkdownPreview markdown={md} />
-  }
 
   /** Drop a freehand drawing into the note as an image (inline doodle). */
   async function insertDrawing(blob: Blob) {
@@ -202,7 +165,7 @@ export function NoteEditor({
         }}
       />
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-card/80 px-1.5 py-1 backdrop-blur sm:-mx-1">
-        {mode !== 'preview'
+        {mode === 'write'
           ? tools.map((it) => (
               <button
                 key={it.label}
@@ -224,29 +187,24 @@ export function NoteEditor({
         ) : null}
 
         <div className="ml-auto flex items-center gap-0.5 rounded-md bg-muted/60 p-0.5">
-          {((split ? ['write', 'split', 'preview'] : ['write', 'preview']) as Mode[]).map((m) => (
+          {(['write', 'preview'] as Mode[]).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => setMode(m)}
               className={cn(
                 'flex items-center gap-1 rounded px-2 py-1 text-[12px] font-medium transition',
-                // Side-by-side needs the width — desktop only.
-                m === 'split' && 'hidden lg:flex',
                 mode === m ? 'bg-brand text-brand-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {m === 'write' ? <Pencil className="size-3.5" /> : m === 'split' ? <Columns2 className="size-3.5" /> : <Eye className="size-3.5" />}
-              {m === 'write' ? t('Write', '編輯') : m === 'split' ? t('Side by side', '並排') : t('Preview', '預覽')}
+              {m === 'write' ? <Pencil className="size-3.5" /> : <Eye className="size-3.5" />}
+              {m === 'write' ? t('Write', '編輯') : t('Preview', '預覽')}
             </button>
           ))}
         </div>
       </div>
 
-      {mode === 'preview' ? (
-        renderedPreview(value)
-      ) : (
-        <div className={cn(mode === 'split' && 'grid items-start gap-3 lg:grid-cols-2')}>
+      {mode === 'write' ? (
         <textarea
           ref={ref}
           value={value}
@@ -282,12 +240,10 @@ export function NoteEditor({
             dragOver && 'border-brand bg-brand-muted/40',
           )}
         />
-        {mode === 'split' ? (
-          <div className="min-w-0 rounded-lg border border-border/60 px-2 py-3 lg:sticky lg:top-12 lg:max-h-[75vh] lg:overflow-y-auto">
-            {renderedPreview(previewValue)}
-          </div>
-        ) : null}
-        </div>
+      ) : value.trim() ? (
+        <MarkdownPreview markdown={value} />
+      ) : (
+        <p className="px-1 py-10 text-center text-sm text-muted-foreground/60">{t('Nothing to preview yet.', '還沒有可預覽的內容。')}</p>
       )}
 
       <WhiteboardDialog
@@ -302,8 +258,8 @@ export function NoteEditor({
   )
 }
 
-/** Read-only TipTap render of markdown — the Preview tab (and trip notes' rendered view). */
-export function MarkdownPreview({ markdown }: { markdown: string }) {
+/** Read-only TipTap render of markdown — used only for the Preview tab. */
+function MarkdownPreview({ markdown }: { markdown: string }) {
   const navigate = useNavigate()
   const resolve = useNoteResolver()
   const editor = useEditor(

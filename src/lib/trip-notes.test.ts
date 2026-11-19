@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deriveTitle, isNoteConflict, noteSnippet, noteTitle, setChecklistLine, splitChecklist } from './trip-notes'
+import { deriveTitle, isNoteConflict, noteSnippet, noteTitle } from './trip-notes'
 
 describe('deriveTitle', () => {
   it('uses the first non-empty line without markdown markers', () => {
@@ -19,34 +19,6 @@ describe('noteSnippet / noteTitle', () => {
   it('prefers an explicit title', () => {
     expect(noteTitle({ title: 'Visa', body: 'hello' })).toBe('Visa')
     expect(noteTitle({ title: ' ', body: 'hello' })).toBe('hello')
-  })
-})
-
-describe('splitChecklist', () => {
-  it('separates checklist lines with their source line numbers', () => {
-    const segs = splitChecklist('# Pack\n- [ ] passport\n- [x] yen\nafter')
-    expect(segs).toEqual([
-      { kind: 'markdown', text: '# Pack' },
-      { kind: 'check', line: 1, checked: false, text: 'passport' },
-      { kind: 'check', line: 2, checked: true, text: 'yen' },
-      { kind: 'markdown', text: 'after' },
-    ])
-  })
-  it('ignores checkboxes inside fenced code', () => {
-    const segs = splitChecklist('```\n- [ ] code\n```')
-    expect(segs).toEqual([{ kind: 'markdown', text: '```\n- [ ] code\n```' }])
-  })
-})
-
-describe('setChecklistLine', () => {
-  it('toggles exactly one line', () => {
-    const body = 'x\n  - [ ] a\n- [X] b'
-    expect(setChecklistLine(body, 1, true)).toBe('x\n  - [x] a\n- [X] b')
-    expect(setChecklistLine(body, 2, false)).toBe('x\n  - [ ] a\n- [ ] b')
-  })
-  it('leaves the body alone when the line is no longer a checkbox', () => {
-    expect(setChecklistLine('plain\nline', 1, true)).toBe('plain\nline')
-    expect(setChecklistLine('a', 5, true)).toBe('a')
   })
 })
 

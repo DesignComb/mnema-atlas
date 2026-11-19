@@ -1,10 +1,8 @@
 /**
  * Pure helpers for trip notes (備忘錄): iCloud-style "first line is the title",
- * list snippets, and tappable `- [ ]` checklist lines in the rendered view.
+ * list snippets, and the update RPC's conflict error.
  * Kept free of React/Supabase so they're unit-tested in isolation.
  */
-
-const CHECK_RE = /^(\s*[-*+]\s+\[)( |x|X)(\]\s?)(.*)$/
 
 /** Strip leading markdown markers (#, >, list bullets, checkboxes) and inline emphasis. */
 function plainLine(line: string): string {
@@ -33,50 +31,6 @@ export function noteSnippet(body: string, max = 80): string {
 
 export function noteTitle(n: { title: string; body: string }): string {
   return n.title.trim() || deriveTitle(n.body)
-}
-
-export type NoteSegment =
-  | { kind: 'markdown'; text: string }
-  | { kind: 'check'; line: number; checked: boolean; text: string }
-
-/**
- * Split a body into markdown runs and individual checklist lines (with their
- * 0-based line index), so the view can render checkboxes as real buttons and
- * map a tap back to exactly one source line. Fenced code blocks are never split.
- */
-export function splitChecklist(body: string): NoteSegment[] {
-  const out: NoteSegment[] = []
-  let buf: string[] = []
-  let inFence = false
-  const flush = () => {
-    if (buf.length) out.push({ kind: 'markdown', text: buf.join('\n') })
-    buf = []
-  }
-  body.split('\n').forEach((line, i) => {
-    if (/^\s*(```|~~~)/.test(line)) inFence = !inFence
-    const m = inFence ? null : CHECK_RE.exec(line)
-    if (m) {
-      flush()
-      out.push({ kind: 'check', line: i, checked: m[2] !== ' ', text: m[4] })
-    } else {
-      buf.push(line)
-    }
-  })
-  flush()
-  return out
-}
-
-/**
- * Set the checkbox on source line `line` to `checked`. Returns the body
- * unchanged when that line isn't a checklist line (e.g. a collaborator's
- * edit moved it), so a stale tap can never corrupt unrelated text.
- */
-export function setChecklistLine(body: string, line: number, checked: boolean): string {
-  const lines = body.split('\n')
-  const m = CHECK_RE.exec(lines[line] ?? '')
-  if (!m) return body
-  lines[line] = `${m[1]}${checked ? 'x' : ' '}${m[3]}${m[4]}`
-  return lines.join('\n')
 }
 
 /** True when an RPC error is update_trip_note's optimistic-concurrency 'conflict'. */

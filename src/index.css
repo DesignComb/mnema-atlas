@@ -544,6 +544,65 @@
   color: var(--muted-foreground);
   opacity: 0.6;
 }
+/* Trip notes' WYSIWYG editor (RichNoteEditor): iPhone-Notes-style checklists + images. */
+.mnema-rich img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+.mnema-rich img.ProseMirror-selectednode {
+  outline: 2px solid var(--brand);
+}
+.mnema-rich ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+.mnema-rich ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+}
+.mnema-rich ul[data-type='taskList'] li > label {
+  flex: none;
+  margin-top: 0.36em;
+  user-select: none;
+}
+.mnema-rich ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.mnema-rich ul[data-type='taskList'] input[type='checkbox'] {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  margin: 0;
+  border: 1.5px solid color-mix(in oklch, var(--muted-foreground) 60%, transparent);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.mnema-rich ul[data-type='taskList'] input[type='checkbox']:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.mnema-rich ul[data-type='taskList'] input[type='checkbox']:checked::before {
+  content: '';
+  width: 0.3em;
+  height: 0.56em;
+  margin-top: -0.1em;
+  border: solid var(--brand-foreground);
+  border-width: 0 0.13em 0.13em 0;
+  transform: rotate(45deg);
+}
+.mnema-rich ul[data-type='taskList'] input[type='checkbox']:disabled {
+  cursor: default;
+}
+.mnema-rich ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+}
 /* [[wikilink]] chips — global (flashcards render them outside .mnema-prose). */
 .wikilink {
   color: var(--brand);

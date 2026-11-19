@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { prepareImageForUpload } from './image-prepare'
 
 const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif']
 const MAX_BYTES = 5 * 1024 * 1024 // mirrors the bucket's file_size_limit
@@ -8,7 +9,9 @@ const MAX_BYTES = 5 * 1024 * 1024 // mirrors the bucket's file_size_limit
  * ({uid}/…, enforced by RLS) and return its public URL. Used by image cards;
  * reusable for any future attachment surface.
  */
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(input: File): Promise<string> {
+  // Phone photos (> 5 MB, HEIC, or no MIME type) are downscaled/re-encoded first.
+  const file = await prepareImageForUpload(input)
   if (!ALLOWED.includes(file.type)) throw new Error('Unsupported image type (PNG, JPEG, WebP, GIF, or AVIF)')
   if (file.size > MAX_BYTES) throw new Error('Image too large (max 5 MB)')
 
